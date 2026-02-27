@@ -16,7 +16,7 @@ const Footer = () => {
           <div className="space-y-8">
             <Link to="/" className="inline-block transition-transform hover:scale-105 duration-500">
               <img
-                src="/lovable-uploads/cf9082da-6aac-4f3b-85cf-515fdb61963a.png"
+                src="/assets/cf9082da-6aac-4f3b-85cf-515fdb61963a.png"
                 alt="Suna Al-Saada"
                 className="h-28 object-contain"
               />

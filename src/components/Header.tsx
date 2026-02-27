@@ -70,7 +70,7 @@ const Header = () => {
             <Link to="/" className="group flex items-center gap-3 shrink-0 relative transition-transform hover:scale-[1.02]">
               <div className="relative h-11 w-11 md:h-13 md:w-13 bg-white rounded-2xl flex items-center justify-center shadow-[0_10px_20px_rgba(0,0,0,0.1)] group-hover:shadow-secondary/20 group-hover:rotate-6 transition-all duration-500 overflow-hidden border border-primary/5">
                 <img
-                  src="/lovable-uploads/cf9082da-6aac-4f3b-85cf-515fdb61963a.png"
+                  src="/assets/cf9082da-6aac-4f3b-85cf-515fdb61963a.png"
                   alt="Logo"
                   className="h-full w-full object-cover"
                 />

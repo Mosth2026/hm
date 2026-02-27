@@ -1,73 +1,50 @@
-# Welcome to your Lovable project
+# متجر صناع السعادة (Happiness Makers Store)
 
-## Project info
+متجر إلكتروني فاخر متخصص في بيع أجود أنواع الشوكولاتة والحلويات الفاخرة. يتميز المتجر بتصميم راقٍ وتجربة مستخدم سلسة تدعم اللغة العربية بشكل كامل.
 
-**URL**: https://lovable.dev/projects/af17f076-9631-47d7-bfc0-30843a668c98
+## المميزات الأساسية للمشروع
 
-## How can I edit this code?
+- **تصميم فاخر (Premium Design):** واجهة مستخدم عصرية وأنيقة تليق بالعلامة التجارية.
+- **إدارة المنتجات:** لوحة تحكم إدارية متكاملة لإضافة وتعديل وحذف المنتجات.
+- **نظام الضرائب الذكي:** إمكانية تحديد منتجات معينة كمعفاة من الضريبة (14%) بسهولة.
+- **تتبع الطلبات:** نظام تتبع للطلبات يسهل على العملاء معرفة حالة طلبهم.
+- **متوافق مع الجوال:** تصميم ريسبونسيف بالكامل يعمل بكفاءة على جميع الأجهزة.
+- **واتساب:** تكامل مع واتساب لتسهيل عملية الشراء والتواصل.
 
-There are several ways of editing your application.
+## التقنيات المستخدمة
 
-**Use Lovable**
+تم بناء هذا المشروع باستخدام أحدث تقنيات الويب:
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/af17f076-9631-47d7-bfc0-30843a668c98) and start prompting.
+- **Vite:** أداة بناء سريعة جداً للمشاريع الحديثة.
+- **React:** مكتبة جافا سكريبت لبناء واجهات المستخدم.
+- **TypeScript:** لإضافة الأمان البرمجي وتسهيل التطوير.
+- **Tailwind CSS:** لتصميم الواجهات بمرونة تامة.
+- **shadcn/ui:** واجهات برمجية جاهزة وقابلة للتخصيص.
+- **Supabase:** قاعدة بيانات سحابية ونظام مصادقة متكامل.
+- **Zustand:** لإدارة حالة التطبيق بشكل بسيط وفعال.
 
-Changes made via Lovable will be committed automatically to this repo.
+## كيفية البدء
 
-**Use your preferred IDE**
+للبدء في تشغيل المشروع محلياً، اتبع الخطوات التالية:
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### المتطلبات المسبقة
+يجب تثبيت [Node.js](https://nodejs.org/) على جهازك.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### الخطوات
+1. قم بتحميل المستودع.
+2. افتح المجلد في الـ Terminal.
+3. قم بتثبيت المكتبات اللازمة:
+   ```bash
+   npm install
+   ```
+4. قم بتشغيل خادم التطوير:
+   ```bash
+   npm run dev
+   ```
 
-Follow these steps:
+## نشر المشروع (Deployment)
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+المشروع جاهز للنشر على منصات مثل Vercel أو Netlify أو Cloudflare Pages. تأكد من إضافة المتغيرات البيئية (Environment Variables) الخاصة بـ Supabase في منصة النشر.
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/af17f076-9631-47d7-bfc0-30843a668c98) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes it is!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+---
+تم تطوير هذا المشروع بكل حب وحرص لتقديم أفضل تجربة تسوق لمحبي الشوكولاتة.
