@@ -1,0 +1,297 @@
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 20 20% 98%;
+    --foreground: 20 10% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 20 10% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 10% 10%;
+    --primary: 34 35% 25%;
+    /* Deep Coffee Brown */
+    --primary-foreground: 43 100% 98%;
+    --secondary: 35 92% 51%;
+    /* Golden Accent */
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 33 20% 90%;
+    --muted-foreground: 33 10% 40%;
+    --accent: 35 92% 51%;
+    --accent-foreground: 20 10% 10%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 33 20% 88%;
+    --input: 33 20% 88%;
+    --ring: 35 92% 51%;
+    --radius: 1rem;
+    --theme-gradient: radial-gradient(at 0% 0%, hsla(35, 92%, 51%, 0.05) 0, transparent 50%), radial-gradient(at 100% 100%, hsla(34, 35%, 25%, 0.05) 0, transparent 50%);
+  }
+
+  [data-theme='midnight'] {
+    --primary: 222 47% 11%;
+    /* Deep Navy */
+    --primary-foreground: 210 40% 98%;
+    --secondary: 199 89% 48%;
+    /* Neon Blue */
+    --secondary-foreground: 222 47% 11%;
+    --background: 222 47% 4%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 6%;
+    --card-foreground: 210 40% 98%;
+    --border: 222 47% 15%;
+    --input: 222 47% 15%;
+    --ring: 199 89% 48%;
+    --theme-gradient: radial-gradient(at 0% 0%, hsla(199, 89%, 48%, 0.08) 0, transparent 50%), radial-gradient(at 100% 100%, hsla(222, 47%, 11%, 0.1) 0, transparent 50%);
+  }
+
+  [data-theme='berry'] {
+    --primary: 340 60% 30%;
+    /* Deep Berry */
+    --primary-foreground: 340 100% 98%;
+    --secondary: 15 60% 70%;
+    /* Rose Gold */
+    --secondary-foreground: 340 60% 10%;
+    --background: 340 20% 98%;
+    --foreground: 340 40% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 340 40% 10%;
+    --border: 340 20% 90%;
+    --input: 340 20% 90%;
+    --ring: 15 60% 70%;
+    --theme-gradient: radial-gradient(at 0% 0%, hsla(15, 60%, 70%, 0.1) 0, transparent 50%), radial-gradient(at 100% 100%, hsla(340, 60%, 30%, 0.05) 0, transparent 50%);
+  }
+
+  [data-theme='emerald'] {
+    --primary: 160 50% 15%;
+    /* Forest Green */
+    --primary-foreground: 160 100% 98%;
+    --secondary: 25 60% 45%;
+    /* Deep Copper */
+    --secondary-foreground: 160 100% 98%;
+    --background: 160 10% 98%;
+    --foreground: 160 50% 5%;
+    --card: 0 0% 100%;
+    --card-foreground: 160 50% 5%;
+    --border: 160 20% 90%;
+    --input: 160 20% 90%;
+    --ring: 25 60% 45%;
+    --theme-gradient: radial-gradient(at 0% 0%, hsla(25, 60%, 45%, 0.08) 0, transparent 50%), radial-gradient(at 100% 100%, hsla(160, 50%, 15%, 0.05) 0, transparent 50%);
+  }
+
+  [data-theme='noir'] {
+    --primary: 0 0% 0%;
+    /* Absolute Black */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 60%;
+    /* Minimal Silver */
+    --secondary-foreground: 0 0% 0%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+    --border: 0 0% 90%;
+    --input: 0 0% 90%;
+    --ring: 0 0% 0%;
+    --theme-gradient: none;
+  }
+
+  [data-theme='chocolate-silk'] {
+    --background: 30 30% 98%;
+    /* Ultra-clean Cream */
+    --foreground: 23 25% 15%;
+    /* Deep Espresso */
+    --primary: 23 45% 25%;
+    /* Rich Cocoa */
+    --primary-foreground: 30 30% 98%;
+    --secondary: 23 60% 50%;
+    /* Caramel Gold */
+    --secondary-foreground: 30 30% 98%;
+    --card: 0 0% 100%;
+    --card-foreground: 23 25% 15%;
+    --border: 23 45% 25% / 0.15;
+    --input: 23 45% 25% / 0.05;
+    --muted: 30 20% 94%;
+    --muted-foreground: 23 15% 45%;
+    --accent: 23 60% 50%;
+    --ring: 23 45% 25%;
+    --theme-gradient: radial-gradient(at 0% 0%, hsla(23, 60%, 50%, 0.03) 0, transparent 50%), radial-gradient(at 100% 100%, hsla(23, 45%, 25%, 0.03) 0, transparent 50%);
+  }
+
+  [data-theme='saada-signature'] {
+    --background: 240 10% 4%;
+    /* Deepest Charcoal/Black */
+    --foreground: 0 0% 98%;
+    --primary: 354 86% 51%;
+    /* Logo Red */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 44 100% 50%;
+    /* Logo Gold/Yellow */
+    --secondary-foreground: 0 0% 0%;
+    --card: 240 10% 6%;
+    --card-foreground: 0 0% 98%;
+    --border: 0 0% 100% / 0.1;
+    --input: 0 0% 100% / 0.05;
+    --muted: 240 10% 12%;
+    --muted-foreground: 0 0% 60%;
+    --accent: 354 86% 51%;
+    --ring: 354 86% 51%;
+    --theme-gradient: linear-gradient(135deg, hsla(354, 86%, 51%, 0.1) 0%, hsla(240, 10%, 4%, 1) 40%, hsla(44, 100%, 50%, 0.05) 100%);
+  }
+
+  [data-theme='signature-serene'] {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 10%;
+    --primary: 354 86% 51%;
+    /* Logo Red */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 42 100% 50%;
+    /* Golden Touch */
+    --secondary-foreground: 0 0% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+    --border: 0 0% 0% / 0.06;
+    --input: 0 0% 0% / 0.04;
+    --ring: 354 86% 51%;
+    --theme-gradient: radial-gradient(at 100% 0%, hsla(354, 86%, 51%, 0.02) 0, transparent 40%), radial-gradient(at 0% 100%, hsla(42, 100%, 50%, 0.02) 0, transparent 40%);
+  }
+
+  * {
+    @apply border-border selection:bg-secondary/30;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased font-tajawal;
+    background-image:
+      radial-gradient(circle at center, transparent 0%, hsl(var(--background)) 100%),
+      url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l2.5 7.5L40 10l-7.5 2.5L30 20l-2.5-7.5L20 10l7.5-2.5L30 0zm0 40l2.5 7.5L40 50l-7.5 2.5L30 60l-2.5-7.5L20 50l7.5-2.5L30 40zM0 30l7.5 2.5L10 40l2.5-7.5L20 30l-7.5-2.5L10 20l-2.5 7.5L0 30zm40 0l7.5 2.5L50 40l2.5-7.5L60 30l-7.5-2.5L50 20l-2.5 7.5L40 30z' fill='%23d99d33' fill-opacity='0.07' fill-rule='evenodd'%3E%3C/path%3E%3C/svg%3E"),
+      var(--theme-gradient);
+    position: relative;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/40 backdrop-blur-2xl border border-white/20 shadow-[0_8px_32px_0_rgba(31, 38, 135, 0.07)];
+  }
+
+  /* Theme-aware Header */
+  header {
+    background-color: hsl(var(--background) / 0.8) !important;
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid hsl(var(--primary) / 0.1);
+  }
+
+  [data-theme='saada-signature'] header,
+  [data-theme='midnight'] header {
+    background-color: hsl(var(--background) / 0.9) !important;
+    color: hsl(var(--foreground));
+  }
+}
+
+.font-tajawal {
+  font-family: 'Tajawal', sans-serif;
+}
+
+.font-outfit {
+  font-family: 'Outfit', sans-serif;
+}
+
+.rtl {
+  direction: rtl;
+}
+
+/* Custom Animations */
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes sway {
+
+  0%,
+  100% {
+    transform: rotate(-2deg);
+  }
+
+  50% {
+    transform: rotate(2deg);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-sway {
+  animation: sway 6s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+.hover-lift {
+  @apply transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/10;
+}
+
+@keyframes luxury-shine {
+  0% {
+    transform: translateX(-100%) skewX(-15deg);
+  }
+
+  100% {
+    transform: translateX(200%) skewX(-15deg);
+  }
+}
+
+.premium-card {
+  @apply relative overflow-hidden;
+}
+
+.premium-card::before {
+  content: "";
+  @apply absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/10 to-transparent;
+  transform: translateX(-100%) skewX(-15deg);
+  transition: transform 0.8s ease;
+  pointer-events: none;
+}
+
+.premium-card:hover::before {
+  animation: luxury-shine 1.2s ease;
+}
+
+/* Fix Toast Overlays - Allow clicking through the container */
+[data-sonner-toaster] {
+  pointer-events: none !important;
+}
+
+[data-sonner-toast] {
+  pointer-events: auto !important;
+}
+
+/* Custom Scrollbar for Theme Menu */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(217, 157, 51, 0.3);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(217, 157, 51, 0.5);
+}

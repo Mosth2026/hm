@@ -1,0 +1,12 @@
+/* React Router redirection for Netlify */
+/* This ensures that all routes go to index.html so React can handle them */
+/* See: https://docs.netlify.com/routing/redirects/rewrites-proxies/ */
+
+/* Standard SPA Rewrite */
+/* Any request that doesn't match a static file will be sent to index.html */
+/* This is essential for react-router-dom to work on refresh */
+/* Redirect from any path to /index.html with 200 status */
+/* This is a comment - the actual rule is below */
+
+/* ACTUAL RULE FOR netlify.toml or _redirects */
+/* For Netlify, we need a file named `_redirects` in the `public` folder */
