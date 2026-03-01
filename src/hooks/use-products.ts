@@ -51,17 +51,18 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean) => {
             let query = supabase.from('products').select('*');
 
             if (!isAdmin) {
-                // شروط العرض للعملاء:
+                // شروط العرض للعملاء (ضمان الجودة):
                 // 1. المخزون أكبر من أو يساوي 1
                 // 2. السعر أكبر من 0
                 // 3. وجود صورة صالحة وغير افتراضية
-                // 4. عدم الانتماء للأصناف المخفية
+                // 4. عدم وجود [DRAFT] في الوصف
                 query = query
                     .filter('stock', 'gte', 1)
                     .filter('price', 'gt', 0)
                     .not('image', 'is', null)
                     .neq('image', '')
-                    .not('image', 'ilike', '%unsplash.com%');
+                    .not('image', 'ilike', '%unsplash.com%')
+                    .not('description', 'ilike', '%[DRAFT]%');
 
                 if (categoryId && categoryId !== 'all') {
                     query = query.or(`category_id.eq.${categoryId},category_name.eq.${categoryId}`);
@@ -82,16 +83,18 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean) => {
 
             if (error) throw error;
 
-            // معالجة البيانات للعملاء (إخفاء الباركود وفلترة إضافية للسلامة)
+            // معالجة البيانات للعملاء (فلترة نهائية للأمان القصوى)
             if (!isAdmin) {
                 return (data as any[]).filter(p => {
                     const price = Number(p.price);
                     const stock = Number(p.stock);
+                    const isDraft = p.description?.includes('[DRAFT]');
                     const hasValidImage = p.image &&
                         p.image.trim() !== "" &&
-                        !p.image.includes('unsplash.com');
+                        !p.image.includes('unsplash.com') &&
+                        p.image !== SITE_CONFIG.placeholderImage;
 
-                    return stock >= 1 && price > 0 && hasValidImage;
+                    return stock >= 1 && price > 0 && hasValidImage && !isDraft;
                 }).map(p => processProduct(p, false));
             }
 
@@ -119,11 +122,13 @@ export const useProduct = (id: number) => {
             if (!isAdmin && data) {
                 const price = Number(data.price);
                 const stock = Number(data.stock);
+                const isDraft = data.description?.includes('[DRAFT]');
                 const hasValidImage = data.image &&
                     data.image.trim() !== "" &&
-                    !data.image.includes('unsplash.com');
+                    !data.image.includes('unsplash.com') &&
+                    data.image !== SITE_CONFIG.placeholderImage;
 
-                if (!(stock >= 1 && price > 0 && hasValidImage)) {
+                if (!(stock >= 1 && price > 0 && hasValidImage && !isDraft)) {
                     return null;
                 }
 

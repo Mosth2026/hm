@@ -201,7 +201,7 @@ const OrderTracking = () => {
                 <meta name="description" content={`تفاصيل طلب العميل ${order.customer_name} - إجمالي ${Number(order.total_price).toFixed(Number(order.total_price) % 1 === 0 ? 0 : 1)} ج.م`} />
                 <meta property="og:title" content={`📦 فاتورة رقم #${order.id}`} />
                 <meta property="og:description" content="اضغط لمعاينة تفاصيل طلبك من صناع السعادة" />
-                <meta property="og:image" content="/assets/cf9082da-6aac-4f3b-85cf-515fdb61963a.png" />
+                <meta property="og:image" content="/assets/logo.png" />
                 <meta property="og:type" content="website" />
             </Helmet>
             <Header />

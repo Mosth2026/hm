@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+// Force rebuild timestamp: 2026-02-28 20:48 (Reset Sync)
 import { useAuth, UserRole } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import {
@@ -88,37 +89,110 @@ const AdminDashboard = () => {
         needsPhoto: 0,
         published: 0,
         noTax: 0,
-        readyToShot: 0
+        readyToShot: 0,
+        trash: 0
     });
-    const [activeFilter, setActiveFilter] = useState<"all" | "low" | "value" | "categories" | "zero" | "draft" | "published" | "no-tax" | "ready">("all");
+    const [activeFilter, setActiveFilter] = useState<"all" | "low" | "value" | "categories" | "zero" | "draft" | "published" | "no-tax" | "ready" | "trash">("all");
     const [selectedCategoryLabel, setSelectedCategoryLabel] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<"products" | "orders">("products");
     const [orders, setOrders] = useState<any[]>([]);
     const [ordersLoading, setOrdersLoading] = useState(false);
     const [updatedSessionIds, setUpdatedSessionIds] = useState<number[]>([]);
     const [importProgress, setImportProgress] = useState<{ current: number, total: number } | null>(null);
+    const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
 
-    const handleExportNoTax = () => {
-        const noTaxProducts = products.filter(p => p.description?.includes('[TAX_EXEMPT]'));
-        if (noTaxProducts.length === 0) {
-            toast.error("لا توجد منتجات بدون ضريبة لتصديرها");
+    // Define filteredProducts near the top but as a derived value
+    const filteredProducts = products.sort((a, b) => {
+        const aUpdated = updatedSessionIds.includes(a.id);
+        const bUpdated = updatedSessionIds.includes(b.id);
+        if (aUpdated && !bUpdated) return -1;
+        if (!aUpdated && bUpdated) return 1;
+        return (new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+    });
+
+    useEffect(() => {
+        setSelectedProductIds([]);
+    }, [activeFilter, selectedCategoryLabel, searchQuery]);
+
+    const handleExportData = () => {
+        if (filteredProducts.length === 0) {
+            toast.error("لا توجد بيانات لتصديرها في هذا القسم");
             return;
         }
 
-        const exportData = noTaxProducts.map(p => ({
+        const exportData = filteredProducts.map(p => ({
             "الاسم": p.name,
-            "الباركود": p.description?.match(/باركود\s*:\s*([^ ]+)/)?.[1] || "",
+            "الباركود": p.description?.includes('باركود:') ? p.description.split('باركود:')[1].trim().replace('[TAX_EXEMPT]', '').replace('[DRAFT]', '').trim() : "",
             "القسم": p.category_name,
             "السعر": p.price,
-            "المخزون": p.stock
+            "المخزون": p.stock,
+            "الحالة": p.description?.includes('[DRAFT]') ? 'مسودة' : ((p.stock ?? 0) > 0 ? 'نشط' : 'منتهي')
         }));
 
         const ws = XLSX.utils.json_to_sheet(exportData);
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "منتجات بدون ضريبة");
-        XLSX.writeFile(wb, "saada_no_tax_products.xlsx");
-        toast.success("تم التصدير بنجاح");
+        const sheetName = activeFilter === "all" ? "جميع المنتجات" :
+            activeFilter === "categories" ? (selectedCategoryLabel || "قسم محدد") :
+                activeFilter === "trash" ? "الدرافت" : "تقرير المنتجات";
+
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        XLSX.writeFile(wb, `saada_export_${new Date().getTime()}.xlsx`);
+        toast.success("تم تصدير البيانات بنجاح");
     };
+
+    const handleBulkDelete = async () => {
+        if (selectedProductIds.length === 0) return;
+        if (!confirm(`هل أنت متأكد من حذف ${selectedProductIds.length} صنف نهائياً؟`)) return;
+
+        const { error } = await supabase.from('products').delete().in('id', selectedProductIds);
+        if (error) {
+            toast.error("فشل الحذف الجماعي");
+        } else {
+            toast.success("تم الحذف بنجاح");
+            setSelectedProductIds([]);
+            fetchProducts();
+        }
+    };
+
+    const handleBulkDraft = async (toDraft: boolean) => {
+        if (selectedProductIds.length === 0) return;
+
+        const toastId = toast.loading(toDraft ? "جاري نقل المنتجات للدرافت..." : "جاري استعادة المنتجات...");
+
+        try {
+            const updates = selectedProductIds.map((id) => {
+                const prod = products.find(p => p.id === id);
+                if (!prod) return null;
+                // Remove existing [DRAFT] if any to avoid duplicates
+                let desc = (prod.description || '').replace('[DRAFT]', '').trim();
+                if (toDraft) desc = `${desc} [DRAFT]`.trim();
+                return { id, description: desc };
+            }).filter(u => u !== null);
+
+            if (updates.length === 0) throw new Error("لم يتم العثور على المنتجات المختارة");
+
+            // Perform updates sequentially to maintain database integrity
+            for (const up of updates) {
+                const { error } = await supabase
+                    .from('products')
+                    .update({ description: up!.description })
+                    .eq('id', up!.id);
+                if (error) throw error;
+            }
+
+            toast.success(toDraft ? "تم إخفاء المنتجات في الدرافت" : "تم استعادة المنتجات بنجاح", { id: toastId });
+            setSelectedProductIds([]);
+            fetchProducts();
+        } catch (error: any) {
+            console.error("Bulk Actions Error:", error);
+            toast.error("فشل تنفيذ الإجراء الجماعي", {
+                description: error.message,
+                id: toastId
+            });
+        }
+    };
+
+
 
     // دالة مطورة لتنظيف النصوص العربية للمطابقة (Shared)
     const normalize = (text: string) => {
@@ -149,33 +223,40 @@ const AdminDashboard = () => {
             const nameGroups = new Map<string, Product[]>();
 
             data.forEach(p => {
-                // Check Barcode
+                // 1. استخراج الباركود الصافي (الأرقام فقط)
+                let pureBarcode = null;
                 if (p.description && p.description.includes('باركود:')) {
-                    const code = p.description.split('باركود:')[1].trim();
-                    if (code && code.length > 3) {
-                        const existing = barcodeGroups.get(code) || [];
-                        barcodeGroups.set(code, [...existing, p]);
-                    }
+                    const match = p.description.match(/باركود:\s*(\d+)/);
+                    if (match) pureBarcode = match[1].trim();
                 }
-                // Check Name (Normalized)
-                const normName = normalize(p.name);
-                if (normName && normName.length > 5) {
-                    const existing = nameGroups.get(normName) || [];
-                    nameGroups.set(normName, [...existing, p]);
+
+                // 2. تجميع بالباركود (الأولوية القصوى)
+                if (pureBarcode && pureBarcode.length > 3) {
+                    const existing = barcodeGroups.get(pureBarcode) || [];
+                    barcodeGroups.set(pureBarcode, [...existing, p]);
+                } else {
+                    // 3. تجميع بالاسم فقط للأصناف التي ليس لها باركود لضمان الدقة
+                    const normName = normalize(p.name);
+                    if (normName && normName.length > 5) {
+                        const existing = nameGroups.get(normName) || [];
+                        nameGroups.set(normName, [...existing, p]);
+                    }
                 }
             });
 
             const conflicts: { key: string, items: Product[] }[] = [];
+            
+            // إضافة مجموعات الباركود المكررة فعلياً
             barcodeGroups.forEach((items, code) => {
-                if (items.length > 1) conflicts.push({ key: `الباركود: ${code}`, items });
+                if (items.length > 1) {
+                    conflicts.push({ key: `نفس الباركود: ${code}`, items });
+                }
             });
+
+            // إضافة تعارضات بالاسم بشرط أن تكون أصناف "تائهة" (بدون باركود)
             nameGroups.forEach((items, name) => {
-                const alreadyHandledInBarcode = items.some(item => {
-                    const code = item.description?.includes('باركود:') ? item.description.split('باركود:')[1].trim() : null;
-                    return code && barcodeGroups.get(code) && barcodeGroups.get(code)!.length > 1;
-                });
-                if (items.length > 1 && !alreadyHandledInBarcode) {
-                    conflicts.push({ key: `الاسم: ${items[0].name}`, items });
+                if (items.length > 1) {
+                    conflicts.push({ key: `اسم متشابه (بدون باركود): ${items[0].name}`, items });
                 }
             });
 
@@ -382,17 +463,23 @@ const AdminDashboard = () => {
             query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
         }
 
-        // Server-side Filters
+        // Server-side Filters (Always exclude Drafts unless specifically viewing them)
+        if (activeFilter !== "trash") {
+            query = query.not('description', 'ilike', '%[DRAFT]%');
+        }
+
         if (activeFilter === "low") {
             query = query.lt('stock', 10).gt('stock', 0);
         } else if (activeFilter === "zero") {
-            // أصناف منتهية ولها صور (جاهزة للبيع فور توفر الرصيد)
-            query = query.eq('stock', 0).not('image', 'ilike', '%unsplash.com%').not('image', 'is', null).neq('image', '');
+            query = query.eq('stock', 0).not('image', 'ilike', '%unsplash.com%').not('image', 'is', null).neq('image', '').neq('image', PLACEHOLDER_IMAGE);
         } else if (activeFilter === "draft") {
-            // أصناف رصيدها صفر وبدون صور (تحتاج مراجعة شاملة)
+            // المنتجات التي تحتاج صور (رصيدها صفر وبدون صورة)
             query = query.eq('stock', 0).or('image.is.null,image.eq.,image.ilike.%unsplash%');
+        } else if (activeFilter === "trash") {
+            // المنتجات المسودة مانيوال
+            query = query.ilike('description', '%[DRAFT]%');
         } else if (activeFilter === "published") {
-            query = query.gte('stock', 1).gt('price', 0).not('image', 'ilike', '%unsplash.com%').not('image', 'is', null).neq('image', '');
+            query = query.gte('stock', 1).gt('price', 0).not('image', 'ilike', '%unsplash.com%').not('image', 'is', null).neq('image', '').neq('image', PLACEHOLDER_IMAGE);
         } else if (activeFilter === "value") {
             query = query.gt('price', 100);
         } else if (activeFilter === "categories" && selectedCategoryLabel) {
@@ -400,7 +487,6 @@ const AdminDashboard = () => {
         } else if (activeFilter === "no-tax") {
             query = query.ilike('description', '%[TAX_EXEMPT]%');
         } else if (activeFilter === "ready") {
-            // أصناف لها رصيد ولكنها مخفية لعدم وجود صور (أهمية قصوى)
             query = query.gte("stock", 1).or('image.is.null,image.eq.,image.ilike.%unsplash%');
         }
 
@@ -442,15 +528,17 @@ const AdminDashboard = () => {
                 { count: publishedCount },
                 { count: noTaxCount },
                 { count: readyToShotCount },
+                { count: trashCount },
                 { data: allProducts }
             ] = await Promise.all([
-                supabase.from('products').select('*', { count: 'exact', head: true }),
-                supabase.from('products').select('*', { count: 'exact', head: true }).lt('stock', 10).gte('stock', 1),
-                supabase.from('products').select('*', { count: 'exact', head: true }).eq('stock', 0).not('image', 'ilike', '%unsplash.com%').not('image', 'is', null).neq('image', '').neq('image', PLACEHOLDER_IMAGE),
-                supabase.from('products').select('*', { count: 'exact', head: true }).eq('stock', 0).or('image.is.null,image.eq.,image.ilike.%unsplash%'),
-                supabase.from('products').select('*', { count: 'exact', head: true }).gte('stock', 1).gt('price', 0).not('image', 'ilike', '%unsplash.com%').not('image', 'is', null).neq('image', '').neq('image', PLACEHOLDER_IMAGE),
+                supabase.from('products').select('*', { count: 'exact', head: true }).not('description', 'ilike', '%[DRAFT]%'),
+                supabase.from('products').select('*', { count: 'exact', head: true }).lt('stock', 10).gte('stock', 1).not('description', 'ilike', '%[DRAFT]%'),
+                supabase.from('products').select('*', { count: 'exact', head: true }).eq('stock', 0).not('image', 'ilike', '%unsplash.com%').not('image', 'is', null).neq('image', '').neq('image', PLACEHOLDER_IMAGE).not('description', 'ilike', '%[DRAFT]%'),
+                supabase.from('products').select('*', { count: 'exact', head: true }).eq('stock', 0).or('image.is.null,image.eq.,image.ilike.%unsplash%').not('description', 'ilike', '%[DRAFT]%'),
+                supabase.from('products').select('*', { count: 'exact', head: true }).gte('stock', 1).gt('price', 0).not('image', 'ilike', '%unsplash.com%').not('image', 'is', null).neq('image', '').neq('image', PLACEHOLDER_IMAGE).not('description', 'ilike', '%[DRAFT]%'),
                 supabase.from('products').select('*', { count: 'exact', head: true }).ilike('description', '%[TAX_EXEMPT]%'),
-                supabase.from('products').select('*', { count: 'exact', head: true }).gte('stock', 1).or('image.is.null,image.eq.,image.ilike.%unsplash%'),
+                supabase.from('products').select('*', { count: 'exact', head: true }).gte('stock', 1).or('image.is.null,image.eq.,image.ilike.%unsplash%').not('description', 'ilike', '%[DRAFT]%'),
+                supabase.from('products').select('*', { count: 'exact', head: true }).ilike('description', '%[DRAFT]%'),
                 supabase.from('products').select('price, stock')
             ]);
 
@@ -460,8 +548,8 @@ const AdminDashboard = () => {
             const draft = needsPhotoCount || 0;
             const published = publishedCount || 0;
             const noTax = noTaxCount || 0;
+            const trash = trashCount || 0;
 
-            // Calculate total value from all products, not just the current filtered set
             const value = (allProducts || []).reduce((acc, p) => acc + (p.price * (p.stock ?? 0)), 0);
 
             setStats({
@@ -473,7 +561,8 @@ const AdminDashboard = () => {
                 needsPhoto: draft,
                 published: published,
                 noTax: noTax,
-                readyToShot: readyToShotCount || 0
+                readyToShot: readyToShotCount || 0,
+                trash: trash
             });
         } catch (err) {
             console.error("Error calculating stats:", err);
@@ -671,6 +760,10 @@ const AdminDashboard = () => {
         if (!file) return;
         const reader = new FileReader();
         reader.onload = async (evt) => {
+            console.log("DEBUG: handleExcelImport LOADED - v94");
+            const barcodeMap = new Map<string, number>();
+            const categoryMap = new Map<string, number>();
+            const dbProductMap = new Map<number, any>();
             try {
                 const dataArray = evt.target?.result;
                 const wb = XLSX.read(dataArray, { type: 'array' });
@@ -686,7 +779,7 @@ const AdminDashboard = () => {
                     while (hasMore) {
                         const { data, error } = await supabase
                             .from('products')
-                            .select('id, name, category_id, description, image')
+                            .select('id, name, category_id, description, image, stock, price')
                             .range(from, from + lmt - 1);
 
                         if (error) {
@@ -706,20 +799,34 @@ const AdminDashboard = () => {
 
                 const dbProducts = await fetchAllDbProducts();
 
-                const barcodeMap = new Map();
-                const categoryMap = new Map();
-                const dbImageMap = new Map();
-
                 dbProducts.forEach(p => {
+                    dbProductMap.set(p.id, p);
+                    
+                    const normName = normalize(p.name);
+                    let pureBarcode = "";
+                    
+                    // استخراج الباركود بشكل ذكي باستخدام Regex
                     if (p.description && p.description.includes('باركود:')) {
-                        const code = p.description.split('باركود:')[1].trim();
-                        if (code) {
-                            const normCode = normalize(code);
-                            if (normCode) barcodeMap.set(normCode, p.id);
+                        const match = p.description.match(/باركود:\s*(\d+)/);
+                        if (match) pureBarcode = normalize(match[1]);
+                    }
+
+                    const hasImage = p.image && p.image !== PLACEHOLDER_IMAGE && !p.image.includes('unsplash.com');
+                    
+                    // إذا وجدنا مكررات، نحفظ دائماً الـ ID الخاص بالنسخة التي لها صورة
+                    if (pureBarcode) {
+                        const existingId = barcodeMap.get(pureBarcode);
+                        if (!existingId || hasImage) {
+                            barcodeMap.set(pureBarcode, p.id);
                         }
                     }
-                    categoryMap.set(p.id, p.category_id);
-                    dbImageMap.set(p.id, p.image);
+                    
+                    if (normName) {
+                        const existingId = categoryMap.get(normName);
+                        if (!existingId || hasImage) {
+                            categoryMap.set(normName, p.id);
+                        }
+                    }
                 });
 
                 let successCount = 0;
@@ -827,16 +934,20 @@ const AdminDashboard = () => {
                     }
                     if (uniqueKey) processedInBatch.add(uniqueKey);
 
-                    // --- MATCHING LOGIC (Strictly Barcode or ID) ---
+                    // --- MATCHING LOGIC (The Iron Shield) ---
                     let productId = null;
                     const numericExcelId = excelId ? Number(excelId) : null;
 
-                    if (numericExcelId && dbProducts.some(p => p.id === numericExcelId)) {
+                    if (numericExcelId && dbProductMap.has(numericExcelId)) {
                         productId = numericExcelId;
                     } else if (normCode && barcodeMap.has(normCode)) {
                         productId = barcodeMap.get(normCode);
                         barcodeMatches++;
+                    } else if (normName && categoryMap.has(normName)) {
+                        productId = categoryMap.get(normName);
                     }
+
+                    const dbProduct = productId ? dbProductMap.get(productId) : null;
 
                     const excelCat = getRowValue(row, catKey);
 
@@ -861,38 +972,71 @@ const AdminDashboard = () => {
                         else if (normName.includes('هدايا') || normName.includes('بوكس')) finalCatId = 'gifts';
                     }
 
-                    if (productId) {
+                    if (productId && dbProduct) {
                         importedIds.add(productId);
                         const updateData: any = { id: productId };
                         let hasChanges = false;
 
-                        const dbProduct = dbProducts.find(p => p.id === productId);
-                        const currentCatId = finalCatId || dbProduct?.category_id;
+                        const currentCatId = finalCatId || dbProduct.category_id;
                         const isExempt = (currentCatId === 'no-tax') ||
-                            dbProduct?.description?.includes('[TAX_EXEMPT]') ||
+                            dbProduct.description?.includes('[TAX_EXEMPT]') ||
                             (finalCatId === 'no-tax');
 
-                        if (stockValue !== null) {
+                        // PERSISTENT DRAFT LOGIC: المخبأ السري
+                        const isOldDraft = dbProduct?.description?.includes('[DRAFT]');
+                        const currentStock = dbProduct?.stock || 0;
+                        const currentPrice = dbProduct?.price || 0;
+                        const currentDesc = dbProduct?.description || '';
+
+                        // 1. تحديث الرصيد (فقط إذا اختلف)
+                        if (stockValue !== null && stockValue !== currentStock) {
                             updateData.stock = stockValue;
                             hasChanges = true;
-                        }
 
-                        if (priceValue !== null) {
-                            let price = parseFloat(String(priceValue).replace(/[^0-9.]/g, ''));
-                            if (!isNaN(price) && price > 0) {
-                                // Skip tax only for "No Tax" category
-                                if (!isExempt) {
-                                    price = price * 1.14;
-                                }
-                                updateData.price = Number(price.toFixed(1));
-                                hasChanges = true;
+                            // إذا كان "درافت" وتغير رصيده (زاد عن صفر)، يتم إخراجه فوراً مانيوال ليعود للبيع
+                            if (isOldDraft && stockValue > 0) {
+                                updateData.description = currentDesc.replace('[DRAFT]', '').trim();
                             }
                         }
 
-                        if (finalCatId) {
+                        // 2. تحديث السعر (المنطق المحاسبي الذكي لمنع الضريبة المزدوجة)
+                        if (priceValue !== null && user?.username !== 'mostafa') {
+                            let excelPrice = parseFloat(String(priceValue).replace(/[^0-9.]/g, ''));
+                            if (!isNaN(excelPrice) && excelPrice > 0) {
+                                let finalCalculatedPrice = excelPrice;
+
+                                // إذا لم يكن المنتج معفياً من الضريبة، نضيف 14%
+                                if (!isExempt) {
+                                    finalCalculatedPrice = Number((excelPrice * 1.14).toFixed(1));
+                                }
+
+                                // الحماية الكبرى: إذا كان السعر المحسوب مطابقاً للسعر الحالي في الداتابيز، لا نعتبره تغييراً.
+                                // هذا يمنع إعادة حساب الضريبة على سعر تم حسابه مسبقاً.
+                                if (finalCalculatedPrice !== currentPrice && Math.abs(finalCalculatedPrice - currentPrice) > 0.1) {
+                                    updateData.price = finalCalculatedPrice;
+                                    hasChanges = true;
+                                }
+                            }
+                        }
+
+                        // 3. تحديث القسم (فقط إذا اختلف)
+                        if (finalCatId && finalCatId !== dbProduct?.category_id) {
                             updateData.category_id = finalCatId;
                             const catObj = categories.find(c => c.id === finalCatId);
                             updateData.category_name = catObj ? catObj.label : 'الاسناكس';
+                            hasChanges = true;
+                        }
+
+                        // 4. أتمتة الدرافت (قاعدة الإخفاء الذكي)
+                        const finalStock = updateData.stock !== undefined ? updateData.stock : currentStock;
+                        const finalDesc = updateData.description !== undefined ? updateData.description : currentDesc;
+                        const hasRealImage = dbProduct?.image &&
+                            dbProduct.image !== PLACEHOLDER_IMAGE &&
+                            !dbProduct.image.includes('unsplash.com');
+
+                        // إذا أصبح الرصيد 0 وليس له صورة حقيقية وليس مسودة بالفعل، نضعه في المسودة
+                        if (finalStock <= 0 && !hasRealImage && !finalDesc.includes('[DRAFT]')) {
+                            updateData.description = `${finalDesc} [DRAFT]`.trim();
                             hasChanges = true;
                         }
 
@@ -908,6 +1052,7 @@ const AdminDashboard = () => {
                                 price = price * 1.14;
                             }
 
+                            const isDraft = (stockValue || 0) <= 0;
                             const catObj = categories.find(c => c.id === newCatId);
                             toInsert.push({
                                 name: excelName.trim(),
@@ -915,7 +1060,7 @@ const AdminDashboard = () => {
                                 stock: stockValue || 0,
                                 category_id: newCatId,
                                 category_name: catObj ? catObj.label : 'الاسناكس',
-                                description: excelCode ? `باركود: ${excelCode}` : '',
+                                description: excelCode ? (isDraft ? `باركود: ${excelCode} [DRAFT]` : `باركود: ${excelCode}`) : (isDraft ? '[DRAFT]' : ''),
                                 image: PLACEHOLDER_IMAGE,
                                 is_featured: false,
                                 is_new: true
@@ -928,46 +1073,49 @@ const AdminDashboard = () => {
                 let firstInsertError: any = null;
                 const finalTotal = toUpdate.length + toInsert.length;
 
-                // --- PHASE 1: SEQUENTIAL UPDATES (Stability First) ---
-                // We use a simple loop because parallel updates on the same table can hang or cause deadlocks.
-                for (let i = 0; i < toUpdate.length; i++) {
-                    const p = toUpdate[i];
+                // --- PHASE 1: PARALLEL UPDATES (Faster) ---
+                const UPDATE_BATCH_SIZE = 15; // عدد التحديثات المتزامنة
+                for (let i = 0; i < toUpdate.length; i += UPDATE_BATCH_SIZE) {
+                    const chunk = toUpdate.slice(i, i + UPDATE_BATCH_SIZE);
                     setImportProgress({ current: i, total: finalTotal });
 
-                    const { id, ...updateFields } = p;
-                    const { error } = await supabase
-                        .from('products')
-                        .update(updateFields)
-                        .eq('id', id);
+                    await Promise.all(chunk.map(async (p) => {
+                        const { id, ...updateFields } = p;
+                        const { error } = await supabase
+                            .from('products')
+                            .update(updateFields)
+                            .eq('id', id);
 
-                    if (!error) {
-                        successCount++;
-                        importedIds.add(id);
-                    } else {
-                        failCount++;
-                        if (!firstUpdateError) firstUpdateError = error;
-                        console.error(`Update failed for ID ${id}:`, error);
-                    }
-
-                    // Small yield to keep UI responsive every 20 items
-                    if (i % 20 === 0) await new Promise(r => setTimeout(r, 0));
+                        if (!error) {
+                            successCount++;
+                            importedIds.add(id);
+                        } else {
+                            failCount++;
+                            if (!firstUpdateError) firstUpdateError = error;
+                            console.error(`Update failed for ID ${id}:`, error);
+                        }
+                    }));
                 }
 
-                // --- PHASE 2: SEQUENTIAL INSERTS (For stability) ---
-                for (let i = 0; i < toInsert.length; i++) {
-                    const p = toInsert[i];
+                // --- PHASE 2: BATCH INSERTS (Massive Speedup) ---
+                const INSERT_BATCH_SIZE = 100;
+                for (let i = 0; i < toInsert.length; i += INSERT_BATCH_SIZE) {
+                    const chunk = toInsert.slice(i, i + INSERT_BATCH_SIZE);
                     setImportProgress({ current: toUpdate.length + i, total: finalTotal });
 
-                    const { data: inserted, error } = await supabase.from('products').insert([p]).select('id').single();
-                    if (!error && inserted) {
-                        addedCount++;
-                        importedIds.add(inserted.id);
+                    const { data: insertedRows, error } = await supabase
+                        .from('products')
+                        .insert(chunk)
+                        .select('id');
+
+                    if (!error && insertedRows) {
+                        addedCount += insertedRows.length;
+                        insertedRows.forEach(row => importedIds.add(row.id));
                     } else {
-                        failCount++;
+                        failCount += chunk.length;
                         if (!firstInsertError) firstInsertError = error;
-                        console.error("Insert failed:", error, p);
+                        console.error("Batch Insert failed:", error);
                     }
-                    if (i % 20 === 0) await new Promise(r => setTimeout(r, 0));
                 }
 
                 // --- PHASE 3: THE TOTAL PURGE (Master Sync) ---
@@ -1034,13 +1182,7 @@ const AdminDashboard = () => {
         e.target.value = '';
     };
 
-    const filteredProducts = [...products].sort((a, b) => {
-        const aUpdated = updatedSessionIds.includes(a.id);
-        const bUpdated = updatedSessionIds.includes(b.id);
-        if (aUpdated && !bUpdated) return -1;
-        if (!aUpdated && bUpdated) return 1;
-        return (new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
-    });
+
 
     if (!isAuthenticated) {
         return (
@@ -1210,6 +1352,9 @@ const AdminDashboard = () => {
     };
 
     const isEditor = user?.role === 'editor';
+    const isMostafa = user?.username === 'mostafa';
+    const canDelete = !isEditor && !isMostafa;
+    const canEditPrice = !isEditor && !isMostafa;
 
     return (
         <div className="min-h-screen bg-gray-50/50 p-4 md:p-8 font-tajawal rtl" dir="rtl">
@@ -1252,11 +1397,11 @@ const AdminDashboard = () => {
                             لوحة تحكم صناع السعادة ({user?.username === 'mostafa' ? 'الموظف مصطفى' : 'المدير'})
                         </h1>
                         <p className="text-gray-500 mt-1">
-                            {isEditor ? (user?.username === 'mostafa' ? 'تعديل الأسماء، الصور، الأسعار، والحذف' : 'صلاحية محدودة لتعديل الصور والأسماء') : 'إدارة كاملة للمتجر والمنتجات'}
+                            {isEditor ? (user?.username === 'mostafa' ? 'تحديث المخزون، الصور، والأسماء' : 'صلاحية محدودة لتعديل الصور والأسماء') : 'إدارة كاملة للمتجر والمنتجات'}
                         </p>
                     </div>
                     <div className="flex gap-2">
-                        {(user?.username === 'hesham' || user?.username === 'mostafa' || user?.role === 'admin') && (
+                        {(!isMostafa && (user?.username === 'hesham' || user?.role === 'admin')) && (
                             <>
                                 <div className="flex flex-col gap-2">
                                     <Button
@@ -1276,15 +1421,15 @@ const AdminDashboard = () => {
                                     <Button
                                         onClick={handleCleanupDuplicates}
                                         variant="outline"
-                                        className="h-10 border-red-200 text-red-600 hover:bg-red-50 rounded-xl font-bold flex gap-2"
+                                        className="h-10 border-red-200 text-red-600 hover:bg-red-50 rounded-xl font-bold flex gap-2 transition-all active:scale-95"
                                     >
                                         <Trash2 className="h-4 w-4" />
-                                        تنظيف المكررات
+                                        حل التعارضات (للمدير)
                                     </Button>
                                 </div>
                             </>
                         )}
-                        {(!isEditor || user?.username === 'mostafa') && (
+                        {(!isEditor && !isMostafa) && (
                             <Button onClick={handleAddNew} className="bg-saada-red hover:bg-red-700 text-white gap-2 h-12 px-6 text-lg rounded-xl shadow-lg shadow-red-200 transition-all">
                                 <Plus className="h-5 w-5" />
                                 إضافة منتج جديد
@@ -1308,7 +1453,7 @@ const AdminDashboard = () => {
                     >
                         إدارة المنتجات
                     </button>
-                    {(!isEditor || user?.username === 'mostafa') && (
+                    {(!isEditor && !isMostafa) && (
                         <button
                             onClick={() => setActiveTab("orders")}
                             className={`pb-4 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "orders" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
@@ -1321,7 +1466,7 @@ const AdminDashboard = () => {
                 {activeTab === "products" ? (
                     <>
                         {/* Stats Grid - Hidden for limited Editors */}
-                        {(!isEditor || user?.username === 'mostafa') && (
+                        {(!isEditor && !isMostafa) && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 cursor-pointer">
                                 <Card
                                     onClick={() => { setActiveFilter("all"); setSelectedCategoryLabel(null); }}
@@ -1407,11 +1552,28 @@ const AdminDashboard = () => {
                                         </div>
                                     </CardContent>
                                 </Card>
+
+                                <Card
+                                    onClick={() => { setActiveFilter("trash"); setSelectedCategoryLabel(null); }}
+                                    className={`border-none shadow-md bg-white overflow-hidden group hover:shadow-xl transition-all border-r-4 ${activeFilter === "trash" ? "ring-2 ring-gray-600 border-r-gray-800" : "border-r-gray-500 opacity-80"}`}
+                                >
+                                    <CardContent className="p-4">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-xs font-medium text-gray-500">قسم الدرافت (مخفي)</p>
+                                                <h3 className="text-2xl font-bold mt-1 text-gray-800">{stats.trash || 0}</h3>
+                                            </div>
+                                            <div className="h-10 w-10 bg-gray-100 rounded-xl flex items-center justify-center text-gray-600 group-hover:scale-110 transition-transform">
+                                                <Trash2 className="h-5 w-5" />
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             </div>
                         )}
 
                         {/* Top Priority Section for Products needing photos but have stock */}
-                        {(!isEditor || user?.username === 'mostafa') && stats.readyToShot > 0 && (
+                        {(!isEditor && !isMostafa) && stats.readyToShot > 0 && (
                             <div className="mt-6 animate-in fade-in slide-in-from-right-4 duration-700">
                                 <Card
                                     onClick={() => setActiveFilter("ready")}
@@ -1467,7 +1629,7 @@ const AdminDashboard = () => {
                         )}
 
                         {/* Conflict Monitoring Section */}
-                        {(!isEditor || user?.username === 'mostafa') && conflictProducts.length > 0 && (
+                        {(!isEditor && !isMostafa) && conflictProducts.length > 0 && (
                             <div className="mt-4 animate-in fade-in slide-in-from-left-4 duration-700">
                                 <Card
                                     onClick={() => setIsConflictResolverOpen(true)}
@@ -1530,28 +1692,37 @@ const AdminDashboard = () => {
                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                     <CardTitle className="text-xl font-bold text-saada-brown flex items-center gap-3">
                                         قائمة المنتجات
-                                        {updatedSessionIds.length > 0 && (
+                                        {selectedProductIds.length > 0 && (
+                                            <div className="flex items-center gap-2 animate-in zoom-in-95 duration-200">
+                                                <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full border border-blue-200">
+                                                    تم اختيار ({selectedProductIds.length})
+                                                </span>
+                                                <Button size="sm" variant="destructive" className="h-7 px-3 text-[10px]" onClick={canDelete ? handleBulkDelete : undefined} disabled={!canDelete}>
+                                                    حذف الجماعي
+                                                </Button>
+                                                {activeFilter !== "trash" ? (
+                                                    <Button size="sm" variant="outline" className="h-7 px-3 text-[10px] border-gray-300" onClick={() => handleBulkDraft(true)}>
+                                                        نقل للدرافت
+                                                    </Button>
+                                                ) : (
+                                                    <Button size="sm" variant="outline" className="h-7 px-3 text-[10px] border-gray-300" onClick={() => handleBulkDraft(false)}>
+                                                        استعادة للنشط
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        )}
+                                        {updatedSessionIds.length > 0 && selectedProductIds.length === 0 && (
                                             <span className="text-xs bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full animate-pulse border border-emerald-200">
                                                 تم تحديث ({updatedSessionIds.length}) منتجات الآن
                                             </span>
                                         )}
-                                        {updatedSessionIds.length > 0 && (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                className="text-[10px] h-6 px-2 text-gray-400 hover:text-saada-red"
-                                                onClick={() => setUpdatedSessionIds([])}
-                                            >
-                                                مسح التمييز
-                                            </Button>
-                                        )}
                                     </CardTitle>
                                     <div className="flex flex-col md:flex-row md:items-center gap-3 w-full md:w-auto">
-                                        {activeFilter === "no-tax" && (
+                                        {!isMostafa && (
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                onClick={handleExportNoTax}
+                                                onClick={handleExportData}
                                                 className="h-11 px-4 border-emerald-500 text-emerald-600 hover:bg-emerald-50 font-bold rounded-xl flex items-center gap-2"
                                             >
                                                 <FileSpreadsheet className="h-5 w-5" />
@@ -1575,30 +1746,51 @@ const AdminDashboard = () => {
                                     <Table>
                                         <TableHeader className="bg-gray-50/50">
                                             <TableRow>
+                                                <TableHead className="w-10 py-4 text-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="h-4 w-4 rounded"
+                                                        checked={selectedProductIds.length === filteredProducts.length && filteredProducts.length > 0}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) setSelectedProductIds(filteredProducts.map(p => p.id));
+                                                            else setSelectedProductIds([]);
+                                                        }}
+                                                    />
+                                                </TableHead>
                                                 <TableHead className="text-right py-4 font-bold text-saada-brown">المنتج</TableHead>
                                                 <TableHead className="text-right py-4 font-bold text-saada-brown">الباركود</TableHead>
                                                 <TableHead className="text-right py-4 font-bold text-saada-brown">القسم</TableHead>
                                                 <TableHead className="text-right py-4 font-bold text-saada-brown">السعر</TableHead>
-                                                {(!isEditor || user?.username === 'mostafa') && <TableHead className="text-right py-4 font-bold text-saada-brown">المخزون</TableHead>}
+                                                <TableHead className="text-right py-4 font-bold text-saada-brown">المخزون</TableHead>
                                                 <TableHead className="text-center py-4 font-bold text-saada-brown">الإجراءات</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                             {loading ? (
                                                 <TableRow>
-                                                    <TableCell colSpan={5} className="text-center py-20 text-gray-500">جاري التحميل...</TableCell>
+                                                    <TableCell colSpan={6} className="text-center py-20 text-gray-500">جاري التحميل...</TableCell>
                                                 </TableRow>
                                             ) : filteredProducts.length === 0 ? (
                                                 <TableRow>
-                                                    <TableCell colSpan={5} className="text-center py-20 text-gray-500">لا توجد منتجات مطابقة لـ "{searchQuery}"</TableCell>
+                                                    <TableCell colSpan={6} className="text-center py-20 text-gray-500">لا توجد منتجات مطابقة لـ "{searchQuery}"</TableCell>
                                                 </TableRow>
                                             ) : (
                                                 filteredProducts.map((p) => (
                                                     <TableRow
                                                         key={p.id}
-                                                        className={`group hover: bg - gray - 50 / 80 transition - colors border - b border - gray - 100 ${updatedSessionIds.includes(p.id) ? 'bg-emerald-50/40 hover:bg-emerald-50/60' : ''
-                                                            } `}
+                                                        className={`group hover: bg - gray - 50 / 80 transition - colors border - b border - gray - 100 ${updatedSessionIds.includes(p.id) ? 'bg-emerald-50/40 hover:bg-emerald-50/60' : ''} ${selectedProductIds.includes(p.id) ? 'bg-blue-50/50' : ''} `}
                                                     >
+                                                        <TableCell className="w-10 text-center">
+                                                            <input
+                                                                type="checkbox"
+                                                                className="h-4 w-4 rounded"
+                                                                checked={selectedProductIds.includes(p.id)}
+                                                                onChange={(e) => {
+                                                                    if (e.target.checked) setSelectedProductIds([...selectedProductIds, p.id]);
+                                                                    else setSelectedProductIds(selectedProductIds.filter(id => id !== p.id));
+                                                                }}
+                                                            />
+                                                        </TableCell>
                                                         <TableCell className="py-4">
                                                             <div className="flex items-center gap-3">
                                                                 <div className="h-10 w-10 rounded-lg bg-gray-100 overflow-hidden border border-gray-200 relative">
@@ -1617,6 +1809,9 @@ const AdminDashboard = () => {
                                                                         )}
                                                                         {p.created_at && (new Date().getTime() - new Date(p.created_at).getTime() < 48 * 60 * 60 * 1000) && (
                                                                             <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded font-bold">جديد</span>
+                                                                        )}
+                                                                        {p.description?.includes('[DRAFT]') && (
+                                                                            <span className="text-[10px] bg-gray-800 text-white px-1.5 py-0.5 rounded font-bold">درافت (مخفي)</span>
                                                                         )}
                                                                     </span>
                                                                 </div>
@@ -1650,7 +1845,7 @@ const AdminDashboard = () => {
                                                                 >
                                                                     <Edit className="h-4 w-4" />
                                                                 </Button>
-                                                                {(!isEditor || user?.username === 'mostafa') && (
+                                                                {canDelete && (
                                                                     <Button
                                                                         variant="ghost"
                                                                         size="icon"
@@ -1784,7 +1979,7 @@ const AdminDashboard = () => {
                                     <Input
                                         id="price"
                                         type="number"
-                                        disabled={false} /* تم الفتح مؤقتاً للتجربة */
+                                        disabled={!canEditPrice}
                                         value={currentProduct.price}
                                         onChange={(e) => setCurrentProduct({ ...currentProduct, price: parseFloat(e.target.value) })}
                                         className="h-11 rounded-xl"
@@ -1840,6 +2035,40 @@ const AdminDashboard = () => {
                                         checked={currentProduct.no_tax}
                                         onCheckedChange={(val) => setCurrentProduct({ ...currentProduct, no_tax: val })}
                                         className="data-[state=checked]:bg-orange-600 shadow-sm"
+                                        onClick={(e) => e.stopPropagation()}
+                                    />
+                                </div>
+                            </div>
+
+                            <div
+                                className={`p-5 rounded-[1.5rem] border-2 transition-all cursor-pointer select-none flex items-center justify-between group ${currentProduct.description?.includes('[DRAFT]') ? "bg-gray-200 border-gray-400 shadow-inner" : "bg-gray-50 border-gray-100 hover:border-gray-200"}`}
+                                onClick={() => {
+                                    const isDraft = currentProduct.description?.includes('[DRAFT]');
+                                    let newDesc = (currentProduct.description || '').replace('[DRAFT]', '').trim();
+                                    if (!isDraft) newDesc = `${newDesc} [DRAFT]`.trim();
+                                    setCurrentProduct({ ...currentProduct, description: newDesc });
+                                }}
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center transition-all duration-300 ${currentProduct.description?.includes('[DRAFT]') ? "bg-gray-800 text-white shadow-lg" : "bg-gray-200 text-gray-400 group-hover:bg-gray-600 group-hover:text-white"}`}>
+                                        <Trash2 className="h-6 w-6" />
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        <h4 className={`text-base font-black transition-colors ${currentProduct.description?.includes('[DRAFT]') ? "text-gray-900" : "text-gray-900"}`}>وضع الدرافت (إخفاء)</h4>
+                                        <p className={`text-[11px] font-bold transition-colors ${currentProduct.description?.includes('[DRAFT]') ? "text-red-600" : "text-gray-400"}`}>
+                                            {currentProduct.description?.includes('[DRAFT]') ? "هذا الصنف الآن في قسم الدرافت فقط وغير ظاهر للعملاء" : "إرسال هذا الصنف لقسم الدرافت لإخفائه مؤقتاً"}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="scale-110">
+                                    <Switch
+                                        checked={currentProduct.description?.includes('[DRAFT]')}
+                                        onCheckedChange={(val) => {
+                                            let newDesc = (currentProduct.description || '').replace('[DRAFT]', '').trim();
+                                            if (val) newDesc = `${newDesc} [DRAFT]`.trim();
+                                            setCurrentProduct({ ...currentProduct, description: newDesc });
+                                        }}
+                                        className="data-[state=checked]:bg-gray-800 shadow-sm"
                                         onClick={(e) => e.stopPropagation()}
                                     />
                                 </div>
