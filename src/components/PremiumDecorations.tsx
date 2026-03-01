@@ -6,16 +6,17 @@ import { cn } from "@/lib/utils";
 const PremiumDecorations = () => {
     // Array of positions and types for variety
     const decorations = [
-        { left: '5%', height: '120px', type: 'star', delay: '0s', size: '12px', showOnMobile: true },
-        { left: '15%', height: '180px', type: 'lantern', delay: '0.5s', size: '24px', showOnMobile: false },
-        { left: '25%', height: '140px', type: 'lantern', delay: '1.2s', size: '18px', showOnMobile: true }, // small lantern for mobile
-        { left: '35%', height: '220px', type: 'star', delay: '0.8s', size: '18px', showOnMobile: false },
-        { left: '45%', height: '160px', type: 'star', delay: '1.5s', size: '14px', showOnMobile: true },
-        { left: '55%', height: '200px', type: 'lantern', delay: '0.3s', size: '28px', showOnMobile: false },
-        { left: '70%', height: '130px', type: 'lantern', delay: '2.1s', size: '16px', showOnMobile: true }, // small lantern for mobile
-        { left: '80%', height: '190px', type: 'star', delay: '1.7s', size: '20px', showOnMobile: false },
-        { left: '90%', height: '150px', type: 'star', delay: '0.9s', size: '13px', showOnMobile: true },
-        { left: '98%', height: '210px', type: 'lantern', delay: '2.5s', size: '22px', showOnMobile: false },
+        { left: '5%', height: '140px', type: 'star', delay: '0s', size: '14px', showOnMobile: true },
+        { left: '15%', height: '200px', type: 'lantern', delay: '0.5s', size: '28px', showOnMobile: true },
+        { left: '25%', height: '160px', type: 'lantern', delay: '1.2s', size: '22px', showOnMobile: true },
+        { left: '35%', height: '240px', type: 'star', delay: '0.8s', size: '20px', showOnMobile: false },
+        { left: '45%', height: '180px', type: 'star', delay: '1.5s', size: '16px', showOnMobile: true },
+        { left: '55%', height: '220px', type: 'lantern', delay: '0.3s', size: '32px', showOnMobile: true },
+        { left: '65%', height: '190px', type: 'lantern', delay: '1.8s', size: '26px', showOnMobile: true },
+        { left: '75%', height: '150px', type: 'lantern', delay: '2.1s', size: '18px', showOnMobile: true },
+        { left: '85%', height: '210px', type: 'star', delay: '1.7s', size: '24px', showOnMobile: false },
+        { left: '92%', height: '170px', type: 'star', delay: '0.9s', size: '15px', showOnMobile: true },
+        { left: '98%', height: '230px', type: 'lantern', delay: '2.5s', size: '25px', showOnMobile: true },
     ];
 
     return (
@@ -24,7 +25,11 @@ const PremiumDecorations = () => {
                 {decorations.map((dec, idx) => (
                     <div
                         key={idx}
-                        className={`absolute top-0 flex flex-col items-center animate-sway will-change-transform ${dec.showOnMobile ? 'flex' : 'hidden sm:flex'}`}
+                        className={cn(
+                            "absolute top-0 flex flex-col items-center will-change-transform",
+                            idx % 2 === 0 ? "animate-sway" : "animate-sway-slow",
+                            dec.showOnMobile ? 'flex' : 'hidden sm:flex'
+                        )}
                         style={{
                             left: dec.left,
                             height: dec.height,
@@ -36,10 +41,7 @@ const PremiumDecorations = () => {
                         <div className="w-[0.5px] h-full bg-gradient-to-b from-transparent via-secondary/30 to-secondary/60" />
 
                         {/* Decoration Item */}
-                        <div className={cn(
-                            "relative -mt-1 flex items-center justify-center",
-                            idx % 2 === 0 ? "animate-sway" : "animate-sway-slow"
-                        )}>
+                        <div className="relative -mt-1 flex items-center justify-center">
                             {dec.type === 'star' ? (
                                 <Star
                                     className="text-secondary fill-secondary lux-glow"

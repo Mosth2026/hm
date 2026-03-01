@@ -59,6 +59,7 @@ const Hero = () => {
       <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-secondary/10 rounded-full blur-3xl pointer-events-none" />
 
       <div className="container mx-auto px-4 md:px-8 relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start pt-0">
           {/* Content Section */}
           <div className="space-y-6 md:space-y-8 text-right order-2 lg:order-1">
             <div className="flex flex-wrap items-center gap-4 justify-start lg:justify-end">
