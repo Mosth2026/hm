@@ -319,10 +319,10 @@ const Header = () => {
                   key={link.path}
                   to={link.path}
                   className={cn(
-                    "px-4 py-2 text-[11px] font-black uppercase tracking-wider rounded-xl transition-all whitespace-nowrap",
+                    "px-5 py-2.5 text-[13px] font-black uppercase tracking-wider rounded-xl transition-all whitespace-nowrap border-b-2 shadow-sm",
                     isActive
-                      ? "bg-primary text-white shadow-lg shadow-primary/20 scale-105"
-                      : "bg-primary/5 text-primary/60 hover:bg-primary/10"
+                      ? "bg-primary text-white border-secondary scale-105 shadow-primary/20"
+                      : "bg-white/50 text-primary/70 border-transparent hover:bg-primary/5 hover:text-primary"
                   )}
                 >
                   {link.name}

@@ -218,15 +218,13 @@
 }
 
 @keyframes sway {
+  0%, 100% { transform: rotate(-8deg); }
+  50% { transform: rotate(8deg); }
+}
 
-  0%,
-  100% {
-    transform: rotate(-2deg);
-  }
-
-  50% {
-    transform: rotate(2deg);
-  }
+@keyframes sway-slow {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
 }
 
 .animate-float {
@@ -234,8 +232,15 @@
 }
 
 .animate-sway {
-  animation: sway 6s ease-in-out infinite;
+  animation: sway 5s ease-in-out infinite;
   transform-origin: top center;
+}
+.animate-sway-slow {
+  animation: sway-slow 8s ease-in-out infinite;
+  transform-origin: top center;
+}
+.lux-glow {
+  filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.4));
 }
 
 .hover-lift {

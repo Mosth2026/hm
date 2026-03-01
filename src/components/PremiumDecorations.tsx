@@ -1,6 +1,7 @@
 
 import React from "react";
 import { Star } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const PremiumDecorations = () => {
     // Array of positions and types for variety
@@ -35,27 +36,52 @@ const PremiumDecorations = () => {
                         <div className="w-[0.5px] h-full bg-gradient-to-b from-transparent via-secondary/30 to-secondary/60" />
 
                         {/* Decoration Item */}
-                        <div className="relative -mt-1 flex items-center justify-center">
+                        <div className={cn(
+                            "relative -mt-1 flex items-center justify-center",
+                            idx % 2 === 0 ? "animate-sway" : "animate-sway-slow"
+                        )}>
                             {dec.type === 'star' ? (
                                 <Star
-                                    className="text-secondary fill-secondary drop-shadow-[0_0_8px_rgba(var(--secondary),0.5)]"
+                                    className="text-secondary fill-secondary lux-glow"
                                     style={{ width: dec.size, height: dec.size }}
                                 />
                             ) : (
                                 <svg
-                                    viewBox="0 0 100 100"
-                                    className="text-secondary fill-secondary drop-shadow-[0_0_12px_rgba(var(--secondary),0.4)]"
-                                    style={{ width: dec.size, height: dec.size }}
+                                    viewBox="0 0 100 120"
+                                    className="text-secondary fill-secondary lux-glow"
+                                    style={{ width: dec.size, height: `calc(${dec.size} * 1.2)` }}
                                 >
-                                    {/* Elegant Lantern (Fanous) Design */}
-                                    <path d="M50 5 L42 15 L58 15 Z" />
-                                    <path d="M30 15 L70 15 L82 35 L70 55 L30 55 L18 35 Z" className="opacity-90" />
-                                    <rect x="38" y="22" width="24" height="26" rx="2" className="fill-white/20" />
-                                    <path d="M30 55 L42 75 L58 75 L70 55 Z" />
-                                    <path d="M45 75 L40 85 L60 85 L55 75 Z" />
+                                    {/* Luxurious Gold Gradient Definition */}
+                                    <defs>
+                                        <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                            <stop offset="0%" style={{ stopColor: '#FFD700' }} />
+                                            <stop offset="50%" style={{ stopColor: '#DAA520' }} />
+                                            <stop offset="100%" style={{ stopColor: '#B8860B' }} />
+                                        </linearGradient>
+                                        <filter id="glow">
+                                            <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
+                                            <feMerge>
+                                                <feMergeNode in="coloredBlur" />
+                                                <feMergeNode in="SourceGraphic" />
+                                            </feMerge>
+                                        </filter>
+                                    </defs>
 
-                                    {/* Inner Light Effect */}
-                                    <circle cx="50" cy="35" r="8" className="fill-white/40 blur-[2px]" />
+                                    {/* Detailed Lantern Body */}
+                                    <path d="M50 5 L42 18 L58 18 Z" fill="url(#goldGradient)" />
+                                    <path d="M30 18 L70 18 L85 45 L70 75 L30 75 L15 45 Z" fill="url(#goldGradient)" className="opacity-95" />
+                                    
+                                    {/* Glass/Window Effect */}
+                                    <path d="M38 25 L62 25 L68 45 L62 65 L38 65 L32 45 Z" fill="white" fillOpacity="0.1" />
+                                    
+                                    {/* Inner Light Flare */}
+                                    <circle cx="50" cy="45" r="10" fill="white" fillOpacity="0.4" filter="url(#glow)" />
+                                    <circle cx="50" cy="45" r="5" fill="white" fillOpacity="0.8" />
+                                    
+                                    {/* Decorative Filigree */}
+                                    <path d="M30 18 L70 18 M30 75 L70 75 M15 45 L85 45" stroke="white" strokeWidth="0.5" strokeOpacity="0.3" />
+                                    <path d="M50 75 L40 100 L60 100 L50 75 Z" fill="url(#goldGradient)" />
+                                    <path d="M45 100 L40 110 L60 110 L55 100 Z" fill="url(#goldGradient)" />
                                 </svg>
                             )}
 
