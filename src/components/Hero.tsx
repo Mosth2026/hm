@@ -72,11 +72,11 @@ const Hero = () => {
 
             <div className="space-y-4">
               <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-primary leading-[1.1]">
-                فن اختيار <br />
-                <span className="text-secondary italic">السعادة العالمية</span>
+                صناع السعادة <br />
+                <span className="text-secondary italic">أصل المستورد</span>
               </h1>
               <p className="text-lg md:text-xl text-muted-foreground max-w-xl leading-relaxed font-medium">
-                بخبرة تزيد عن 15 عاماً في قطاع التجزئة الفاخر، ننتقي لك بعناية فائقة أفضل ما جربه المسافرون في عواصم العالم. منتجاتنا ليست مجرد سناكس، بل هي قصص وذكريات تأتي إليك بمعايير الجودة العالمية.
+                أكبر تشكيلة في مصر من الشوكولاتة، الكاندي، القهوة، والاسناكس العالمية الفاخرة. ننتقي لكم أجود الماركات التي تحبونها بأفضل العروض والأسعار، في 7 فروع تخدمكم بالقاهرة والإسكندرية.
               </p>
             </div>
 

@@ -9,14 +9,15 @@ import Newsletter from "@/components/Newsletter";
 import LuxuryExperience from "@/components/LuxuryExperience";
 import LifestyleCollections from "@/components/LifestyleCollections";
 import TrustBanner from "@/components/TrustBanner";
+import SocialBanner from "@/components/SocialBanner";
 import { Helmet } from "react-helmet-async";
 
 const Index = () => {
   return (
     <>
       <Helmet>
-        <title>صناع السعادة | أرقى المنتجات العالمية في مصر</title>
-        <meta name="description" content="وجهتك الأولى لأفخر أنواع الشوكولاتة، القهوة المختصة، والسناكس العالمية. نأتي لك بجودة عواصم العالم إلى باب منزلك في مصر." />
+        <title>صناع السعادة | أكبر تشكيلة منتجات عالمية في مصر</title>
+        <meta name="description" content="صناع السعادة (Sana'a Al-Saada) وجهتك الأولى لأفخر أنواع الشوكولاتة، الكاندي، القهوة، والسناكس المستوردة. فروعنا في القاهرة والإسكندرية تخدمكم بأفضل الماركات العالمية." />
       </Helmet>
 
       <LuxuryExperience />
@@ -29,6 +30,7 @@ const Index = () => {
           <LifestyleCollections />
           <FeaturedProducts />
           <Features />
+          <SocialBanner />
           <Testimonials />
           <Newsletter />
         </main>

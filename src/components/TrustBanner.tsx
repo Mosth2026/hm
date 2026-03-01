@@ -1,6 +1,6 @@
 
 const brands = [
-    "Lindt", "Godiva", "Nutella", "Lavazza", "Starbucks", "Lotus", "Milka", "Ferrero Rocher", "Toblerone", "Nespresso"
+    "Lindt", "Takis", "Pringles", "Nutella", "Lavazza", "Starbucks", "Lotus", "Milka", "Monster", "Kinder", "Ferrero Rocher"
 ];
 
 const TrustBanner = () => {

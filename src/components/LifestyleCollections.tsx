@@ -4,27 +4,27 @@ import { Link } from "react-router-dom";
 
 const collections = [
     {
-        title: "طقوس الصباح",
-        subtitle: "كل ما تحتاجه لبداية يوم راقية",
-        icon: <Coffee className="h-8 w-8" />,
-        link: "/categories/coffee",
-        image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1000&auto=format&fit=crop",
+        title: "ركن الشوكولاتة",
+        subtitle: "أفخم أنواع الشوكولاتة العالمية والمستوردة",
+        icon: <Martini className="h-8 w-8" />,
+        link: "/categories/chocolate",
+        image: "https://images.unsplash.com/photo-1549007994-cb92cfd7d4d9?q=80&w=1000&auto=format&fit=crop",
         color: "from-amber-500 to-orange-700"
     },
     {
-        title: "سهرة العائلة",
-        subtitle: "سناكس ومسليات من حول العالم",
+        title: "عالم السناكس",
+        subtitle: "تشكيلة مذهلة من الشيبس والمسليات الفريدة",
         icon: <Utensils className="h-8 w-8" />,
         link: "/categories/snacks",
         image: "https://images.unsplash.com/photo-1599490659223-930b447ff317?q=80&w=1000&auto=format&fit=crop",
         color: "from-purple-500 to-indigo-700"
     },
     {
-        title: "لحظات الامتنان",
-        subtitle: "أرقى صناديق الهدايا لمن تحب",
-        icon: <Gift className="h-8 w-8" />,
-        link: "/categories/gifts",
-        image: "https://images.unsplash.com/photo-1549465220-1a8b9238cd48?q=80&w=1000&auto=format&fit=crop",
+        title: "عشاق القهوة",
+        subtitle: "حبوب، كبسولات، ومشروبات القهوة الجاهزة",
+        icon: <Coffee className="h-8 w-8" />,
+        link: "/categories/coffee",
+        image: "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=1000&auto=format&fit=crop",
         color: "from-rose-500 to-red-700"
     }
 ];
