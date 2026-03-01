@@ -24,7 +24,7 @@ import PremiumDecorations from "./components/PremiumDecorations";
 
 // Forced cleanup for multiple account conflicts
 try {
-  const version = "3.2.2-luxury";
+  const version = "3.2.5-final";
   if (typeof window !== 'undefined' && localStorage.getItem('site_v') !== version) {
     localStorage.clear();
     localStorage.setItem('site_v', version);
