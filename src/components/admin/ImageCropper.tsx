@@ -42,10 +42,10 @@ const ImageCropper: React.FC<ImageCropperProps> = ({ image, open, onClose, onCro
         if (!croppedAreaPixels || isProcessing) return;
         setIsProcessing(true);
         try {
-            console.log("Starting crop process...");
+            
             const croppedImage = await getCroppedImg(image, croppedAreaPixels, rotation)
             if (croppedImage) {
-                console.log("Crop successful, calling completion...");
+                
                 await onCropComplete(croppedImage)
             } else {
                 throw new Error("فشل توليد الصورة المقصوصة");

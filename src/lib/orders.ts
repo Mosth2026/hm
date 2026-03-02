@@ -17,7 +17,7 @@ export const saveOrderToDb = async (
     status: string = "pending"
 ) => {
     try {
-        console.log("Saving order to Supabase...", { customerInfo, totalPrice });
+        
 
         const roundedTotal = Math.round(Number(totalPrice) * 100) / 100;
 

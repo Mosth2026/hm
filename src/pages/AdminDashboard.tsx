@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from "react";
-// Force rebuild timestamp: 2026-02-28 20:48 (Reset Sync)
 import { useAuth, UserRole } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import {

@@ -25,7 +25,7 @@ export const useAuth = create<AuthState>()(
                 const u = String(uRaw || "").trim().toLowerCase();
                 const p = String(pRaw || "").trim().toLowerCase();
 
-                console.log("LOGIN CHECK:", { u, p });
+                
 
                 const isHesham = u === 'hesham' || u === 'h' || u === 'هشام';
                 const isPass = p === 'hfikry' || p === 'h';
