@@ -22,16 +22,13 @@ import WhatsAppWidget from "./components/WhatsAppWidget";
 import LuxuryExperience from "./components/LuxuryExperience";
 import PremiumDecorations from "./components/PremiumDecorations";
 
-// Forced cleanup for multiple account conflicts
 try {
   const version = "3.2.5-final";
   if (typeof window !== 'undefined' && localStorage.getItem('site_v') !== version) {
     localStorage.clear();
     localStorage.setItem('site_v', version);
   }
-} catch (e) {
-  console.error("Cleanup failed", e);
-}
+} catch (e) {}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,8 +45,7 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
     this.state = { hasError: false };
   }
   static getDerivedStateFromError() { return { hasError: true }; }
-  componentDidCatch(error: any, errorInfo: any) {
-    console.error("CRITICAL UI ERROR:", error, errorInfo);
+  componentDidCatch() {
   }
   render() {
     if (this.state.hasError) {
