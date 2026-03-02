@@ -49,19 +49,18 @@ const PremiumDecorations = () => {
                                 />
                             ) : (
                                 <svg
-                                    viewBox="0 0 100 120"
+                                    viewBox="0 0 100 130"
                                     className="text-secondary fill-secondary lux-glow"
-                                    style={{ width: dec.size, height: `calc(${dec.size} * 1.2)` }}
+                                    style={{ width: dec.size, height: `calc(${dec.size} * 1.3)` }}
                                 >
-                                    {/* Luxurious Gold Gradient Definition */}
                                     <defs>
                                         <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                                             <stop offset="0%" style={{ stopColor: '#FFD700' }} />
-                                            <stop offset="50%" style={{ stopColor: '#DAA520' }} />
-                                            <stop offset="100%" style={{ stopColor: '#B8860B' }} />
+                                            <stop offset="50%" style={{ stopColor: '#FDB931' }} />
+                                            <stop offset="100%" style={{ stopColor: '#9E7E38' }} />
                                         </linearGradient>
                                         <filter id="glow">
-                                            <feGaussianBlur stdDeviation="2.5" result="coloredBlur" />
+                                            <feGaussianBlur stdDeviation="3" result="coloredBlur" />
                                             <feMerge>
                                                 <feMergeNode in="coloredBlur" />
                                                 <feMergeNode in="SourceGraphic" />
@@ -69,21 +68,36 @@ const PremiumDecorations = () => {
                                         </filter>
                                     </defs>
 
-                                    {/* Detailed Lantern Body */}
-                                    <path d="M50 5 L42 18 L58 18 Z" fill="url(#goldGradient)" />
-                                    <path d="M30 18 L70 18 L85 45 L70 75 L30 75 L15 45 Z" fill="url(#goldGradient)" className="opacity-95" />
+                                    {/* Traditional Fanous (Egyptian Style) */}
+                                    {/* Top Ring */}
+                                    <circle cx="50" cy="5" r="3" fill="none" stroke="url(#goldGradient)" strokeWidth="1.5" />
                                     
-                                    {/* Glass/Window Effect */}
-                                    <path d="M38 25 L62 25 L68 45 L62 65 L38 65 L32 45 Z" fill="white" fillOpacity="0.1" />
+                                    {/* Dome Top */}
+                                    <path d="M50 8 L35 22 L65 22 Z" fill="url(#goldGradient)" />
                                     
-                                    {/* Inner Light Flare */}
-                                    <circle cx="50" cy="45" r="10" fill="white" fillOpacity="0.4" filter="url(#glow)" />
-                                    <circle cx="50" cy="45" r="5" fill="white" fillOpacity="0.8" />
+                                    {/* Upper Tier */}
+                                    <path d="M30 22 L70 22 L78 35 L22 35 Z" fill="url(#goldGradient)" opacity="0.9" />
                                     
-                                    {/* Decorative Filigree */}
-                                    <path d="M30 18 L70 18 M30 75 L70 75 M15 45 L85 45" stroke="white" strokeWidth="0.5" strokeOpacity="0.3" />
-                                    <path d="M50 75 L40 100 L60 100 L50 75 Z" fill="url(#goldGradient)" />
-                                    <path d="M45 100 L40 110 L60 110 L55 100 Z" fill="url(#goldGradient)" />
+                                    {/* Main Glass Body */}
+                                    <path d="M22 35 L78 35 L85 65 L15 65 Z" fill="url(#goldGradient)" opacity="0.85" />
+                                    
+                                    {/* Detailed Glass Patterns (Windows) */}
+                                    <path d="M35 40 L65 40 L72 60 L28 60 Z" fill="white" fillOpacity="0.15" />
+                                    <rect x="48" y="40" width="4" height="20" fill="white" fillOpacity="0.1" />
+                                    
+                                    {/* Inner Light */}
+                                    <circle cx="50" cy="50" r="12" fill="white" fillOpacity="0.3" filter="url(#glow)" />
+                                    <circle cx="50" cy="50" r="6" fill="white" fillOpacity="0.6" />
+                                    
+                                    {/* Lower Flare */}
+                                    <path d="M15 65 L85 65 L75 85 L25 85 Z" fill="url(#goldGradient)" />
+                                    
+                                    {/* Tiered Base */}
+                                    <path d="M25 85 L35 105 L65 105 L75 85 Z" fill="url(#goldGradient)" opacity="0.9" />
+                                    <path d="M40 105 L35 115 L65 115 L60 105 Z" fill="url(#goldGradient)" />
+                                    
+                                    {/* Decorative Borders */}
+                                    <path d="M30 22 L70 22 M22 35 L78 35 M15 65 L85 65 M25 85 L75 85" stroke="rgba(255,255,255,0.4)" strokeWidth="0.5" />
                                 </svg>
                             )}
 
