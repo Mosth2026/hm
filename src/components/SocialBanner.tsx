@@ -53,7 +53,7 @@ const SocialBanner = () => {
                   size="lg"
                   className="h-16 px-10 bg-[#1877F2] hover:bg-[#0d65d9] text-white rounded-2xl text-xl font-black shadow-xl shadow-blue-600/20 transition-all hover:scale-105 group"
                 >
-                  <a href="https://www.facebook.com/Happiness.Makers.2" target="_blank" rel="noopener noreferrer">
+                  <a href="https://www.facebook.com/share/1HpTkYTqRf/" target="_blank" rel="noopener noreferrer">
                     <Facebook className="ml-3 h-6 w-6 transition-transform group-hover:scale-110" />
                     تابعنا على فيسبوك
                   </a>

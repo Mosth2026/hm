@@ -25,15 +25,22 @@ const Footer = () => {
               نحن لا نصنع المنتجات، بل ننتقي لك أجود الخيارات العالمية والماركات الفاخرة التي تملأ حياتك بذكريات السعادة الحقيقية.
             </p>
             <div className="flex items-center gap-4">
-              {[Facebook, Instagram, Twitter].map((Icon, idx) => (
-                <a
-                  key={idx}
-                  href="#"
-                  className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary hover:-translate-y-2 transition-all duration-500"
-                >
-                  <Icon className="h-6 w-6" />
-                </a>
-              ))}
+              <a
+                href="https://www.facebook.com/share/1HpTkYTqRf/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary hover:-translate-y-2 transition-all duration-500"
+              >
+                <Facebook className="h-6 w-6" />
+              </a>
+              <a
+                href="https://www.instagram.com/happiness.makers.20?igsh=anRnZ2Mzcmw2Ymdk"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-12 w-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary hover:-translate-y-2 transition-all duration-500"
+              >
+                <Instagram className="h-6 w-6" />
+              </a>
             </div>
           </div>
 
