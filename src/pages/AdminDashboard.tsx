@@ -760,7 +760,6 @@ const AdminDashboard = () => {
         if (!file) return;
         const reader = new FileReader();
         reader.onload = async (evt) => {
-            console.log("DEBUG: handleExcelImport LOADED - v94");
             const barcodeMap = new Map<string, number>();
             const categoryMap = new Map<string, number>();
             const dbProductMap = new Map<number, any>();

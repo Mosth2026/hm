@@ -1,6 +1,7 @@
 
-import { Facebook, MessageCircle, Users, Heart } from "lucide-react";
+import { Facebook, Instagram, MessageCircle, Users, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const SocialBanner = () => {
   return (
@@ -16,9 +17,15 @@ const SocialBanner = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
             
             <div className="space-y-8 text-right">
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-600/20 text-blue-400 text-xs font-black uppercase tracking-widest border border-blue-600/30">
-                <Facebook className="h-4 w-4" />
-                Facebook Community
+              <div className="flex items-center gap-4">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-600/20 text-blue-400 text-xs font-black uppercase tracking-widest border border-blue-600/30">
+                  <Facebook className="h-4 w-4" />
+                  Facebook Community
+                </div>
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-600/20 text-pink-400 text-xs font-black uppercase tracking-widest border border-pink-600/30">
+                  <Instagram className="h-4 w-4" />
+                  Instagram Feed
+                </div>
               </div>
               <h2 className="text-4xl md:text-6xl font-black text-white leading-tight">
                 انضم لأكبر تجمع <br />
@@ -47,19 +54,19 @@ const SocialBanner = () => {
                   className="h-16 px-10 bg-[#1877F2] hover:bg-[#0d65d9] text-white rounded-2xl text-xl font-black shadow-xl shadow-blue-600/20 transition-all hover:scale-105 group"
                 >
                   <a href="https://www.facebook.com/Happiness.Makers.2" target="_blank" rel="noopener noreferrer">
-                    <Facebook className="ml-3 h-6 w-6" />
+                    <Facebook className="ml-3 h-6 w-6 transition-transform group-hover:scale-110" />
                     تابعنا على فيسبوك
                   </a>
                 </Button>
                 <Button 
-                  variant="outline"
-                  size="lg"
-                  className="h-16 px-10 rounded-2xl text-xl font-black border-2 border-white/10 text-white hover:bg-white hover:text-primary transition-all group"
                   asChild
+                  size="lg"
+                  className="h-16 px-10 bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] hover:opacity-90 text-white rounded-2xl text-xl font-black shadow-xl shadow-purple-600/20 transition-all hover:scale-105 group border-0"
                 >
-                    <Link to="/products">
-                        تصفح الكتالوج الكامل
-                    </Link>
+                  <a href="https://www.instagram.com/happiness.makers.20?igsh=anRnZ2Mzcmw2Ymdk" target="_blank" rel="noopener noreferrer">
+                    <Instagram className="ml-3 h-6 w-6 transition-transform group-hover:scale-110" />
+                    تابعنا على انستجرام
+                  </a>
                 </Button>
               </div>
             </div>
@@ -69,15 +76,15 @@ const SocialBanner = () => {
                 <div className="relative bg-white rounded-[3.5rem] p-4 shadow-2xl rotate-2 group-hover:rotate-0 transition-all duration-700">
                     <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden relative">
                          <img 
-                            src="https://images.unsplash.com/photo-1559181567-c3190ca9959b?auto=format&fit=crop&q=80&w=1000" 
-                            alt="Suna Al Saada Facebook" 
+                            src="/assets/social-joy.png"
+                            alt="Suna Al Saada Community" 
                             className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700"
                          />
-                         <div className="absolute inset-0 bg-gradient-to-t from-blue-900/60 via-transparent to-transparent" />
+                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                          
                          <div className="absolute bottom-8 left-8 right-8 bg-white/10 backdrop-blur-md p-6 rounded-3xl border border-white/20">
                             <div className="flex items-center gap-4">
-                                <div className="h-12 w-12 bg-blue-600 rounded-full flex items-center justify-center text-white shadow-lg">
+                                <div className="h-12 w-12 bg-secondary rounded-full flex items-center justify-center text-primary shadow-lg">
                                     <Users className="h-6 w-6" />
                                 </div>
                                 <div className="text-white">
@@ -99,4 +106,3 @@ const SocialBanner = () => {
 
 export default SocialBanner;
 
-import { Link } from "react-router-dom";

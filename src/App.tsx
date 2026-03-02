@@ -28,7 +28,6 @@ try {
   if (typeof window !== 'undefined' && localStorage.getItem('site_v') !== version) {
     localStorage.clear();
     localStorage.setItem('site_v', version);
-    console.log("Storage cleared for Luxury update");
   }
 } catch (e) {
   console.error("Cleanup failed", e);
