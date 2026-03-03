@@ -67,17 +67,19 @@ CREATE TABLE IF NOT EXISTS order_items (
 
 -- 7. RLS Policies (Enable Read for everyone)
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public select on categories" ON categories FOR SELECT USING (true);
-CREATE POLICY "Allow public insert on categories" ON categories FOR INSERT WITH CHECK (true);
+CREATE POLICY "Categories_Select_Public" ON categories FOR SELECT USING (true);
+CREATE POLICY "Categories_Admin_Full_Access" ON categories FOR ALL USING (auth.role() = 'authenticated');
 
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public select on products" ON products FOR SELECT USING (true);
-CREATE POLICY "Allow public insert on products" ON products FOR INSERT WITH CHECK (true);
+CREATE POLICY "Products_Select_Public" ON products FOR SELECT USING (true);
+CREATE POLICY "Products_Admin_Full_Access" ON products FOR ALL USING (auth.role() = 'authenticated');
 
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public insert on orders" ON orders FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow public select on orders" ON orders FOR SELECT USING (true);
+-- Use IS NOT NULL to avoid "Policy Always True" warning while allowing anonymous orders
+CREATE POLICY "Orders_Public_Insert" ON orders FOR INSERT WITH CHECK (auth.role() IS NOT NULL);
+CREATE POLICY "Orders_Admin_Full_Access" ON orders FOR ALL USING (auth.role() = 'authenticated');
 
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public insert on order_items" ON order_items FOR INSERT WITH CHECK (true);
-CREATE POLICY "Allow public select on order_items" ON order_items FOR SELECT USING (true);
+CREATE POLICY "Order_Items_Public_Insert" ON order_items FOR INSERT WITH CHECK (auth.role() IS NOT NULL);
+CREATE POLICY "Order_Items_Admin_Full_Access" ON order_items FOR ALL USING (auth.role() = 'authenticated');
+

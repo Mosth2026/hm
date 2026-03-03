@@ -69,7 +69,12 @@ import { SITE_CONFIG } from "@/lib/constants";
 const PLACEHOLDER_IMAGE = SITE_CONFIG.placeholderImage;
 
 const AdminDashboard = () => {
-    const { user, isAuthenticated, login, logout } = useAuth();
+    const { user, isAuthenticated, login, logout, initialize } = useAuth();
+
+    useEffect(() => {
+        initialize();
+    }, []);
+
     const [authData, setAuthData] = useState({ username: '', password: '' });
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
@@ -244,7 +249,7 @@ const AdminDashboard = () => {
             });
 
             const conflicts: { key: string, items: Product[] }[] = [];
-            
+
             // إضافة مجموعات الباركود المكررة فعلياً
             barcodeGroups.forEach((items, code) => {
                 if (items.length > 1) {
@@ -799,10 +804,10 @@ const AdminDashboard = () => {
 
                 dbProducts.forEach(p => {
                     dbProductMap.set(p.id, p);
-                    
+
                     const normName = normalize(p.name);
                     let pureBarcode = "";
-                    
+
                     // استخراج الباركود بشكل ذكي باستخدام Regex
                     if (p.description && p.description.includes('باركود:')) {
                         const match = p.description.match(/باركود:\s*(\d+)/);
@@ -810,7 +815,7 @@ const AdminDashboard = () => {
                     }
 
                     const hasImage = p.image && p.image !== PLACEHOLDER_IMAGE && !p.image.includes('unsplash.com');
-                    
+
                     // إذا وجدنا مكررات، نحفظ دائماً الـ ID الخاص بالنسخة التي لها صورة
                     if (pureBarcode) {
                         const existingId = barcodeMap.get(pureBarcode);
@@ -818,7 +823,7 @@ const AdminDashboard = () => {
                             barcodeMap.set(pureBarcode, p.id);
                         }
                     }
-                    
+
                     if (normName) {
                         const existingId = categoryMap.get(normName);
                         if (!existingId || hasImage) {
@@ -1214,9 +1219,12 @@ const AdminDashboard = () => {
                         </div>
                         <Button
                             className="w-full h-14 bg-saada-brown hover:bg-black text-white rounded-xl font-bold text-lg shadow-xl transition-all"
-                            onClick={() => {
-                                if (!login(authData.username, authData.password)) {
-                                    toast.error("بيانات الدخول غير صحيحة");
+                            onClick={async () => {
+                                const result = await login(authData.username, authData.password);
+                                if (!result.success) {
+                                    toast.error("فشل تسجيل الدخول", {
+                                        description: result.error || "تأكد من بيانات الدخول"
+                                    });
                                 } else {
                                     toast.success("مرحباً بك مجدداً");
                                 }
@@ -1225,15 +1233,7 @@ const AdminDashboard = () => {
                             تسجيل الدخول
                         </Button>
 
-                        <div
-                            className="mt-4 text-center text-xs text-gray-300 hover:text-saada-red cursor-pointer transition-colors"
-                            onClick={() => {
-                                login('h', 'h');
-                                toast.success("مرحباً بك (دخول سريع)");
-                            }}
-                        >
-                            دخول سريع للمسؤول (تجربة)
-                        </div>
+
                     </CardContent>
                 </Card>
             </div>
