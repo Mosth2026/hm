@@ -76,8 +76,7 @@ const ProductCard = ({
         label: "عرض السلة",
         onClick: () => window.location.href = '/cart'
       },
-      style: { background: 'var(--primary)', color: 'white', borderRadius: '1rem', cursor: 'pointer' },
-      onClick: () => window.location.href = '/cart'
+      style: { background: 'var(--primary)', color: 'white', borderRadius: '1rem', cursor: 'pointer' }
     });
   };
 
