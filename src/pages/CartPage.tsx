@@ -138,10 +138,6 @@ const CartPage = () => {
                                             <span>إجمالي المنتجات</span>
                                             <span>{totalPrice.toFixed(totalPrice % 1 === 0 ? 0 : 1)} ج.م</span>
                                         </div>
-                                        <div className="flex justify-between text-gray-600">
-                                            <span>تخصيص التوصيل</span>
-                                            <span className="text-green-600 font-medium">مجاني</span>
-                                        </div>
                                         <div className="border-t pt-4 flex justify-between items-center">
                                             <span className="text-lg font-bold text-saada-brown">الإجمالي كلياً</span>
                                             <span className="text-2xl font-bold text-saada-red">{totalPrice.toFixed(totalPrice % 1 === 0 ? 0 : 1)} ج.م</span>

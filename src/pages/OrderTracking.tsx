@@ -256,10 +256,6 @@ const OrderTracking = () => {
                                         <span>إجمالي المنتجات</span>
                                         <span>{Number(order.total_price).toFixed(Number(order.total_price) % 1 === 0 ? 0 : 1)} ج.م</span>
                                     </div>
-                                    <div className="flex justify-between text-gray-600">
-                                        <span>التوصيل</span>
-                                        <span className="text-green-600 font-bold">مجاني</span>
-                                    </div>
                                     <div className="pt-2 border-t mt-2 flex justify-between text-saada-brown">
                                         <span className="font-black">الإجمالي الكلي</span>
                                         <span className="text-2xl font-black text-saada-red">{Number(order.total_price).toFixed(Number(order.total_price) % 1 === 0 ? 0 : 1)} ج.م</span>
