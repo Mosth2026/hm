@@ -2,10 +2,12 @@
 import { useParams } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { Button } from "@/components/ui/button";
 import ProductCard from "@/components/ProductCard";
 import { Helmet } from "react-helmet-async";
 import { useProducts } from "@/hooks/use-products";
-import { Loader2, Sparkles, Filter } from "lucide-react";
+import { Loader2, Sparkles, Filter, Share2 } from "lucide-react";
+import { toast } from "sonner";
 
 const categoryNames: Record<string, string> = {
   chocolate: "مختارات الشوكولاتة",
@@ -71,10 +73,32 @@ const CategoryPage = () => {
               {/* Toolbar */}
               <div className="flex items-center justify-between mb-12 py-4 border-b border-primary/5">
                 <p className="text-sm font-bold text-muted-foreground italic">عرض {products?.length || 0} منتج فاخر</p>
-                <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/5 hover:bg-primary/10 transition-colors text-sm font-black text-primary">
-                  <Filter className="h-4 w-4" />
-                  تصفية النتائج
-                </button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => {
+                      const url = window.location.href;
+                      if (navigator.share) {
+                        navigator.share({
+                          title: categoryName,
+                          text: `استكشف تشكيلة ${categoryName} الرائعة من صناع السعادة!`,
+                          url: url,
+                        }).catch(console.error);
+                      } else {
+                        navigator.clipboard.writeText(url);
+                        toast.success("تم نسخ رابط القسم! يمكنك مشاركته الآن.");
+                      }
+                    }}
+                    variant="ghost"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/5 hover:bg-primary/10 transition-colors text-sm font-black text-primary h-10"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    مشاركة القسم
+                  </Button>
+                  <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/5 hover:bg-primary/10 transition-colors text-sm font-black text-primary h-10">
+                    <Filter className="h-4 w-4" />
+                    تصفية النتائج
+                  </button>
+                </div>
               </div>
 
               {error ? (

@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Heart, Plus, Star } from "lucide-react";
+import { ShoppingCart, Heart, Plus, Star, Share2 } from "lucide-react";
 import { useCart } from "@/hooks/use-cart";
 import { toast } from "sonner";
 import { cn, cleanProductName } from "@/lib/utils";
@@ -80,6 +80,25 @@ const ProductCard = ({
     });
   };
 
+  const handleShare = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const url = `${window.location.origin}/products/${id}`;
+    const cleanName = cleanProductName(name);
+
+    if (navigator.share) {
+      navigator.share({
+        title: cleanName,
+        text: `شوف المنتج الرائع ده من صناع السعادة: ${cleanName}`,
+        url: url,
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText(url);
+      toast.success("تم نسخ رابط المنتج! يمكنك مشاركته الآن.");
+    }
+  };
+
   return (
     <div className="group relative bg-card rounded-[2rem] border border-primary/10 p-3 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 font-tajawal rtl h-full flex flex-col premium-card">
 
@@ -111,15 +130,24 @@ const ProductCard = ({
           )}
         </div>
 
-        {/* Quick Action Overlay */}
         <div className="absolute inset-x-4 bottom-4 flex justify-between items-center opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-500 z-10">
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-10 w-10 bg-white/80 backdrop-blur-md rounded-full shadow-xl text-primary hover:bg-secondary hover:text-white transition-colors"
-          >
-            <Heart className="h-5 w-5" />
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleShare}
+              className="h-10 w-10 bg-white/80 backdrop-blur-md rounded-full shadow-xl text-primary hover:bg-secondary hover:text-white transition-colors"
+            >
+              <Share2 className="h-5 w-5" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-10 w-10 bg-white/80 backdrop-blur-md rounded-full shadow-xl text-primary hover:bg-secondary hover:text-white transition-colors overflow-hidden"
+            >
+              <Heart className="h-5 w-5" />
+            </Button>
+          </div>
           <Button
             size="icon"
             variant="ghost"

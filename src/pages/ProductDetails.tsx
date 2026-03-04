@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Heart, ChevronRight, Loader2, ShieldCheck, Truck, RotateCcw, Star, MessageCircle, Plus, Minus } from "lucide-react";
+import { ShoppingCart, Heart, ChevronRight, Loader2, ShieldCheck, Truck, RotateCcw, Star, MessageCircle, Plus, Minus, Share2 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import { useProduct } from "@/hooks/use-products";
@@ -286,6 +286,28 @@ const ProductDetails = () => {
                   >
                     <MessageCircle className="h-5 w-5" />
                     <span>اطلب عبر واتساب</span>
+                  </Button>
+
+                  <Button
+                    onClick={() => {
+                      const url = window.location.href;
+                      const cleanName = cleanProductName(product.name);
+                      if (navigator.share) {
+                        navigator.share({
+                          title: cleanName,
+                          text: `شوف المنتج الرائع ده من صناع السعادة: ${cleanName}`,
+                          url: url,
+                        }).catch(console.error);
+                      } else {
+                        navigator.clipboard.writeText(url);
+                        toast.success("تم نسخ رابط المنتج! يمكنك مشاركته الآن.");
+                      }
+                    }}
+                    variant="outline"
+                    size="lg"
+                    className="h-16 px-8 rounded-2xl border-2 border-primary/10 hover:border-secondary hover:bg-secondary/5 text-primary transition-all group shadow-sm"
+                  >
+                    <Share2 className="h-6 w-6 group-hover:scale-110 transition-transform" />
                   </Button>
 
                   <Button
