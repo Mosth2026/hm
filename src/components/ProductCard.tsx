@@ -1,9 +1,15 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Heart, Plus, Star, Share2 } from "lucide-react";
+import { ShoppingCart, Heart, Plus, Star, Share2, MessageCircle, Copy } from "lucide-react";
 import { useCart } from "@/hooks/use-cart";
 import { toast } from "sonner";
 import { cn, cleanProductName } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ProductCardProps {
   id: number;
@@ -80,6 +86,13 @@ const ProductCard = ({
     });
   };
 
+  const shareToWhatsApp = () => {
+    const url = `${window.location.origin}/products/${id}`;
+    const cleanName = cleanProductName(name);
+    const message = encodeURIComponent(`شوف المنتج الرائع ده من صناع السعادة: ${cleanName}\n${url}`);
+    window.open(`https://wa.me/?text=${message}`, '_blank');
+  };
+
   const handleShare = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -132,14 +145,28 @@ const ProductCard = ({
 
         <div className="absolute inset-x-4 bottom-4 flex justify-between items-center opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-500 z-10">
           <div className="flex gap-2">
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={handleShare}
-              className="h-10 w-10 bg-white/80 backdrop-blur-md rounded-full shadow-xl text-primary hover:bg-secondary hover:text-white transition-colors"
-            >
-              <Share2 className="h-5 w-5" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-10 w-10 bg-white/80 backdrop-blur-md rounded-full shadow-xl text-primary hover:bg-secondary hover:text-white transition-colors"
+                >
+                  <Share2 className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48 p-2 rounded-2xl border-primary/10 shadow-2xl font-tajawal rtl">
+                <DropdownMenuItem onClick={handleShare} className="rounded-xl gap-2 cursor-pointer focus:bg-primary focus:text-white font-bold py-3">
+                  <Copy className="h-4 w-4" />
+                  مشاركة كـ رابط
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={shareToWhatsApp} className="rounded-xl gap-2 cursor-pointer focus:bg-emerald-600 focus:text-white font-bold py-3 text-emerald-600">
+                  <MessageCircle className="h-4 w-4" />
+                  واتسـاب ويب
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button
               size="icon"
               variant="ghost"

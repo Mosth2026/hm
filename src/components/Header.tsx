@@ -97,9 +97,6 @@ const Header = () => {
           : "bg-white/80 backdrop-blur-md"
       )}>
         <div className="border-b border-primary/5">
-          <div className="bg-red-600 text-white text-[8px] font-bold text-center py-0.5 tracking-tighter uppercase px-2 whitespace-nowrap overflow-hidden">
-            Site Update v3.2.6 Live (Share Enabled)
-          </div>
           <div className="container mx-auto px-4 md:px-8 h-20 flex items-center justify-between gap-4 md:gap-12">
             <Link to="/" className="group flex items-center gap-3 shrink-0 relative transition-transform hover:scale-[1.02]">
               <div className="relative h-11 w-11 md:h-13 md:w-13 bg-white rounded-2xl flex items-center justify-center shadow-[0_10px_20px_rgba(0,0,0,0.1)] group-hover:shadow-secondary/20 group-hover:rotate-6 transition-all duration-500 overflow-hidden border border-primary/5">
