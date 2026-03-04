@@ -12,7 +12,7 @@ import { Helmet } from "react-helmet-async";
 import { SITE_CONFIG } from "@/lib/constants";
 
 const CheckoutPage = () => {
-    const { items, getTotalPrice, clearCart } = useCart();
+    const { items, getTotalPrice, getDiscountedTotal, appliedCoupon, clearCart } = useCart();
     const navigate = useNavigate();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
@@ -24,6 +24,8 @@ const CheckoutPage = () => {
     });
 
     const totalPrice = getTotalPrice();
+    const discountedTotal = getDiscountedTotal();
+    const discountAmount = totalPrice - discountedTotal;
 
     if (items.length === 0 && !isSuccess) {
         navigate("/cart");
@@ -57,7 +59,9 @@ const CheckoutPage = () => {
                             customer_phone: formData.phone,
                             customer_address: formData.address,
                             customer_notes: formData.notes + " (طلب عبر واتساب من صفحة الدفع)",
-                            total_price: totalPrice,
+                            total_price: discountedTotal,
+                            coupon_code: appliedCoupon?.code || "",
+                            discount_amount: discountAmount,
                             status: "pending",
                         },
                     ])
@@ -97,7 +101,7 @@ const CheckoutPage = () => {
             let invoiceUrl = `${window.location.origin}/order-preview/${orderId}`;
             if (!success) {
                 const itemsParam = items.map(i => `${i.id}-${i.quantity}`).join('_');
-                invoiceUrl += `?t=${totalPrice}&i=${itemsParam}`;
+                invoiceUrl += `?t=${discountedTotal}&i=${itemsParam}`;
             }
 
             const message = encodeURIComponent(
@@ -105,8 +109,9 @@ const CheckoutPage = () => {
                 `👤 *العميل:* ${formData.name}\n` +
                 `📞 *رقم الهاتف:* ${formData.phone}\n` +
                 `📍 *العنوان:* ${formData.address}\n\n` +
+                (appliedCoupon ? `🎟️ *كود الخصم:* ${appliedCoupon.code} (-${discountAmount} ج.م)\n\n` : "") +
                 `📦 *المنتجات:*\n${cartDetails}\n\n` +
-                `💰 *الإجمالي الكلي:* ${Number(totalPrice).toFixed(Number(totalPrice) % 1 === 0 ? 0 : 1)} ج.م\n\n` +
+                `💰 *الإجمالي الكلي:* ${Number(discountedTotal).toFixed(Number(discountedTotal) % 1 === 0 ? 0 : 1)} ج.م\n\n` +
                 `📄 *رابط الفاتورة الرقمية:* ${invoiceUrl}\n\n` +
                 `مرحباً صناع السعادة، أود إتمام هذا الطلب الذي سجلته على الموقع.`
             );
@@ -139,7 +144,9 @@ const CheckoutPage = () => {
                         customer_phone: formData.phone,
                         customer_address: formData.address,
                         customer_notes: formData.notes,
-                        total_price: totalPrice,
+                        total_price: discountedTotal,
+                        coupon_code: appliedCoupon?.code || "",
+                        discount_amount: discountAmount,
                         status: "pending",
                     },
                 ])
@@ -353,9 +360,23 @@ const CheckoutPage = () => {
                                     </div>
 
                                     <div className="bg-saada-brown text-white p-6 rounded-2xl shadow-lg">
+                                        {appliedCoupon && (
+                                            <div className="flex justify-between items-center mb-3 pb-3 border-b border-white/10">
+                                                <div className="flex items-center gap-2">
+                                                    <CreditCard className="h-4 w-4 text-saada-orange" />
+                                                    <span className="text-sm">الكود: {appliedCoupon.code}</span>
+                                                </div>
+                                                <span className="text-sm font-bold text-saada-orange">-{discountAmount} ج.م</span>
+                                            </div>
+                                        )}
                                         <div className="flex justify-between items-center mb-2">
-                                            <span className="opacity-80">الإجمالي الكلي</span>
-                                            <span className="text-2xl font-bold">{Number(totalPrice).toFixed(Number(totalPrice) % 1 === 0 ? 0 : 1)} ج.م</span>
+                                            <span className="opacity-80">الإجمالي {appliedCoupon ? "بعد الخصم" : "الكلي"}</span>
+                                            <div className="text-right">
+                                                {appliedCoupon && (
+                                                    <div className="text-[10px] line-through opacity-50 mb-1">{totalPrice} ج.م</div>
+                                                )}
+                                                <span className="text-2xl font-bold">{Number(discountedTotal).toFixed(Number(discountedTotal) % 1 === 0 ? 0 : 1)} ج.م</span>
+                                            </div>
                                         </div>
                                         <p className="text-[10px] opacity-60 text-center mt-4">
                                             بضغطك على تأكيد الطلب أنت توافق على شروط وأحكام متجر صناع السعادة

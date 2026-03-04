@@ -25,7 +25,8 @@ import {
     Merge,
     FileSpreadsheet,
     RefreshCw,
-    Percent
+    Percent,
+    Ticket
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import ImageCropper from "@/components/admin/ImageCropper";
@@ -98,7 +99,15 @@ const AdminDashboard = () => {
     });
     const [activeFilter, setActiveFilter] = useState<"all" | "low" | "value" | "categories" | "zero" | "draft" | "published" | "no-tax" | "ready" | "trash">("all");
     const [selectedCategoryLabel, setSelectedCategoryLabel] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<"products" | "orders">("products");
+    const [activeTab, setActiveTab] = useState<"products" | "orders" | "coupons">("products");
+    const [coupons, setCoupons] = useState<any[]>([]);
+    const [couponsLoading, setCouponsLoading] = useState(false);
+    const [isCouponDialogOpen, setIsCouponDialogOpen] = useState(false);
+    const [newCoupon, setNewCoupon] = useState({
+        code: "",
+        discount_type: "percentage",
+        discount_value: 0
+    });
     const [orders, setOrders] = useState<any[]>([]);
     const [ordersLoading, setOrdersLoading] = useState(false);
     const [updatedSessionIds, setUpdatedSessionIds] = useState<number[]>([]);
@@ -440,6 +449,63 @@ const AdminDashboard = () => {
         }
     };
 
+    const fetchCoupons = async () => {
+        setCouponsLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from("coupons")
+                .select("*")
+                .order("created_at", { ascending: false });
+            if (error) throw error;
+            setCoupons(data || []);
+        } catch (error: any) {
+            toast.error("خطأ في تحميل الأكواد", { description: error.message });
+        } finally {
+            setCouponsLoading(false);
+        }
+    };
+
+    const handleAddCoupon = async () => {
+        if (!newCoupon.code || newCoupon.discount_value <= 0) {
+            toast.error("يرجى إدخال كود صحيح وقيمة خصم أكبر من صفر");
+            return;
+        }
+        try {
+            const { error } = await supabase
+                .from("coupons")
+                .insert([{
+                    code: newCoupon.code.toUpperCase(),
+                    discount_type: newCoupon.discount_type,
+                    discount_value: newCoupon.discount_value
+                }]);
+            if (error) throw error;
+            toast.success("تم إضافة كود الخصم بنجاح");
+            setIsCouponDialogOpen(false);
+            setNewCoupon({ code: "", discount_type: "percentage", discount_value: 0 });
+            fetchCoupons();
+        } catch (error: any) {
+            toast.error("فشل إضافة الكود", { description: error.message });
+        }
+    };
+
+    const handleDeleteCoupon = async (id: number) => {
+        if (!confirm("هل أنت متأكد من حذف كود الخصم؟")) return;
+        try {
+            const { error } = await supabase.from("coupons").delete().eq("id", id);
+            if (error) throw error;
+            toast.success("تم حذف الكود");
+            fetchCoupons();
+        } catch (error: any) {
+            toast.error("فشل الحذف", { description: error.message });
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === "coupons") {
+            fetchCoupons();
+        }
+    }, [activeTab]);
+
     const categories = [
         { id: "chocolate", label: "الشوكولاتة" },
         { id: "coffee", label: "القهوة" },
@@ -517,7 +583,7 @@ const AdminDashboard = () => {
             });
             setProducts(processed);
             calculateStats(processed);
-            if (user?.role === 'admin' || user?.username === 'maher' || user?.username === 'h' || user?.username === 'mostafa') fetchConflicts();
+            if (user?.role === 'admin' || user?.username === 'maher' || user?.username === 'h' || user?.username === 'mostafa' || user?.username === 'hesham') fetchConflicts();
         }
         setLoading(false);
     };
@@ -1350,9 +1416,11 @@ const AdminDashboard = () => {
     };
 
     const isEditor = user?.role === 'editor';
-    const isMostafa = user?.username === 'mostafa';
-    const canDelete = !isEditor && !isMostafa;
-    const canEditPrice = !isEditor && !isMostafa;
+    const username = user?.username?.toLowerCase() || "";
+    const isRestrictedStaff = username.includes('mostafa') || username.includes('hesham') || username === 'h' || username === 'fikry';
+    const isAdmin = user?.role === 'admin' && !isRestrictedStaff;
+    const canDelete = isAdmin;
+    const canEditPrice = isAdmin;
 
     return (
         <div className="min-h-screen bg-gray-50/50 p-4 md:p-8 font-tajawal rtl" dir="rtl">
@@ -1392,14 +1460,14 @@ const AdminDashboard = () => {
                     <div>
                         <h1 className="text-3xl font-bold text-saada-brown flex items-center gap-2">
                             <BarChart className="h-8 w-8 text-saada-red" />
-                            لوحة تحكم صناع السعادة ({user?.username === 'mostafa' ? 'الموظف مصطفى' : 'المدير'})
+                            لوحة تحكم صناع السعادة ({username === 'fikry' ? 'مرحبا هشام' : (isAdmin ? 'المدير' : (username.includes('mostafa') ? 'الموظف مصطفى' : (username.includes('hesham') ? 'الموظف هشام' : `الموظف ${user?.username || ''}`)))})
                         </h1>
                         <p className="text-gray-500 mt-1">
-                            {isEditor ? (user?.username === 'mostafa' ? 'تحديث المخزون، الصور، والأسماء' : 'صلاحية محدودة لتعديل الصور والأسماء') : 'إدارة كاملة للمتجر والمنتجات'}
+                            {isRestrictedStaff ? 'تحديث المخزون، الصور، والأسماء' : (isAdmin ? 'إدارة كاملة للمتجر والمنتجات' : 'صلاحية محدودة لتعديل الصور والأسماء')}
                         </p>
                     </div>
                     <div className="flex gap-2">
-                        {(!isMostafa && (user?.username === 'hesham' || user?.role === 'admin')) && (
+                        {isAdmin && (
                             <>
                                 <div className="flex flex-col gap-2">
                                     <Button
@@ -1427,7 +1495,7 @@ const AdminDashboard = () => {
                                 </div>
                             </>
                         )}
-                        {(!isEditor && !isMostafa) && (
+                        {isAdmin && (
                             <Button onClick={handleAddNew} className="bg-saada-red hover:bg-red-700 text-white gap-2 h-12 px-6 text-lg rounded-xl shadow-lg shadow-red-200 transition-all">
                                 <Plus className="h-5 w-5" />
                                 إضافة منتج جديد
@@ -1451,7 +1519,7 @@ const AdminDashboard = () => {
                     >
                         إدارة المنتجات
                     </button>
-                    {(!isEditor && !isMostafa) && (
+                    {isAdmin && (
                         <button
                             onClick={() => setActiveTab("orders")}
                             className={`pb-4 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "orders" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
@@ -1459,12 +1527,20 @@ const AdminDashboard = () => {
                             إدارة الطلبات
                         </button>
                     )}
+                    {isAdmin && (
+                        <button
+                            onClick={() => setActiveTab("coupons")}
+                            className={`pb-4 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "coupons" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
+                        >
+                            أكواد الخصم
+                        </button>
+                    )}
                 </div>
 
                 {activeTab === "products" ? (
                     <>
                         {/* Stats Grid - Hidden for limited Editors */}
-                        {(!isEditor && !isMostafa) && (
+                        {isAdmin && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 cursor-pointer">
                                 <Card
                                     onClick={() => { setActiveFilter("all"); setSelectedCategoryLabel(null); }}
@@ -1571,7 +1647,7 @@ const AdminDashboard = () => {
                         )}
 
                         {/* Top Priority Section for Products needing photos but have stock */}
-                        {(!isEditor && !isMostafa) && stats.readyToShot > 0 && (
+                        {isAdmin && stats.readyToShot > 0 && (
                             <div className="mt-6 animate-in fade-in slide-in-from-right-4 duration-700">
                                 <Card
                                     onClick={() => setActiveFilter("ready")}
@@ -1627,7 +1703,7 @@ const AdminDashboard = () => {
                         )}
 
                         {/* Conflict Monitoring Section */}
-                        {(!isEditor && !isMostafa) && conflictProducts.length > 0 && (
+                        {isAdmin && conflictProducts.length > 0 && (
                             <div className="mt-4 animate-in fade-in slide-in-from-left-4 duration-700">
                                 <Card
                                     onClick={() => setIsConflictResolverOpen(true)}
@@ -1716,7 +1792,7 @@ const AdminDashboard = () => {
                                         )}
                                     </CardTitle>
                                     <div className="flex flex-col md:flex-row md:items-center gap-3 w-full md:w-auto">
-                                        {!isMostafa && (
+                                        {isAdmin && (
                                             <Button
                                                 variant="outline"
                                                 size="sm"
@@ -1826,7 +1902,7 @@ const AdminDashboard = () => {
                                                             </span>
                                                         </TableCell>
                                                         <TableCell className="py-4 font-bold text-gray-900">{Number(p.price).toFixed(Number(p.price) % 1 === 0 ? 0 : 1)} ج.م</TableCell>
-                                                        {!isEditor && (
+                                                        {isAdmin && (
                                                             <TableCell className="py-4">
                                                                 <span className={`font - bold ${(p.stock ?? 0) < 10 ? 'text-orange-600' : 'text-gray-600'} `}>
                                                                     {p.stock ?? "-"}
@@ -1864,7 +1940,7 @@ const AdminDashboard = () => {
                             </CardContent>
                         </Card>
                     </>
-                ) : (
+                ) : activeTab === "orders" ? (
                     <Card className="border-none shadow-xl bg-white overflow-hidden">
                         <CardHeader className="border-b border-gray-100 bg-white p-6 flex flex-row items-center justify-between">
                             <CardTitle className="text-xl font-bold text-saada-brown">قائمة الطلبات (الواتساب والموقع)</CardTitle>
@@ -1902,6 +1978,11 @@ const AdminDashboard = () => {
                                                         <div className="flex flex-col">
                                                             <span className="font-bold text-saada-brown">{order.customer_name}</span>
                                                             <span className="text-xs text-gray-500" dir="ltr">{order.customer_phone}</span>
+                                                            {order.coupon_code && (
+                                                                <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full mt-1 w-fit font-bold">
+                                                                    🎟️ {order.coupon_code}
+                                                                </span>
+                                                            )}
                                                         </div>
                                                     </TableCell>
                                                     <TableCell className="py-4 text-sm text-gray-500">
@@ -1946,6 +2027,124 @@ const AdminDashboard = () => {
                             </div>
                         </CardContent>
                     </Card>
+                ) : (
+                    <div className="space-y-6">
+                        <div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                            <div>
+                                <h2 className="text-xl font-bold text-saada-brown">إدارة أكواد الخصم</h2>
+                                <p className="text-gray-500 text-sm">أنشئ أكواد خصم لزبائنك لزيادة المبيعات</p>
+                            </div>
+                            <Button
+                                onClick={() => setIsCouponDialogOpen(true)}
+                                className="bg-saada-brown text-white h-12 px-6 rounded-xl font-bold flex gap-2"
+                            >
+                                <Plus className="h-5 w-5" />
+                                كود خصم جديد
+                            </Button>
+                        </div>
+
+                        {couponsLoading ? (
+                            <div className="text-center py-20">
+                                <RefreshCw className="h-10 w-10 animate-spin text-saada-red mx-auto mb-4" />
+                                <p className="font-bold text-gray-400">جاري تحميل الأكواد...</p>
+                            </div>
+                        ) : coupons.length === 0 ? (
+                            <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-100">
+                                <Ticket className="h-16 w-16 text-gray-200 mx-auto mb-4" />
+                                <h3 className="text-xl font-bold text-gray-400">لا توجد أكواد خصم حالياً</h3>
+                                <p className="text-gray-500 mt-2">ابدأ بإضافة أول كود للترحيب بزبائنك!</p>
+                            </div>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {coupons.map((coupon) => (
+                                    <Card key={coupon.id} className="border-none shadow-md overflow-hidden relative group">
+                                        <div className="absolute top-0 right-0 p-4">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleDeleteCoupon(coupon.id)}
+                                                className="text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-xl"
+                                            >
+                                                <Trash2 className="h-5 w-5" />
+                                            </Button>
+                                        </div>
+                                        <CardContent className="p-6">
+                                            <div className="flex flex-col items-center text-center space-y-4">
+                                                <div className="h-16 w-16 bg-saada-red/10 text-saada-red rounded-2xl flex items-center justify-center">
+                                                    <Ticket className="h-8 w-8" />
+                                                </div>
+                                                <div>
+                                                    <h3 className="text-2xl font-black text-saada-brown tracking-widest">{coupon.code}</h3>
+                                                    <div className="flex items-center justify-center gap-2 mt-2">
+                                                        <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold">
+                                                            {coupon.discount_type === 'percentage' ? `${coupon.discount_value}% خصم` : `${coupon.discount_value} ج.م خصم`}
+                                                        </span>
+                                                        <span className="bg-saada-brown/5 text-saada-brown/60 px-3 py-1 rounded-full text-[10px] font-bold">
+                                                            تم الاستخدام: {coupon.used_count || 0}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                ))}
+                            </div>
+                        )}
+
+                        <Dialog open={isCouponDialogOpen} onOpenChange={setIsCouponDialogOpen}>
+                            <DialogContent className="max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl">
+                                <DialogHeader className="p-8 bg-saada-brown text-white">
+                                    <DialogTitle className="text-2xl font-black flex items-center gap-3">
+                                        <Ticket className="h-7 w-7" />
+                                        إضافة كود خصم جديد
+                                    </DialogTitle>
+                                </DialogHeader>
+                                <div className="p-8 space-y-6">
+                                    <div className="space-y-2">
+                                        <Label className="font-bold text-saada-brown">كود الخصم (مثلاً SAADA20)</Label>
+                                        <Input
+                                            placeholder="اكتب الكود هنا..."
+                                            className="h-12 rounded-xl text-center uppercase font-black text-xl tracking-widest"
+                                            value={newCoupon.code}
+                                            onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <Label className="font-bold text-saada-brown">نوع الخصم</Label>
+                                            <Select
+                                                value={newCoupon.discount_type}
+                                                onValueChange={(val) => setNewCoupon({ ...newCoupon, discount_type: val })}
+                                            >
+                                                <SelectTrigger className="h-12 rounded-xl">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="percentage">نسبة مئوية (%)</SelectItem>
+                                                    <SelectItem value="fixed">مبلغ ثابت (ج.م)</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label className="font-bold text-saada-brown">قيمة الخصم</Label>
+                                            <Input
+                                                type="number"
+                                                className="h-12 rounded-xl text-center font-bold"
+                                                value={newCoupon.discount_value}
+                                                onChange={(e) => setNewCoupon({ ...newCoupon, discount_value: Number(e.target.value) })}
+                                            />
+                                        </div>
+                                    </div>
+                                    <Button
+                                        onClick={handleAddCoupon}
+                                        className="w-full h-14 bg-saada-red hover:bg-black text-white rounded-xl font-bold text-lg shadow-xl transition-all"
+                                    >
+                                        حفظ كود الخصم
+                                    </Button>
+                                </div>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
                 )}
             </div>
 
@@ -1983,18 +2182,16 @@ const AdminDashboard = () => {
                                         className="h-11 rounded-xl"
                                     />
                                 </div>
-                                {!isEditor && (
-                                    <div className="space-y-2">
-                                        <Label htmlFor="stock">المخزون</Label>
-                                        <Input
-                                            id="stock"
-                                            type="number"
-                                            value={currentProduct.stock}
-                                            onChange={(e) => setCurrentProduct({ ...currentProduct, stock: parseInt(e.target.value) })}
-                                            className="h-11 rounded-xl"
-                                        />
-                                    </div>
-                                )}
+                                <div className="space-y-2">
+                                    <Label htmlFor="stock">المخزون</Label>
+                                    <Input
+                                        id="stock"
+                                        type="number"
+                                        value={currentProduct.stock}
+                                        onChange={(e) => setCurrentProduct({ ...currentProduct, stock: parseInt(e.target.value) })}
+                                        className="h-11 rounded-xl"
+                                    />
+                                </div>
                             </div>
 
                             <div className="space-y-2">
@@ -2077,15 +2274,13 @@ const AdminDashboard = () => {
                             <div className="space-y-2">
                                 <Label htmlFor="image">الصورة</Label>
                                 <div className="flex flex-col gap-3">
-                                    {!isEditor && (
-                                        <Input
-                                            id="image"
-                                            value={currentProduct.image}
-                                            onChange={(e) => setCurrentProduct({ ...currentProduct, image: e.target.value })}
-                                            className="h-11 rounded-xl"
-                                            placeholder="رابط الصورة المباشر"
-                                        />
-                                    )}
+                                    <Input
+                                        id="image"
+                                        value={currentProduct.image}
+                                        onChange={(e) => setCurrentProduct({ ...currentProduct, image: e.target.value })}
+                                        className="h-11 rounded-xl"
+                                        placeholder="رابط الصورة المباشر"
+                                    />
                                     <Button
                                         type="button"
                                         disabled={isUploading}
@@ -2129,7 +2324,7 @@ const AdminDashboard = () => {
                                     <input
                                         type="checkbox"
                                         id="is_featured"
-                                        disabled={isEditor}
+                                        disabled={!isAdmin}
                                         className="h-4 w-4 rounded text-saada-red"
                                         checked={currentProduct.is_featured}
                                         onChange={(e) => setCurrentProduct({ ...currentProduct, is_featured: e.target.checked })}
@@ -2140,7 +2335,7 @@ const AdminDashboard = () => {
                                     <input
                                         type="checkbox"
                                         id="is_new"
-                                        disabled={isEditor}
+                                        disabled={!isAdmin}
                                         className="h-4 w-4 rounded text-saada-red"
                                         checked={currentProduct.is_new}
                                         onChange={(e) => setCurrentProduct({ ...currentProduct, is_new: e.target.checked })}

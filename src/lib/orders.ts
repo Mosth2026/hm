@@ -14,12 +14,15 @@ export const saveOrderToDb = async (
     customerInfo: { name: string; phone: string; address?: string; notes?: string },
     items: OrderItem[],
     totalPrice: number,
-    status: string = "pending"
+    status: string = "pending",
+    couponCode: string = "",
+    discountAmount: number = 0
 ) => {
     try {
-        
+
 
         const roundedTotal = Math.round(Number(totalPrice) * 100) / 100;
+        const roundedDiscount = Math.round(Number(discountAmount) * 100) / 100;
 
         // 1. Standard Insert
         const { data: orders, error: orderError } = await supabase
@@ -28,7 +31,9 @@ export const saveOrderToDb = async (
                 customer_name: customerInfo.name || "عميل",
                 customer_phone: customerInfo.phone || "010",
                 customer_address: customerInfo.address || "طلب عبر المتجر",
-                total_price: roundedTotal
+                total_price: roundedTotal,
+                coupon_code: couponCode,
+                discount_amount: roundedDiscount
             }])
             .select();
 
@@ -41,7 +46,9 @@ export const saveOrderToDb = async (
                 .insert([{
                     customer_name: "طلب سريع",
                     customer_phone: "000",
-                    total_price: roundedTotal
+                    total_price: roundedTotal,
+                    coupon_code: couponCode,
+                    discount_amount: roundedDiscount
                 }])
                 .select();
 

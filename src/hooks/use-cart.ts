@@ -9,18 +9,23 @@ interface CartItem extends Product {
 
 interface CartStore {
     items: CartItem[];
+    appliedCoupon: any | null;
     addItem: (product: Product, quantity?: number) => void;
     removeItem: (productId: number) => void;
     updateQuantity: (productId: number, quantity: number) => void;
     clearCart: () => void;
     getTotalPrice: () => number;
+    getDiscountedTotal: () => number;
     getItemCount: () => number;
+    applyCoupon: (coupon: any) => void;
+    removeCoupon: () => void;
 }
 
 export const useCart = create<CartStore>()(
     persist(
         (set, get) => ({
             items: [],
+            appliedCoupon: null,
 
             addItem: (product, quantity = 1) => {
                 const currentItems = get().items;
@@ -59,7 +64,7 @@ export const useCart = create<CartStore>()(
                 });
             },
 
-            clearCart: () => set({ items: [] }),
+            clearCart: () => set({ items: [], appliedCoupon: null }),
 
             getItemCount: () => {
                 return get().items.reduce((count, item) => count + (item.quantity || 0), 0);
@@ -73,7 +78,23 @@ export const useCart = create<CartStore>()(
                     return total + (price * item.quantity);
                 }, 0);
             },
+
+            getDiscountedTotal: () => {
+                const total = get().getTotalPrice();
+                const coupon = get().appliedCoupon;
+                if (!coupon) return total;
+
+                if (coupon.discount_type === 'percentage') {
+                    return total - (total * coupon.discount_value / 100);
+                } else {
+                    return Math.max(0, total - coupon.discount_value);
+                }
+            },
+
+            applyCoupon: (coupon) => set({ appliedCoupon: coupon }),
+            removeCoupon: () => set({ appliedCoupon: null }),
         }),
+
         {
             name: 'saada-makers-cart-v2',
         }

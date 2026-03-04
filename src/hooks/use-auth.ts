@@ -39,7 +39,8 @@ export const useAuth = create<AuthState>()(
 
                 if (data.user) {
                     // تحديد الدور بناءً على الإيميل أو ميتاداتا المستخدم
-                    const role: UserRole = (email.includes('hesham') || email.includes('admin') || email === 'h') ? 'admin' : 'editor';
+                    const usernamePart = email.split('@')[0] || "";
+                    const role: UserRole = (usernamePart.includes('admin')) ? 'admin' : 'editor';
 
                     set({
                         user: {
@@ -63,7 +64,8 @@ export const useAuth = create<AuthState>()(
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session?.user) {
                     const email = session.user.email || "";
-                    const role: UserRole = (email.includes('hesham') || email.includes('admin') || email === 'h') ? 'admin' : 'editor';
+                    const usernamePart = email.split('@')[0] || "";
+                    const role: UserRole = (usernamePart.includes('admin')) ? 'admin' : 'editor';
                     set({
                         user: {
                             username: email.split('@')[0] || 'user',

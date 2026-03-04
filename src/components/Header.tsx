@@ -9,6 +9,8 @@ import { useCart } from "@/hooks/use-cart";
 import { useNavigate } from "react-router-dom";
 import { saveOrderToDb } from "@/lib/orders";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
+import { Tag, Ticket as TicketIcon, CheckCircle2 as CheckCircleIcon } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -25,9 +27,12 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
-  const { items, removeItem, updateQuantity, getTotalPrice, getItemCount } = useCart();
+  const { items, removeItem, updateQuantity, getTotalPrice, getDiscountedTotal, getItemCount, appliedCoupon, applyCoupon, removeCoupon } = useCart();
   const itemCount = getItemCount();
   const totalPrice = getTotalPrice();
+  const discountedTotal = getDiscountedTotal();
+  const [couponInput, setCouponInput] = useState("");
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -42,6 +47,32 @@ const Header = () => {
       setIsSearchOpen(false);
       setIsMenuOpen(false);
       setSearchQuery("");
+    }
+  };
+
+  const handleApplyCoupon = async () => {
+    if (!couponInput.trim()) return;
+    setIsValidatingCoupon(true);
+    try {
+      const { data, error } = await supabase
+        .from("coupons")
+        .select("*")
+        .eq("code", couponInput.trim().toUpperCase())
+        .eq("is_active", true)
+        .single();
+
+      if (error || !data) {
+        toast.error("كود الخصم غير صحيح أو منتهي");
+        return;
+      }
+
+      applyCoupon(data);
+      toast.success("تم تطبيق الخصم بنجاح!");
+      setCouponInput("");
+    } catch (err) {
+      toast.error("خطأ في التحقق من الكود");
+    } finally {
+      setIsValidatingCoupon(false);
     }
   };
 
@@ -209,12 +240,59 @@ const Header = () => {
 
                   {items.length > 0 && (
                     <div className="p-8 bg-white border-t-2 border-primary/5 space-y-5 shadow-[0_-20px_40px_rgba(0,0,0,0.03)] rounded-t-[2.5rem]">
+                      {/* Coupon Section */}
+                      {appliedCoupon ? (
+                        <div className="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 bg-emerald-500 text-white rounded-xl flex items-center justify-center">
+                              <TicketIcon className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <p className="text-emerald-900 font-black text-sm">{appliedCoupon.code}</p>
+                              <p className="text-emerald-600 text-[10px] font-bold">
+                                خصم {appliedCoupon.discount_type === 'percentage' ? `${appliedCoupon.discount_value}%` : `${appliedCoupon.discount_value} ج.م`}
+                              </p>
+                            </div>
+                          </div>
+                          <button onClick={removeCoupon} className="text-emerald-400 hover:text-red-500 transition-colors">
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2 p-1.5 bg-gray-50 rounded-2xl border border-primary/5 focus-within:border-secondary/30 transition-all">
+                          <div className="relative flex-grow">
+                            <Tag className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-primary/30" />
+                            <input
+                              type="text"
+                              placeholder="هل لديك كود خصم؟"
+                              value={couponInput}
+                              onChange={(e) => setCouponInput(e.target.value)}
+                              className="w-full bg-transparent border-none py-2.5 pr-10 pl-4 text-sm font-bold placeholder-primary/30 focus:outline-none"
+                            />
+                          </div>
+                          <Button
+                            onClick={handleApplyCoupon}
+                            disabled={isValidatingCoupon || !couponInput.trim()}
+                            className="h-10 px-6 bg-primary hover:bg-black text-white rounded-xl font-bold text-xs"
+                          >
+                            {isValidatingCoupon ? <RefreshCw className="h-4 w-4 animate-spin" /> : "تطبيق"}
+                          </Button>
+                        </div>
+                      )}
+
                       <div className="flex items-center justify-between px-2">
                         <div className="flex flex-col">
                           <span className="text-muted-foreground font-black text-xs uppercase tracking-widest">Grand Total</span>
-                          <span className="text-primary/40 text-[10px] font-bold">شامل كافة الرسوم</span>
+                          <span className="text-primary/40 text-[10px] font-bold">
+                            {appliedCoupon ? "السعر بعد الخصم" : "شامل كافة الرسوم"}
+                          </span>
                         </div>
-                        <span className="text-4xl font-black text-primary tracking-tighter">{totalPrice.toFixed(totalPrice % 1 === 0 ? 0 : 1)} <span className="text-lg">ج.م</span></span>
+                        <div className="flex flex-col items-end">
+                          {appliedCoupon && (
+                            <span className="text-sm text-gray-400 line-through font-bold">{totalPrice.toFixed(totalPrice % 1 === 0 ? 0 : 1)} ج.م</span>
+                          )}
+                          <span className="text-4xl font-black text-primary tracking-tighter">{discountedTotal.toFixed(discountedTotal % 1 === 0 ? 0 : 1)} <span className="text-lg">ج.م</span></span>
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-1 gap-4">
@@ -240,7 +318,8 @@ const Header = () => {
                                 return `• *${cleanProductName(item.name)}*\n  العدد: ${item.quantity}\n  السعر: ${itemTotal.toFixed(itemTotal % 1 === 0 ? 0 : 1)} ج.م`;
                               }).join('\n\n');
 
-                              const roundedTotal = Math.round(totalPrice);
+                              const discountAmount = totalPrice - discountedTotal;
+                              const roundedTotal = Math.round(discountedTotal);
                               const orderItems = items.map(item => ({
                                 id: item.id,
                                 quantity: item.quantity,
@@ -252,7 +331,10 @@ const Header = () => {
                               const result = await saveOrderToDb(
                                 { name: "طلب واتساب مباشر", phone: SITE_CONFIG.whatsappNumber },
                                 orderItems,
-                                roundedTotal
+                                roundedTotal,
+                                "pending",
+                                appliedCoupon?.code || "",
+                                discountAmount
                               );
 
                               const finalOrderId = result.success ? result.orderId : `DRAFT${Date.now()}`;
@@ -267,6 +349,7 @@ const Header = () => {
                               const message = encodeURIComponent(
                                 `🛍️ *طلب جديد ${orderNum}* 🛍️\n\n` +
                                 `${cartDetails}\n\n` +
+                                (appliedCoupon ? `🎟️ *كود الخصم:* ${appliedCoupon.code} (-${discountAmount.toFixed(0)} ج.م)\n\n` : "") +
                                 `💰 *الإجمالي:* ${roundedTotal.toFixed(roundedTotal % 1 === 0 ? 0 : 1)} ج.م\n\n` +
                                 `📄 *رابط معاينة الفاتورة:* \n\n${invoiceUrl}\n\n` +
                                 `مرحباً صناع السعادة، أود إتمام هذا الطلب من المتجر.`
