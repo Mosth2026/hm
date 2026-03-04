@@ -23,12 +23,12 @@ import LuxuryExperience from "./components/LuxuryExperience";
 import PremiumDecorations from "./components/PremiumDecorations";
 
 try {
-  const version = "3.2.5-final";
+  const version = "3.2.6-final";
   if (typeof window !== 'undefined' && localStorage.getItem('site_v') !== version) {
     localStorage.clear();
     localStorage.setItem('site_v', version);
   }
-} catch (e) {}
+} catch (e) { }
 
 const queryClient = new QueryClient({
   defaultOptions: {
