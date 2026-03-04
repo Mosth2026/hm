@@ -27,7 +27,8 @@ import {
     RefreshCw,
     Percent,
     Ticket,
-    List
+    List,
+    Users
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import ImageCropper from "@/components/admin/ImageCropper";
@@ -100,10 +101,12 @@ const AdminDashboard = () => {
     });
     const [activeFilter, setActiveFilter] = useState<"all" | "low" | "value" | "categories" | "zero" | "draft" | "published" | "no-tax" | "ready" | "trash">("all");
     const [selectedCategoryLabel, setSelectedCategoryLabel] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<"products" | "orders" | "coupons" | "logs">("products");
+    const [activeTab, setActiveTab] = useState<"products" | "orders" | "coupons" | "logs" | "subscribers">("products");
     const [coupons, setCoupons] = useState<any[]>([]);
     const [couponsLoading, setCouponsLoading] = useState(false);
     const [isCouponDialogOpen, setIsCouponDialogOpen] = useState(false);
+    const [subscribers, setSubscribers] = useState<any[]>([]);
+    const [subscribersLoading, setSubscribersLoading] = useState(false);
     const [newCoupon, setNewCoupon] = useState({
         code: "",
         discount_type: "percentage",
@@ -424,8 +427,30 @@ const AdminDashboard = () => {
             fetchOrders();
         } else if (activeTab === "logs") {
             fetchLogs();
+        } else if (activeTab === "subscribers") {
+            fetchSubscribers();
         }
     }, [activeTab]);
+
+    const fetchSubscribers = async () => {
+        setSubscribersLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from("subscribers")
+                .select("*")
+                .order("created_at", { ascending: false });
+
+            if (error) throw error;
+            setSubscribers(data || []);
+        } catch (error: any) {
+            toast.error("خطأ في تحميل المشتركين", {
+                description: error.message,
+                duration: 6000
+            });
+        } finally {
+            setSubscribersLoading(false);
+        }
+    };
 
     const fetchLogs = async () => {
         setLogsLoading(true);
@@ -1593,6 +1618,14 @@ const AdminDashboard = () => {
                             سجل التعديلات
                         </button>
                     )}
+                    {isSuperAdmin && (
+                        <button
+                            onClick={() => setActiveTab("subscribers")}
+                            className={`pb-4 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "subscribers" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
+                        >
+                            قائمة المشتركين
+                        </button>
+                    )}
                 </div>
 
                 {activeTab === "products" ? (
@@ -2203,6 +2236,64 @@ const AdminDashboard = () => {
                             </DialogContent>
                         </Dialog>
                     </div>
+                ) : activeTab === "subscribers" ? (
+                    <Card className="border-none shadow-xl bg-white overflow-hidden">
+                        <CardHeader className="border-b border-gray-100 bg-white p-6 flex flex-row items-center justify-between">
+                            <div className="flex items-center gap-4">
+                                <CardTitle className="text-xl font-bold text-saada-brown">قائمة المشتركين في النشرة البريدية</CardTitle>
+                                <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold">{subscribers.length} مشترك</span>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button
+                                    onClick={() => {
+                                        const ws = XLSX.utils.json_to_sheet(subscribers.map(s => ({ "الإيميل": s.email, "تاريخ الاشتراك": new Date(s.created_at).toLocaleString('ar-EG') })));
+                                        const wb = XLSX.utils.book_new();
+                                        XLSX.utils.book_append_sheet(wb, ws, "المشتركين");
+                                        XLSX.writeFile(wb, `subscribers_${new Date().getTime()}.xlsx`);
+                                    }}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-10 rounded-xl"
+                                >
+                                    <FileSpreadsheet className="h-4 w-4" />
+                                    تصدير للقائمة
+                                </Button>
+                                <Button onClick={fetchSubscribers} variant="ghost" size="icon">
+                                    <RefreshCw className={`h-4 w-4 ${subscribersLoading ? 'animate-spin' : ''}`} />
+                                </Button>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader className="bg-gray-50/50">
+                                        <TableRow>
+                                            <TableHead className="text-right py-4 font-bold text-saada-brown">الإيميل</TableHead>
+                                            <TableHead className="text-right py-4 font-bold text-saada-brown">تاريخ الاشتراك</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {subscribersLoading ? (
+                                            <TableRow>
+                                                <TableCell colSpan={2} className="text-center py-20 text-gray-500">جاري تحميل المشتركين...</TableCell>
+                                            </TableRow>
+                                        ) : subscribers.length === 0 ? (
+                                            <TableRow>
+                                                <TableCell colSpan={2} className="text-center py-20 text-gray-500">لا يوجد مشتركين حالياً</TableCell>
+                                            </TableRow>
+                                        ) : (
+                                            subscribers.map((s) => (
+                                                <TableRow key={s.id} className="hover:bg-gray-50/80 border-b border-gray-100">
+                                                    <TableCell className="py-4 font-bold text-saada-brown">{s.email}</TableCell>
+                                                    <TableCell className="py-4 text-xs text-gray-500 font-medium font-outfit">
+                                                        {new Date(s.created_at).toLocaleString('ar-EG')}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                    </Card>
                 ) : (
                     <Card className="border-none shadow-xl bg-white overflow-hidden">
                         <CardHeader className="border-b border-gray-100 bg-white p-6 flex flex-row items-center justify-between">

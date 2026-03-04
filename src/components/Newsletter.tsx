@@ -1,25 +1,43 @@
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Send, Mail, Sparkles } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Newsletter = () => {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    setTimeout(() => {
-      toast.success("تم الاشتراك بنجاح! مرحباً بك في عالم السعادة.", {
-        style: { background: 'var(--primary)', color: 'white', borderRadius: '1rem' }
-      });
-      setEmail("");
+    try {
+      const { error } = await supabase
+        .from('subscribers')
+        .insert([{ email }]);
+
+      if (error) {
+        if (error.code === '23505') {
+          toast.info("أنت مشترك معنا بالفعل! شكراً لوفائك.", {
+            style: { background: 'var(--primary)', color: 'white', borderRadius: '1rem' }
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        toast.success("تم الاشتراك بنجاح! مرحباً بك في عالم السعادة.", {
+          style: { background: 'var(--primary)', color: 'white', borderRadius: '1rem' }
+        });
+        setEmail("");
+      }
+    } catch (error: any) {
+      console.error("Newsletter Error:", error);
+      toast.error("عذراً، حدث خطأ أثناء الاشتراك. حاول لاحقاً.");
+    } finally {
       setLoading(false);
-    }, 1200);
+    }
   };
 
   return (
