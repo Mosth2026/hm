@@ -118,6 +118,20 @@ const ProductDetails = () => {
       <Helmet>
         <title>{cleanProductName(product.name)} | صناع السعادة</title>
         <meta name="description" content={product.description} />
+
+        {/* Open Graph Meta Tags */}
+        <meta property="og:title" content={`${cleanProductName(product.name)} | صناع السعادة`} />
+        <meta property="og:description" content={product.description} />
+        <meta property="og:image" content={cleanImageUrl(product.image)} />
+        <meta property="og:type" content="product" />
+        <meta property="og:url" content={window.location.href} />
+
+        {/* Twitter Card Meta Tags */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={cleanProductName(product.name)} />
+        <meta name="twitter:description" content={product.description} />
+        <meta name="twitter:image" content={cleanImageUrl(product.image)} />
+
         <script type="application/ld+json">
           {JSON.stringify(productSchema)}
         </script>

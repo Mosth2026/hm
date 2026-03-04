@@ -50,6 +50,19 @@ const CategoryPage = () => {
       <Helmet>
         <title>{categoryName} | صناع السعادة</title>
         <meta name="description" content={`استكشف تشكيلتنا الحصرية من ${categoryName} الفاخرة في متجر صناع السعادة.`} />
+
+        {/* Open Graph Tags */}
+        <meta property="og:title" content={`${categoryName} | صناع السعادة`} />
+        <meta property="og:description" content={`استكشف تشكيلتنا الحصرية من ${categoryName} الفاخرة في متجر صناع السعادة.`} />
+        <meta property="og:image" content="https://happinessmakers.online/assets/logo.png" />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={window.location.href} />
+
+        {/* Twitter Card Tags */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={`${categoryName} | صناع السعادة`} />
+        <meta name="twitter:description" content={`استكشف تشكيلتنا الحصرية من ${categoryName} الفاخرة في متجر صناع السعادة.`} />
+        <meta name="twitter:image" content="https://happinessmakers.online/assets/logo.png" />
       </Helmet>
       <div className="min-h-screen flex flex-col font-tajawal rtl bg-white">
         <Header />
