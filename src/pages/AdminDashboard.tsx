@@ -26,7 +26,8 @@ import {
     FileSpreadsheet,
     RefreshCw,
     Percent,
-    Ticket
+    Ticket,
+    List
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import ImageCropper from "@/components/admin/ImageCropper";
@@ -99,7 +100,7 @@ const AdminDashboard = () => {
     });
     const [activeFilter, setActiveFilter] = useState<"all" | "low" | "value" | "categories" | "zero" | "draft" | "published" | "no-tax" | "ready" | "trash">("all");
     const [selectedCategoryLabel, setSelectedCategoryLabel] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<"products" | "orders" | "coupons">("products");
+    const [activeTab, setActiveTab] = useState<"products" | "orders" | "coupons" | "logs">("products");
     const [coupons, setCoupons] = useState<any[]>([]);
     const [couponsLoading, setCouponsLoading] = useState(false);
     const [isCouponDialogOpen, setIsCouponDialogOpen] = useState(false);
@@ -113,6 +114,20 @@ const AdminDashboard = () => {
     const [updatedSessionIds, setUpdatedSessionIds] = useState<number[]>([]);
     const [importProgress, setImportProgress] = useState<{ current: number, total: number } | null>(null);
     const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
+    const [logs, setLogs] = useState<any[]>([]);
+    const [logsLoading, setLogsLoading] = useState(false);
+
+    const logAction = async (action: string, details: any = {}) => {
+        try {
+            await supabase.from('admin_logs').insert([{
+                username: user?.username || 'unknown',
+                action,
+                details
+            }]);
+        } catch (e) {
+            console.error("Failed to log action:", e);
+        }
+    };
 
     // Define filteredProducts near the top but as a derived value
     const filteredProducts = products.sort((a, b) => {
@@ -162,6 +177,7 @@ const AdminDashboard = () => {
             toast.error("فشل الحذف الجماعي");
         } else {
             toast.success("تم الحذف بنجاح");
+            logAction('bulk_delete_products', { count: selectedProductIds.length, ids: [...selectedProductIds] });
             setSelectedProductIds([]);
             fetchProducts();
         }
@@ -194,6 +210,7 @@ const AdminDashboard = () => {
             }
 
             toast.success(toDraft ? "تم إخفاء المنتجات في الدرافت" : "تم استعادة المنتجات بنجاح", { id: toastId });
+            logAction(toDraft ? 'bulk_move_to_draft' : 'bulk_restore_from_draft', { count: updates.length, ids: selectedProductIds });
             setSelectedProductIds([]);
             fetchProducts();
         } catch (error: any) {
@@ -405,8 +422,31 @@ const AdminDashboard = () => {
     useEffect(() => {
         if (activeTab === "orders") {
             fetchOrders();
+        } else if (activeTab === "logs") {
+            fetchLogs();
         }
     }, [activeTab]);
+
+    const fetchLogs = async () => {
+        setLogsLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from("admin_logs")
+                .select("*")
+                .order("created_at", { ascending: false })
+                .limit(200);
+
+            if (error) throw error;
+            setLogs(data || []);
+        } catch (error: any) {
+            toast.error("خطأ في تحميل سجل التعديلات", {
+                description: error.message,
+                duration: 6000
+            });
+        } finally {
+            setLogsLoading(false);
+        }
+    };
 
     const fetchOrders = async () => {
         setOrdersLoading(true);
@@ -671,6 +711,7 @@ const AdminDashboard = () => {
             });
         } else {
             toast.success("تم الحذف بنجاح");
+            logAction('delete_product', { id });
             fetchProducts();
         }
     };
@@ -704,6 +745,7 @@ const AdminDashboard = () => {
                 if (deleteError) throw deleteError;
 
                 toast.success(`تم حذف ${ids.length} صنف بنجاح. المتجر الآن نظيف تماماً.`, { id: toastId });
+                logAction('delete_all_ready_to_shot', { count: ids.length, ids });
                 fetchProducts();
             } else {
                 toast.info("لم يتم العثور على أصناف", { id: toastId });
@@ -820,6 +862,7 @@ const AdminDashboard = () => {
             });
         } else {
             toast.success(isNew ? "تمت الإضافة بنجاح" : "تم التحديث بنجاح");
+            logAction(isNew ? 'add_product' : 'edit_product', { id: currentProduct.id, name: productData.name });
             setIsEditDialogOpen(false);
             fetchProducts();
         }
@@ -1229,6 +1272,12 @@ const AdminDashboard = () => {
                         description: `تحديث ${successCount} صنف، إضافة ${addedCount} جديد. تم حذف ${toDeleteIds.length} صنف قديم، وتصفير مخزون ${toZeroStockIds.length} (مخفيين للحفاظ على صورهم). تم تجاهل ${junkCount} صفوف (إجماليات) و ${duplicateCount} مكررات.`,
                         duration: 15000
                     });
+                    logAction('excel_sync', {
+                        updated: successCount,
+                        added: addedCount,
+                        deleted: toDeleteIds.length,
+                        zeroed: toZeroStockIds.length
+                    });
                 }
 
                 if (failCount > 0) {
@@ -1419,6 +1468,7 @@ const AdminDashboard = () => {
     const username = user?.username?.toLowerCase() || "";
     const isRestrictedStaff = username.includes('mostafa') || username.includes('hesham') || username === 'h' || username === 'fikry';
     const isAdmin = user?.role === 'admin' && !isRestrictedStaff;
+    const isSuperAdmin = username === 'elhanafy';
     const canDelete = isAdmin;
     const canEditPrice = isAdmin;
 
@@ -1533,6 +1583,14 @@ const AdminDashboard = () => {
                             className={`pb-4 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "coupons" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
                         >
                             أكواد الخصم
+                        </button>
+                    )}
+                    {isSuperAdmin && (
+                        <button
+                            onClick={() => setActiveTab("logs")}
+                            className={`pb-4 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "logs" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
+                        >
+                            سجل التعديلات
                         </button>
                     )}
                 </div>
@@ -2027,7 +2085,7 @@ const AdminDashboard = () => {
                             </div>
                         </CardContent>
                     </Card>
-                ) : (
+                ) : activeTab === "coupons" ? (
                     <div className="space-y-6">
                         <div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
                             <div>
@@ -2145,6 +2203,66 @@ const AdminDashboard = () => {
                             </DialogContent>
                         </Dialog>
                     </div>
+                ) : (
+                    <Card className="border-none shadow-xl bg-white overflow-hidden">
+                        <CardHeader className="border-b border-gray-100 bg-white p-6 flex flex-row items-center justify-between">
+                            <CardTitle className="text-xl font-bold text-saada-brown">سجل تعديلات النظام (Audit Log)</CardTitle>
+                            <Button onClick={fetchLogs} variant="ghost" size="icon">
+                                <RefreshCw className={`h-4 w-4 ${logsLoading ? 'animate-spin' : ''}`} />
+                            </Button>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <div className="overflow-x-auto">
+                                <Table>
+                                    <TableHeader className="bg-gray-50/50">
+                                        <TableRow>
+                                            <TableHead className="text-right py-4 font-bold text-saada-brown">التاريخ والوقت</TableHead>
+                                            <TableHead className="text-right py-4 font-bold text-saada-brown">المسؤول</TableHead>
+                                            <TableHead className="text-right py-4 font-bold text-saada-brown">الإجراء</TableHead>
+                                            <TableHead className="text-right py-4 font-bold text-saada-brown">التفاصيل</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {logsLoading ? (
+                                            <TableRow>
+                                                <TableCell colSpan={4} className="text-center py-20 text-gray-500">جاري تحميل السجلات...</TableCell>
+                                            </TableRow>
+                                        ) : logs.length === 0 ? (
+                                            <TableRow>
+                                                <TableCell colSpan={4} className="text-center py-20 text-gray-500">لا توجد سجلات تعديل حالياً</TableCell>
+                                            </TableRow>
+                                        ) : (
+                                            logs.map((log) => (
+                                                <TableRow key={log.id} className="hover:bg-gray-50/80 border-b border-gray-100">
+                                                    <TableCell className="py-4 text-xs">
+                                                        {new Date(log.created_at).toLocaleString('ar-EG')}
+                                                    </TableCell>
+                                                    <TableCell className="py-4">
+                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${log.username === 'elhanafy' ? 'bg-saada-red text-white' : 'bg-gray-100 text-gray-600'}`}>
+                                                            {log.username}
+                                                        </span>
+                                                    </TableCell>
+                                                    <TableCell className="py-4 font-bold text-saada-brown text-sm">
+                                                        {log.action === 'add_product' ? '➕ إضافة صنف' :
+                                                            log.action === 'edit_product' ? '📝 تعديل صنف' :
+                                                                log.action === 'delete_product' ? '🗑️ حذف صنف' :
+                                                                    log.action === 'bulk_delete_products' ? '🧹 حذف جماعي' :
+                                                                        log.action === 'bulk_move_to_draft' ? '👁️ إخفاء (درافت)' :
+                                                                            log.action === 'bulk_restore_from_draft' ? '♻️ استعادة' :
+                                                                                log.action === 'excel_sync' ? '📊 مزامنة Excel' :
+                                                                                    log.action === 'cleanup_duplicates' ? '🧼 تنظيف مكررات' : log.action}
+                                                    </TableCell>
+                                                    <TableCell className="py-4 text-xs text-gray-500 max-w-xs truncate">
+                                                        {JSON.stringify(log.details)}
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </CardContent>
+                    </Card>
                 )}
             </div>
 
