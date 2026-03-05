@@ -33,7 +33,6 @@ const Index = () => {
         <meta name="twitter:image" content="https://happinessmakers.online/assets/logo.png" />
       </Helmet>
 
-      <LuxuryExperience />
 
       <div className="min-h-screen flex flex-col relative z-10">
         <Header />

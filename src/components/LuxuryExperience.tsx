@@ -15,7 +15,7 @@ const LuxuryExperience = () => {
     }, []);
 
     return (
-        <div className="fixed inset-0 pointer-events-none z-[5] overflow-hidden">
+        <div className="fixed inset-0 pointer-events-none z-[5] overflow-hidden hidden md:block">
             {/* Optimized Spotlight using CSS Variables */}
             <div
                 className="absolute w-[800px] h-[800px] rounded-full blur-[120px] opacity-[0.15] will-change-transform"

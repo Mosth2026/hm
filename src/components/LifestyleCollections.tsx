@@ -45,7 +45,7 @@ const LifestyleCollections = () => {
                         <Link
                             key={idx}
                             to={item.link}
-                            className="group relative h-[450px] rounded-[3rem] overflow-hidden shadow-2xl transition-transform hover:-translate-y-2 duration-500"
+                            className="group relative h-[350px] md:h-[450px] rounded-[2.5rem] md:rounded-[3rem] overflow-hidden shadow-2xl transition-transform hover:-translate-y-2 duration-500"
                         >
                             {/* Background Image */}
                             <div className="absolute inset-0">

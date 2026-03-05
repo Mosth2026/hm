@@ -393,8 +393,8 @@ const Header = () => {
         </div>
 
         {/* Mobile Category Navigation - RESTORED TOP BAR */}
-        <div className="lg:hidden bg-white/60 border-b border-primary/5 overflow-x-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-          <div className="flex items-center gap-1 px-4 py-2 min-w-max">
+        <div className="lg:hidden bg-white/70 backdrop-blur-md border-b border-primary/5 overflow-x-auto shadow-sm" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          <div className="flex items-center gap-2 px-4 py-3 min-w-max">
             {navLinks.map((link) => {
               const isActive = location.pathname === link.path;
               return (

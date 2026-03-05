@@ -20,7 +20,7 @@ const PremiumDecorations = () => {
     ];
 
     return (
-        <div className="fixed top-0 left-0 w-full h-[400px] pointer-events-none z-[45] overflow-visible select-none pointer-events-none font-tajawal">
+        <div className="fixed top-0 left-0 w-full h-[400px] pointer-events-none z-[45] overflow-visible select-none font-tajawal hidden md:block">
             {/* Arched Strings Background - Matching Vodafone screenshot arches */}
             <svg className="absolute top-0 left-0 w-full h-40 opacity-20 pointer-events-none" preserveAspectRatio="none">
                 <defs>
@@ -66,9 +66,9 @@ const PremiumDecorations = () => {
                                         "text-secondary lux-glow transition-all duration-700",
                                         dec.type === 'star' ? "fill-secondary" : "fill-none"
                                     )}
-                                    style={{ 
-                                        width: dec.size, 
-                                        height: dec.size, 
+                                    style={{
+                                        width: dec.size,
+                                        height: dec.size,
                                         strokeWidth: dec.type === 'star-outline' ? 1.5 : 0,
                                         opacity: dec.type === 'star-outline' ? 0.7 : 0.9
                                     }}
@@ -97,25 +97,25 @@ const PremiumDecorations = () => {
                                     {/* Ultra Slender Traditional Fanous Silhouette */}
                                     <path d="M50 5 L35 25 L65 25 Z" fill={`url(#goldGradient-${idx})`} />
                                     <path d="M28 25 L72 25 L80 40 L20 40 Z" fill={`url(#goldGradient-${idx})`} opacity="0.95" />
-                                    
+
                                     {/* Slender Main Body */}
                                     <path d="M20 40 L80 40 L88 85 L12 85 Z" fill={`url(#goldGradient-${idx})`} opacity="0.85" />
-                                    
+
                                     {/* Ornate Glass Windows */}
                                     <path d="M35 45 L65 45 L72 80 L28 80 Z" fill="white" fillOpacity="0.15" />
                                     <rect x="49" y="45" width="2" height="35" fill="white" fillOpacity="0.1" />
-                                    
+
                                     {/* Center Light Flare */}
                                     <circle cx="50" cy="62" r="10" fill="white" fillOpacity="0.25" filter={`url(#internalGlow-${idx})`} />
                                     <circle cx="50" cy="62" r="5" fill="white" fillOpacity="0.7" />
-                                    
+
                                     {/* Lower Transition */}
                                     <path d="M12 85 L88 85 L78 105 L22 105 Z" fill={`url(#goldGradient-${idx})`} />
-                                    
+
                                     {/* Slender Tiered Base */}
                                     <path d="M22 105 L32 135 L68 135 L78 105 Z" fill={`url(#goldGradient-${idx})`} opacity="0.9" />
                                     <path d="M38 135 L34 145 L66 145 L62 135 Z" fill={`url(#goldGradient-${idx})`} />
-                                    
+
                                     {/* Very fine etching lines for luxury feel */}
                                     <path d="M28 25 L72 25 M20 40 L80 40 M12 85 L88 85 M22 105 L78 105" stroke="rgba(255,255,255,0.4)" strokeWidth="0.4" />
                                 </svg>

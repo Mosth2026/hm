@@ -34,13 +34,14 @@ const ThemeToggle = () => {
     };
 
     return (
-        <div className="fixed left-6 bottom-6 z-[100] font-tajawal rtl">
+        <div className="fixed left-4 bottom-4 md:left-6 md:bottom-6 z-[100] font-tajawal rtl">
             <div className={cn(
-                "absolute bottom-20 left-0 bg-white/10 backdrop-blur-3xl border border-white/20 p-6 rounded-[2.5rem] shadow-2xl transition-all duration-700 transform origin-bottom-left",
-                isOpen ? "scale-100 opacity-100 translate-y-0" : "scale-50 opacity-0 translate-y-10 pointer-events-none"
+                "absolute bottom-20 left-0 md:left-0 bg-white/10 backdrop-blur-3xl border border-white/20 p-4 md:p-6 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl transition-all duration-700 transform origin-bottom-left",
+                isOpen ? "scale-100 opacity-100 translate-y-0" : "scale-50 opacity-0 translate-y-10 pointer-events-none",
+                "w-[85vw] max-w-sm sm:w-64" // Responsive width
             )}>
-                <div className="space-y-6 w-64">
-                    <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+                <div className="space-y-4 md:space-y-6">
+                    <div className="flex items-center gap-3 border-b border-white/10 pb-4 mb-2">
                         <Palette className="h-5 w-5 text-secondary" />
                         <div>
                             <h3 className="text-white font-black text-lg">اختر ثيم المتجر</h3>
@@ -48,14 +49,14 @@ const ThemeToggle = () => {
                         </div>
                     </div>
 
-                    <div className="max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
-                        <div className="grid grid-cols-1 gap-3 pb-2">
+                    <div className="max-h-[45vh] md:max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar scroll-smooth">
+                        <div className="grid grid-cols-1 gap-3 py-2">
                             {themes.map((theme) => (
                                 <button
                                     key={theme.id}
                                     onClick={() => toggleTheme(theme.id)}
                                     className={cn(
-                                        "group flex items-center justify-between p-3 rounded-2xl transition-all duration-500 border-2",
+                                        "group flex items-center justify-between p-2.5 md:p-3 rounded-2xl transition-all duration-500 border-2",
                                         currentTheme === theme.id
                                             ? "bg-white/20 border-secondary shadow-lg shadow-secondary/10 scale-[1.02]"
                                             : "bg-white/5 border-transparent hover:bg-white/10"
