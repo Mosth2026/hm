@@ -33,6 +33,17 @@ export default async function handler(req, res) {
                     image = `${SITE_URL}${rawImage.startsWith('/') ? '' : '/'}${rawImage}`;
                 }
             }
+        } else if (type === 'category' && id) {
+            title = `قسم ${id} | صناع السعادة`;
+            const response = await fetch(
+                `${SUPABASE_URL}/rest/v1/products?category_id=eq.${id}&select=image&limit=1`,
+                { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
+            );
+            const data = await response.json();
+            if (data && data[0]) {
+                let rawImage = data[0].image || '';
+                image = rawImage.startsWith('http') ? rawImage : `${SITE_URL}${rawImage.startsWith('/') ? '' : '/'}${rawImage}`;
+            }
         }
 
         const html = `<!DOCTYPE html>
