@@ -19,8 +19,12 @@ export default async function handler(req, res) {
 
             if (data && data[0]) {
                 const product = data[0];
+                // Clean product name logic
                 title = (product.name || '').replace(/^"/, '').split('*')[0].trim() + " | صناع السعادة";
-                description = product.description || description;
+
+                // Hide Barcode from description for customers/previews
+                let rawDescription = product.description || description;
+                description = rawDescription.replace(/باركود\s*:\s*\d+/g, '').trim();
 
                 let rawImage = product.image || '';
                 if (rawImage.startsWith('http')) {
