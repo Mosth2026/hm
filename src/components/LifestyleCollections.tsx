@@ -60,7 +60,7 @@ const LifestyleCollections = () => {
 
                             {/* Content */}
                             <div className="absolute inset-0 p-10 flex flex-col justify-end text-white text-right">
-                                <div className="mb-6 h-16 w-16 bg-white/20 backdrop-blur-md rounded-2xl hidden md:flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+                                <div className="hidden md:flex mb-6 h-16 w-16 bg-white/20 backdrop-blur-md rounded-2xl items-center justify-center group-hover:scale-110 transition-transform duration-500">
                                     {item.icon}
                                 </div>
                                 <h3 className="text-3xl font-black mb-2">{item.title}</h3>
