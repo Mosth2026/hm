@@ -218,13 +218,27 @@
 }
 
 @keyframes sway {
-  0%, 100% { transform: rotate(-8deg); }
-  50% { transform: rotate(8deg); }
+
+  0%,
+  100% {
+    transform: rotate(-8deg);
+  }
+
+  50% {
+    transform: rotate(8deg);
+  }
 }
 
 @keyframes sway-slow {
-  0%, 100% { transform: rotate(-4deg); }
-  50% { transform: rotate(4deg); }
+
+  0%,
+  100% {
+    transform: rotate(-4deg);
+  }
+
+  50% {
+    transform: rotate(4deg);
+  }
 }
 
 .animate-float {
@@ -235,10 +249,12 @@
   animation: sway 5s ease-in-out infinite;
   transform-origin: top center;
 }
+
 .animate-sway-slow {
   animation: sway-slow 8s ease-in-out infinite;
   transform-origin: top center;
 }
+
 .lux-glow {
   filter: drop-shadow(0 0 15px hsla(var(--secondary) / 0.4));
 }
@@ -299,4 +315,14 @@
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(217, 157, 51, 0.5);
+}
+
+.collection-icon {
+  display: none !important;
+}
+
+@media (min-width: 1024px) {
+  .collection-icon {
+    display: flex !important;
+  }
 }
