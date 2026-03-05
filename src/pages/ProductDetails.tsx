@@ -10,7 +10,7 @@ import { Link } from "react-router-dom";
 import { useProduct } from "@/hooks/use-products";
 import { useCart } from "@/hooks/use-cart";
 import { toast } from "sonner";
-import { cn, cleanProductName, cleanImageUrl } from "@/lib/utils";
+import { cn, cleanProductName, cleanImageUrl, getShareUrl } from "@/lib/utils";
 import { SITE_CONFIG } from "@/lib/constants";
 import { saveOrderToDb } from "@/lib/orders";
 import { useAuth } from "@/hooks/use-auth";
@@ -314,7 +314,8 @@ const ProductDetails = () => {
                     size="lg"
                     className="h-16 px-8 rounded-2xl border-2 border-primary/10 hover:border-secondary hover:bg-secondary/5 text-primary transition-all group shadow-sm md:hidden"
                     onClick={() => {
-                      const url = window.location.href;
+                      if (!product) return;
+                      const url = getShareUrl('product', product.id);
                       const cleanName = cleanProductName(product.name);
                       if (navigator.share) {
                         navigator.share({
@@ -351,7 +352,8 @@ const ProductDetails = () => {
                       <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl border-primary/10 shadow-2xl font-tajawal rtl">
                         <DropdownMenuItem
                           onClick={() => {
-                            const url = window.location.href;
+                            if (!product) return;
+                            const url = getShareUrl('product', product.id);
                             navigator.clipboard.writeText(url);
                             toast.success("تم نسخ رابط المنتج! يمكنك مشاركته الآن.");
                           }}
@@ -362,7 +364,8 @@ const ProductDetails = () => {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
-                            const url = window.location.href;
+                            if (!product) return;
+                            const url = getShareUrl('product', product.id);
                             const cleanName = cleanProductName(product.name);
                             const message = encodeURIComponent(`شوف المنتج الرائع ده من صناع السعادة: ${cleanName}\n${url}`);
                             window.open(`https://wa.me/?text=${message}`, '_blank');

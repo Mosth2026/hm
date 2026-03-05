@@ -21,6 +21,10 @@ export function formatPrice(price: number): string {
   return `${formatted} ج.م`;
 }
 
+export function getShareUrl(type: 'product' | 'category', id: string | number): string {
+  return `${SITE_CONFIG.siteUrl}/api/seo?type=${type}&id=${id}`;
+}
+
 export function cleanImageUrl(url: string | undefined): string {
   if (!url) return "https://happinessmakers.online/assets/logo.png";
 

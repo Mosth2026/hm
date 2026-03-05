@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart, Heart, Plus, Star, Share2, MessageCircle, Copy } from "lucide-react";
 import { useCart } from "@/hooks/use-cart";
 import { toast } from "sonner";
-import { cn, cleanProductName } from "@/lib/utils";
+import { cn, cleanProductName, getShareUrl } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -89,7 +89,7 @@ const ProductCard = ({
 
 
   const shareToWhatsApp = () => {
-    const url = `${window.location.origin}/products/${id}`;
+    const url = getShareUrl('product', id);
     const cleanName = cleanProductName(name);
     const message = encodeURIComponent(`شوف المنتج الرائع ده من صناع السعادة: ${cleanName}\n${url}`);
     window.open(`https://wa.me/?text=${message}`, '_blank');
@@ -99,7 +99,7 @@ const ProductCard = ({
     e.preventDefault();
     e.stopPropagation();
 
-    const url = `${window.location.origin}/products/${id}`;
+    const url = getShareUrl('product', id);
     const cleanName = cleanProductName(name);
     const shareText = `شوف المنتج الرائع ده من صناع السعادة: ${cleanName}`;
 
