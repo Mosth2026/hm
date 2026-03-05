@@ -57,7 +57,7 @@ const CategoryPage = () => {
         <meta property="og:description" content={`استكشف تشكيلتنا الحصرية من ${categoryName} الفاخرة في متجر صناع السعادة.`} />
         <meta property="og:image" content={products && products.length > 0 ? cleanImageUrl(products[0].image) : "https://happinessmakers.online/assets/logo.png"} />
         <meta property="og:type" content="website" />
-        <meta property="og:url" content={window.location.href} />
+        <meta property="og:url" content={`${SITE_CONFIG.siteUrl}${window.location.pathname}`} />
 
         {/* Twitter Card Tags */}
         <meta name="twitter:card" content="summary_large_image" />

@@ -124,7 +124,7 @@ const ProductDetails = () => {
         <meta property="og:description" content={product.description} />
         <meta property="og:image" content={cleanImageUrl(product.image)} />
         <meta property="og:type" content="product" />
-        <meta property="og:url" content={window.location.href} />
+        <meta property="og:url" content={`${SITE_CONFIG.siteUrl}${window.location.pathname}`} />
 
         {/* Twitter Card Meta Tags */}
         <meta name="twitter:card" content="summary_large_image" />

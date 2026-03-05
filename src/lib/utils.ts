@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
+import { SITE_CONFIG } from "./constants"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -34,14 +35,14 @@ export function cleanImageUrl(url: string | undefined): string {
     }
 
     // If it's a relative path, make it absolute
-    const baseUrl = "https://happinessmakers.online";
+    const baseUrl = SITE_CONFIG.siteUrl;
     const cleanPath = url.startsWith('/') ? url : `/${url}`;
     return `${baseUrl}${cleanPath}`;
   } catch (e) {
     // Fallback logic
     if (url && !url.startsWith('http')) {
-      return `https://happinessmakers.online${url.startsWith('/') ? '' : '/'}${url}`;
+      return `${SITE_CONFIG.siteUrl}${url.startsWith('/') ? '' : '/'}${url}`;
     }
-    return url || "https://happinessmakers.online/assets/logo.png";
+    return url || `${SITE_CONFIG.siteUrl}/assets/logo.png`;
   }
 }

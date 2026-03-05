@@ -6,5 +6,6 @@ export const SITE_CONFIG = {
     officePhone: "01050663539",
     address: "الإسكندرية، سان ستيفانو، أمام ستاربكس، ممر عمارة الأوقاف، بين عصير مكة وصيدلية العزبي",
     email: "info@saada-makers.com",
-    placeholderImage: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&q=80"
+    placeholderImage: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&q=80",
+    siteUrl: "https://www.happinessmakers.online"
 };
