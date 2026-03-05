@@ -9,6 +9,7 @@ import { useProducts } from "@/hooks/use-products";
 import { Loader2, Sparkles, Filter, Share2, MessageCircle, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { cleanImageUrl } from "@/lib/utils";
+import { SITE_CONFIG } from "@/lib/constants";
 import {
   DropdownMenu,
   DropdownMenuContent,
