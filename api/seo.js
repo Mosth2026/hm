@@ -18,10 +18,10 @@ export default async function handler(req, res) {
 
             if (data && data[0]) {
                 const product = data[0];
-                title = (product.name || '').replace(/^"/, '').split('*')[0].trim() + " | صناع السعادة";
+                title = (product.name || '').replace(/^"/, '').replace(/\[TAX_EXEMPT\]/g, '').split('*')[0].trim() + " | صناع السعادة";
 
                 let rawDesc = product.description || description;
-                description = rawDesc.replace(/باركود\s*:\s*\d+/g, '').trim();
+                description = rawDesc.replace(/\[TAX_EXEMPT\]/g, '').replace(/باركود\s*:\s*\d+/g, '').trim();
 
                 let rawImage = product.image || '';
                 if (rawImage.startsWith('http')) {

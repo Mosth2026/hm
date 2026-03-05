@@ -12,6 +12,7 @@ export function cleanProductName(name: string): string {
   // Also removes the quote mark at the beginning if present
   return name
     .replace(/^"/, '')
+    .replace(/\[TAX_EXEMPT\]/g, '') // Remove tax tag
     .split('*')[0] // Take everything before the first '*'
     .trim();
 }

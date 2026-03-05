@@ -24,11 +24,17 @@ export interface Product {
 const processProduct = (p: any, isAdmin: boolean): Product => {
     let noTax = p.category_id === 'no-tax';
     let description = p.description || '';
+    let name = p.name || '';
+    let category_name = p.category_name || '';
 
-    if (description.includes('[TAX_EXEMPT]')) {
+    if (description.includes('[TAX_EXEMPT]') || name.includes('[TAX_EXEMPT]') || category_name.includes('[TAX_EXEMPT]')) {
         noTax = true;
-        description = description.replace('[TAX_EXEMPT]', '').trim();
     }
+
+    // Always strip it out for everyone from all visible fields
+    description = description.replace(/\[TAX_EXEMPT\]/g, '').trim();
+    name = name.replace(/\[TAX_EXEMPT\]/g, '').trim();
+    category_name = category_name.replace(/\[TAX_EXEMPT\]/g, '').trim();
 
     if (!isAdmin) {
         description = description.replace(/باركود\s*:\s*\d+/g, '').trim();
@@ -36,7 +42,9 @@ const processProduct = (p: any, isAdmin: boolean): Product => {
 
     return {
         ...p,
+        name,
         description,
+        category_name,
         no_tax: noTax
     };
 };

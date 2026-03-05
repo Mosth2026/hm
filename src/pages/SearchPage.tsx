@@ -39,9 +39,37 @@ const SearchPage = () => {
             const { data, error } = await dbQuery.order("created_at", { ascending: false });
             if (error) throw error;
 
+            const resultData = (data || []).map(p => {
+                let noTax = p.category_id === 'no-tax';
+                let description = p.description || '';
+                let name = p.name || '';
+                let category_name = p.category_name || '';
+
+                if (description.includes('[TAX_EXEMPT]') || name.includes('[TAX_EXEMPT]') || category_name.includes('[TAX_EXEMPT]')) {
+                    noTax = true;
+                }
+
+                // Strip technical tags for a cleaner view
+                name = name.replace(/\[TAX_EXEMPT\]/g, '').trim();
+                description = description.replace(/\[TAX_EXEMPT\]/g, '').trim();
+                category_name = category_name.replace(/\[TAX_EXEMPT\]/g, '').trim();
+
+                if (!isAdmin) {
+                    description = description.replace(/باركود\s*:\s*\d+/g, '').trim();
+                }
+
+                return {
+                    ...p,
+                    name,
+                    description,
+                    category_name,
+                    no_tax: noTax
+                };
+            });
+
             // FAIL-SAFE: Secondary client-side filtering for non-admins
-            if (!isAdmin && data) {
-                return data.filter((p: any) => {
+            if (!isAdmin && resultData) {
+                return resultData.filter((p: any) => {
                     const price = Number(p.price);
                     const stock = Number(p.stock);
                     const hasValidImage = p.image &&
@@ -52,7 +80,7 @@ const SearchPage = () => {
                 });
             }
 
-            return data;
+            return resultData;
         },
         enabled: query.length > 0,
     });

@@ -641,10 +641,22 @@ const AdminDashboard = () => {
         } else {
             const processed = (data || []).map(p => {
                 let noTax = false;
-                if (p.description?.includes('[TAX_EXEMPT]')) {
+                if (p.description?.includes('[TAX_EXEMPT]') || p.name?.includes('[TAX_EXEMPT]') || p.category_name?.includes('[TAX_EXEMPT]')) {
                     noTax = true;
                 }
-                return { ...p, no_tax: noTax };
+
+                // Strip technical tags for a cleaner dashboard view
+                const name = (p.name || '').replace(/\[TAX_EXEMPT\]/g, '').trim();
+                const description = (p.description || '').replace(/\[TAX_EXEMPT\]/g, '').trim();
+                const category_name = (p.category_name || '').replace(/\[TAX_EXEMPT\]/g, '').trim();
+
+                return {
+                    ...p,
+                    name,
+                    description,
+                    category_name,
+                    no_tax: noTax
+                };
             });
             setProducts(processed);
             calculateStats(processed);
