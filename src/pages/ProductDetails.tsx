@@ -14,6 +14,12 @@ import { cn, cleanProductName, cleanImageUrl } from "@/lib/utils";
 import { SITE_CONFIG } from "@/lib/constants";
 import { saveOrderToDb } from "@/lib/orders";
 import { useAuth } from "@/hooks/use-auth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const ProductDetails = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -302,10 +308,11 @@ const ProductDetails = () => {
                     <span>اطلب عبر واتساب</span>
                   </Button>
 
+                  {/* Mobile Sharing */}
                   <Button
                     variant="outline"
                     size="lg"
-                    className="h-16 px-8 rounded-2xl border-2 border-primary/10 hover:border-secondary hover:bg-secondary/5 text-primary transition-all group shadow-sm"
+                    className="h-16 px-8 rounded-2xl border-2 border-primary/10 hover:border-secondary hover:bg-secondary/5 text-primary transition-all group shadow-sm md:hidden"
                     onClick={() => {
                       const url = window.location.href;
                       const cleanName = cleanProductName(product.name);
@@ -328,6 +335,46 @@ const ProductDetails = () => {
                   >
                     <Share2 className="h-6 w-6 group-hover:scale-110 transition-transform" />
                   </Button>
+
+                  {/* Desktop Sharing */}
+                  <div className="hidden md:block">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="lg"
+                          className="h-16 px-8 rounded-2xl border-2 border-primary/10 hover:border-secondary hover:bg-secondary/5 text-primary transition-all group shadow-sm"
+                        >
+                          <Share2 className="h-6 w-6 group-hover:scale-110 transition-transform" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl border-primary/10 shadow-2xl font-tajawal rtl">
+                        <DropdownMenuItem
+                          onClick={() => {
+                            const url = window.location.href;
+                            navigator.clipboard.writeText(url);
+                            toast.success("تم نسخ رابط المنتج! يمكنك مشاركته الآن.");
+                          }}
+                          className="rounded-xl gap-2 cursor-pointer focus:bg-primary focus:text-white font-bold py-3"
+                        >
+                          <Copy className="h-4 w-4" />
+                          مشاركة كـ رابط
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            const url = window.location.href;
+                            const cleanName = cleanProductName(product.name);
+                            const message = encodeURIComponent(`شوف المنتج الرائع ده من صناع السعادة: ${cleanName}\n${url}`);
+                            window.open(`https://wa.me/?text=${message}`, '_blank');
+                          }}
+                          className="rounded-xl gap-2 cursor-pointer focus:bg-emerald-600 focus:text-white font-bold py-3 text-emerald-600"
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                          واتسـاب ويب
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
 
                   <Button
                     variant="outline"
