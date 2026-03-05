@@ -66,6 +66,7 @@ export const saveOrderToDb = async (
         try {
             const orderItems = items.map((item) => ({
                 order_id: order.id,
+                product_id: item.id,
                 product_name: cleanProductName(item.name || "منتج"),
                 quantity: Number(item.quantity) || 1,
                 price: Number(item.price) || 0,
