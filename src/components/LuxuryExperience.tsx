@@ -15,7 +15,7 @@ const LuxuryExperience = () => {
     }, []);
 
     return (
-        <div className="fixed inset-0 pointer-events-none z-[5] overflow-hidden hidden md:block">
+        <div className="fixed inset-0 pointer-events-none z-[5] overflow-hidden">
             {/* Optimized Spotlight using CSS Variables */}
             <div
                 className="absolute w-[800px] h-[800px] rounded-full blur-[120px] opacity-[0.15] will-change-transform"
@@ -27,7 +27,7 @@ const LuxuryExperience = () => {
             />
 
             {/* Subtle Sparkle - Floating Elegant Element */}
-            <div className="absolute top-10 right-10 opacity-[0.05] animate-float hidden md:block">
+            <div className="absolute top-10 right-10 opacity-[0.05] animate-float">
                 <Sparkles className="h-32 w-32 text-secondary" style={{ filter: 'drop-shadow(0 0 20px hsl(var(--secondary)))' }} />
             </div>
 

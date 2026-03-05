@@ -20,7 +20,7 @@ const PremiumDecorations = () => {
     ];
 
     return (
-        <div className="fixed top-0 left-0 w-full h-[400px] pointer-events-none z-[45] overflow-visible select-none font-tajawal hidden md:block">
+        <div className="fixed top-0 left-0 w-full h-[400px] pointer-events-none z-[45] overflow-visible select-none font-tajawal">
             {/* Arched Strings Background - Matching Vodafone screenshot arches */}
             <svg className="absolute top-0 left-0 w-full h-40 opacity-20 pointer-events-none" preserveAspectRatio="none">
                 <defs>
