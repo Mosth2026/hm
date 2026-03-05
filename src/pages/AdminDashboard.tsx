@@ -28,7 +28,8 @@ import {
     Percent,
     Ticket,
     List,
-    Users
+    Users,
+    Clock
 } from "lucide-react";
 import * as XLSX from 'xlsx';
 import ImageCropper from "@/components/admin/ImageCropper";
@@ -132,7 +133,16 @@ const AdminDashboard = () => {
         }
     };
 
+    const username = user?.username?.toLowerCase() || "";
+    const isRestrictedStaff = username.includes('mostafa') || username.includes('hesham') || username === 'h' || username === 'fikry';
+    const isSpecial = isRestrictedStaff || user?.role === 'admin' || user?.role === 'editor';
+    const isAdmin = user?.role === 'admin' && !isRestrictedStaff;
+    const isSuperAdmin = username === 'elhanafy';
+    const canDelete = isAdmin;
+    const canEditPrice = isAdmin;
+
     // Define filteredProducts near the top but as a derived value
+
     const filteredProducts = products.sort((a, b) => {
         const aUpdated = updatedSessionIds.includes(a.id);
         const bUpdated = updatedSessionIds.includes(b.id);
@@ -494,22 +504,83 @@ const AdminDashboard = () => {
     };
 
     const handleMarkAsReceived = async (orderId: number) => {
+        const toastId = toast.loading("جاري معالجة الطلب وتحديث المخزون...");
         try {
-            const { error } = await supabase
+            // 1. Fetch order items
+            const { data: items, error: itemsError } = await supabase
+                .from("order_items")
+                .select("*")
+                .eq("order_id", orderId);
+
+            if (itemsError) throw itemsError;
+
+            // 2. Process each item for FEFO stock deduction
+            for (const item of (items || [])) {
+                let remainingToDeduct = item.quantity;
+
+                // Find all product batches for this product (match by name or barcode)
+                // Normalize search for robustness
+                const normName = normalize(item.product_name);
+
+                // Fetch all candidate batches
+                const { data: batches, error: batchError } = await supabase
+                    .from("products")
+                    .select("*")
+                    .or(`name.ilike.%${item.product_name}%`); // Basic match, we will refine in JS
+
+                if (batchError) continue;
+
+                // Refine matches and filter by stock > 0
+                const validBatches = (batches || []).filter(b => {
+                    const bNormName = normalize(b.name);
+                    // Check if name matches or if barcode (in description) matches
+                    const nameMatch = bNormName === normName;
+                    return nameMatch && b.stock > 0;
+                }).sort((a, b) => {
+                    // Sort by expiry_date: ASC (earliest first), nulls last
+                    if (!a.expiry_date) return 1;
+                    if (!b.expiry_date) return -1;
+                    return new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime();
+                });
+
+                // Deduct from batches
+                for (const batch of validBatches) {
+                    if (remainingToDeduct <= 0) break;
+
+                    const deduction = Math.min(batch.stock, remainingToDeduct);
+                    const newStock = batch.stock - deduction;
+
+                    const { error: updateError } = await supabase
+                        .from("products")
+                        .update({ stock: newStock })
+                        .eq("id", batch.id);
+
+                    if (!updateError) {
+                        remainingToDeduct -= deduction;
+                        console.log(`Deducted ${deduction} from batch ${batch.id} (${batch.expiry_date}) for ${item.product_name}`);
+                    }
+                }
+            }
+
+            // 3. Update order status
+            const { error: orderError } = await supabase
                 .from("orders")
                 .update({
                     status: 'received',
-                    processed_by: user?.username
+                    processed_by: user?.username || 'system'
                 })
                 .eq("id", orderId);
 
-            if (error) throw error;
-            toast.success("تم تأكيد استلام الطلب");
+            if (orderError) throw orderError;
+
+            toast.success("تم تأكيد الاستلام وتحديث المخزون (FEFO)", { id: toastId });
+            logAction('order_received_stock_deducted', { order_id: orderId, processor: user?.username });
             fetchOrders();
         } catch (error: any) {
-            toast.error("فشل تحديث الطلب", {
+            console.error("Order processing error:", error);
+            toast.error("فشل معالجة الطلب", {
                 description: error.message,
-                duration: 6000
+                id: toastId
             });
         }
     };
@@ -640,22 +711,27 @@ const AdminDashboard = () => {
             });
         } else {
             const processed = (data || []).map(p => {
-                let noTax = false;
-                if (p.description?.includes('[TAX_EXEMPT]') || p.name?.includes('[TAX_EXEMPT]') || p.category_name?.includes('[TAX_EXEMPT]')) {
+                let noTax = p.category_id === 'no-tax';
+                let description = p.description || '';
+                let name = p.name || '';
+                let category_name = p.category_name || '';
+
+                if (description.includes('[TAX_EXEMPT]') || name.includes('[TAX_EXEMPT]') || category_name.includes('[TAX_EXEMPT]')) {
                     noTax = true;
                 }
 
                 // Strip technical tags for a cleaner dashboard view
-                const name = (p.name || '').replace(/\[TAX_EXEMPT\]/g, '').trim();
-                const description = (p.description || '').replace(/\[TAX_EXEMPT\]/g, '').trim();
-                const category_name = (p.category_name || '').replace(/\[TAX_EXEMPT\]/g, '').trim();
+                name = name.replace(/\[TAX_EXEMPT\]/g, '').trim();
+                description = description.replace(/\[TAX_EXEMPT\]/g, '').trim();
+                category_name = category_name.replace(/\[TAX_EXEMPT\]/g, '').trim();
 
                 return {
                     ...p,
                     name,
                     description,
                     category_name,
-                    no_tax: noTax
+                    no_tax: noTax,
+                    expiry_date: p.expiry_date || null
                 };
             });
             setProducts(processed);
@@ -733,7 +809,8 @@ const AdminDashboard = () => {
             is_new: false,
             is_on_sale: false,
             discount: 0,
-            no_tax: false
+            no_tax: false,
+            expiry_date: ""
         });
         setIsEditDialogOpen(true);
     };
@@ -1502,12 +1579,6 @@ const AdminDashboard = () => {
     };
 
     const isEditor = user?.role === 'editor';
-    const username = user?.username?.toLowerCase() || "";
-    const isRestrictedStaff = username.includes('mostafa') || username.includes('hesham') || username === 'h' || username === 'fikry';
-    const isAdmin = user?.role === 'admin' && !isRestrictedStaff;
-    const isSuperAdmin = username === 'elhanafy';
-    const canDelete = isAdmin;
-    const canEditPrice = isAdmin;
 
     return (
         <div className="min-h-screen bg-gray-50/50 p-4 md:p-8 font-tajawal rtl" dir="rtl">
@@ -1582,7 +1653,7 @@ const AdminDashboard = () => {
                                 </div>
                             </>
                         )}
-                        {isAdmin && (
+                        {isSpecial && (
                             <Button onClick={handleAddNew} className="bg-saada-red hover:bg-red-700 text-white gap-2 h-12 px-6 text-lg rounded-xl shadow-lg shadow-red-200 transition-all">
                                 <Plus className="h-5 w-5" />
                                 إضافة منتج جديد
@@ -1939,6 +2010,9 @@ const AdminDashboard = () => {
                                                 <TableHead className="text-right py-4 font-bold text-saada-brown">القسم</TableHead>
                                                 <TableHead className="text-right py-4 font-bold text-saada-brown">السعر</TableHead>
                                                 <TableHead className="text-right py-4 font-bold text-saada-brown">المخزون</TableHead>
+                                                {isSpecial && (
+                                                    <TableHead className="text-right py-4 font-bold text-saada-brown">الصلاحية</TableHead>
+                                                )}
                                                 <TableHead className="text-center py-4 font-bold text-saada-brown">الإجراءات</TableHead>
                                             </TableRow>
                                         </TableHeader>
@@ -2005,10 +2079,17 @@ const AdminDashboard = () => {
                                                             </span>
                                                         </TableCell>
                                                         <TableCell className="py-4 font-bold text-gray-900">{Number(p.price).toFixed(Number(p.price) % 1 === 0 ? 0 : 1)} ج.م</TableCell>
-                                                        {isAdmin && (
+                                                        {isSpecial && (
                                                             <TableCell className="py-4">
-                                                                <span className={`font - bold ${(p.stock ?? 0) < 10 ? 'text-orange-600' : 'text-gray-600'} `}>
+                                                                <span className={`font-bold ${(p.stock ?? 0) < 10 ? 'text-orange-600' : 'text-gray-600'}`}>
                                                                     {p.stock ?? "-"}
+                                                                </span>
+                                                            </TableCell>
+                                                        )}
+                                                        {isSpecial && (
+                                                            <TableCell className="py-4">
+                                                                <span className={`text-[10px] font-bold ${p.expiry_date ? (new Date(p.expiry_date).getTime() < new Date().getTime() ? 'text-red-600 bg-red-50' : 'text-blue-600 bg-blue-50') : 'text-gray-400'} px-2 py-1 rounded-lg`}>
+                                                                    {p.expiry_date || "-"}
                                                                 </span>
                                                             </TableCell>
                                                         )}
@@ -2415,6 +2496,24 @@ const AdminDashboard = () => {
                                 </div>
                             </div>
 
+                            {/* Expiry Date Field - Special Users only */}
+                            {isSpecial && (
+                                <div className="space-y-2 p-4 bg-blue-50/50 rounded-2xl border border-blue-100">
+                                    <Label htmlFor="expiry" className="text-blue-700 font-bold flex items-center gap-2">
+                                        <Clock className="h-4 w-4" />
+                                        تاريخ الصلاحية (اختياري)
+                                    </Label>
+                                    <Input
+                                        id="expiry"
+                                        type="date"
+                                        value={currentProduct.expiry_date || ""}
+                                        onChange={(e) => setCurrentProduct({ ...currentProduct, expiry_date: e.target.value })}
+                                        className="h-11 rounded-xl bg-white"
+                                    />
+                                    <p className="text-[10px] text-blue-600 font-medium">اترك فارغاً للأصناف التي لا تملك تاريخ انتهاء محدد</p>
+                                </div>
+                            )}
+
                             <div className="space-y-2">
                                 <Label htmlFor="category">القسم</Label>
                                 <Select
@@ -2572,6 +2671,21 @@ const AdminDashboard = () => {
                             <X className="h-4 w-4 ml-2" />
                             إلغاء
                         </Button>
+                        {isSpecial && currentProduct.id && (
+                            <Button
+                                type="button"
+                                onClick={() => {
+                                    const { id, created_at, ...newData } = currentProduct;
+                                    setCurrentProduct({ ...newData, stock: 0, expiry_date: "" });
+                                    toast.info("تم البدء في إضافة صلاحية جديدة لنفس المنتج. أدخل الرصيد وتاريخ الصلاحية ثم اضغط حفظ.");
+                                }}
+                                variant="outline"
+                                className="h-11 px-6 rounded-xl border-blue-300 text-blue-600 hover:bg-blue-50"
+                            >
+                                <Plus className="h-4 w-4 ml-2" />
+                                إضافة صلاحية/باتش جديد
+                            </Button>
+                        )}
                         <Button onClick={handleSave} className="h-11 px-8 rounded-xl bg-saada-brown hover:bg-saada-brown/90 text-white shadow-lg">
                             <Check className="h-4 w-4 ml-2" />
                             حفظ التعديلات

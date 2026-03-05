@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Heart, ChevronRight, Loader2, ShieldCheck, Truck, RotateCcw, Star, MessageCircle, Plus, Minus, Share2, Copy } from "lucide-react";
+import { ShoppingCart, Heart, ChevronRight, Loader2, ShieldCheck, Truck, RotateCcw, Star, MessageCircle, Plus, Minus, Share2, Copy, Clock } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import { useProduct } from "@/hooks/use-products";
@@ -202,6 +202,15 @@ const ProductDetails = () => {
                     <span className="text-4xl md:text-5xl font-black text-primary">{Number(product.price).toFixed(Number(product.price) % 1 === 0 ? 0 : 1)} ج.م</span>
                   )}
                 </div>
+
+                {/* Expiry Date Display - Only if valid and future (as handled by the hook) */}
+                {product.expiry_date && (
+                  <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-xl border border-blue-100 w-fit animate-in fade-in slide-in-from-right-4 duration-500">
+                    <Clock className="h-4 w-4" />
+                    <span className="text-xs font-black uppercase tracking-widest">تاريخ الانتهاء:</span>
+                    <span className="text-sm font-bold">{product.expiry_date}</span>
+                  </div>
+                )}
 
                 <div className="space-y-6">
                   <div className="p-6 bg-primary/5 rounded-2xl border border-primary/10">

@@ -18,6 +18,7 @@ export interface Product {
     discount: number;
     stock: number;
     no_tax?: boolean;
+    expiry_date?: string;
     created_at?: string;
 }
 
@@ -40,18 +41,34 @@ const processProduct = (p: any, isAdmin: boolean): Product => {
         description = description.replace(/باركود\s*:\s*\d+/g, '').trim();
     }
 
+    let expiryDate = p.expiry_date || null;
+
+    // Rule: Mention expiry only if it's valid, has stock, and is current (for customers)
+    if (!isAdmin && expiryDate) {
+        const now = new Date();
+        const expiry = new Date(expiryDate);
+        const isPast = expiry.getTime() < now.getTime();
+        const hasNoStock = (p.stock || 0) <= 0;
+
+        if (isPast || hasNoStock) {
+            expiryDate = null;
+        }
+    }
+
     return {
         ...p,
         name,
         description,
         category_name,
-        no_tax: noTax
+        no_tax: noTax,
+        expiry_date: expiryDate
     };
 };
 
 export const useProducts = (categoryId?: string, isFeatured?: boolean) => {
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin' || user?.role === 'editor';
+    const isSpecial = user && ['admin', 'elhanafy', 'mostafa', 'mostafa_abu_mailla', 'fikry'].includes(user.username.toLowerCase());
 
     return useQuery({
         queryKey: ['products', categoryId, isFeatured, isAdmin],
@@ -59,11 +76,6 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean) => {
             let query = supabase.from('products').select('*');
 
             if (!isAdmin) {
-                // شروط العرض للعملاء (ضمان الجودة):
-                // 1. المخزون أكبر من أو يساوي 1
-                // 2. السعر أكبر من 0
-                // 3. وجود صورة صالحة وغير افتراضية
-                // 4. عدم وجود [DRAFT] في الوصف
                 query = query
                     .filter('stock', 'gte', 1)
                     .filter('price', 'gt', 0)
@@ -71,15 +83,10 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean) => {
                     .neq('image', '')
                     .not('image', 'ilike', '%unsplash.com%')
                     .not('description', 'ilike', '%[DRAFT]%');
+            }
 
-                if (categoryId && categoryId !== 'all') {
-                    query = query.or(`category_id.eq.${categoryId},category_name.eq.${categoryId}`);
-                }
-            } else {
-                // المسؤول يرى كل شيء
-                if (categoryId && categoryId !== 'all') {
-                    query = query.or(`category_id.eq.${categoryId},category_name.eq.${categoryId}`);
-                }
+            if (categoryId && categoryId !== 'all') {
+                query = query.or(`category_id.eq.${categoryId},category_name.eq.${categoryId}`);
             }
 
             if (isFeatured) {
@@ -91,9 +98,11 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean) => {
 
             if (error) throw error;
 
-            // معالجة البيانات للعملاء (فلترة نهائية للأمان القصوى)
-            if (!isAdmin) {
-                return (data as any[]).filter(p => {
+            if (!isAdmin && data) {
+                // Grouping logic for the store facade
+                const groupedMap = new Map<string, Product>();
+
+                (data as any[]).forEach(p => {
                     const price = Number(p.price);
                     const stock = Number(p.stock);
                     const isDraft = p.description?.includes('[DRAFT]');
@@ -102,8 +111,21 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean) => {
                         !p.image.includes('unsplash.com') &&
                         p.image !== SITE_CONFIG.placeholderImage;
 
-                    return stock >= 1 && price > 0 && hasValidImage && !isDraft;
-                }).map(p => processProduct(p, false));
+                    if (stock >= 1 && price > 0 && hasValidImage && !isDraft) {
+                        const processed = processProduct(p, false);
+                        // Group by name for the store to avoid showing same product with different expiries as separate items
+                        const key = processed.name.toLowerCase().trim();
+
+                        if (groupedMap.has(key)) {
+                            const existing = groupedMap.get(key)!;
+                            existing.stock += processed.stock;
+                        } else {
+                            groupedMap.set(key, processed);
+                        }
+                    }
+                });
+
+                return Array.from(groupedMap.values());
             }
 
             return (data as any[]).map(p => processProduct(p, true));
@@ -116,34 +138,43 @@ export const useProduct = (id: number) => {
     const isAdmin = user?.role === 'admin' || user?.role === 'editor';
 
     return useQuery({
-        queryKey: ['product', id],
+        queryKey: ['product', id, isAdmin],
         queryFn: async () => {
-            const { data, error } = await supabase
+            const { data: product, error } = await supabase
                 .from('products')
                 .select('*')
                 .eq('id', id)
                 .single();
 
             if (error) throw error;
+            if (!product) return null;
 
-            // معالجة البيانات للعملاء (إخفاء الباركود والتحقق من شروط العرض)
-            if (!isAdmin && data) {
-                const price = Number(data.price);
-                const stock = Number(data.stock);
-                const isDraft = data.description?.includes('[DRAFT]');
-                const hasValidImage = data.image &&
-                    data.image.trim() !== "" &&
-                    !data.image.includes('unsplash.com') &&
-                    data.image !== SITE_CONFIG.placeholderImage;
-
-                if (!(stock >= 1 && price > 0 && hasValidImage && !isDraft)) {
-                    return null;
-                }
-
-                return processProduct(data, false);
+            if (isAdmin) {
+                return processProduct(product, true);
             }
 
-            return data ? processProduct(data, true) : null;
+            // Customer View: Show aggregate stock for all batches of this name
+            const { data: allBatches } = await supabase
+                .from('products')
+                .select('*')
+                .eq('name', product.name);
+
+            const totalStock = (allBatches || []).reduce((sum, p) => sum + (p.stock || 0), 0);
+
+            const processed = processProduct(product, false);
+            processed.stock = totalStock;
+
+            const isDraft = product.description?.includes('[DRAFT]');
+            const hasValidImage = product.image &&
+                product.image.trim() !== "" &&
+                !product.image.includes('unsplash.com') &&
+                product.image !== SITE_CONFIG.placeholderImage;
+
+            if (!(totalStock >= 1 && Number(product.price) > 0 && hasValidImage && !isDraft)) {
+                return null;
+            }
+
+            return processed;
         },
         enabled: !!id,
     });

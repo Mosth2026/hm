@@ -74,7 +74,6 @@ const App = () => {
             <BrowserRouter>
               <div className="relative min-h-screen bg-background">
                 <LuxuryExperience />
-                <PremiumDecorations />
                 <ThemeToggle />
                 <WhatsAppWidget />
                 <Routes>
