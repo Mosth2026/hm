@@ -23,7 +23,7 @@ import LuxuryExperience from "./components/LuxuryExperience";
 import PremiumDecorations from "./components/PremiumDecorations";
 
 try {
-  const version = "3.3.3-final";
+  const version = "3.3.4-final";
   if (typeof window !== 'undefined' && localStorage.getItem('site_v') !== version) {
     localStorage.clear();
     localStorage.setItem('site_v', version);
