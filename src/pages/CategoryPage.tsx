@@ -8,6 +8,7 @@ import { Helmet } from "react-helmet-async";
 import { useProducts } from "@/hooks/use-products";
 import { Loader2, Sparkles, Filter, Share2, MessageCircle, Copy } from "lucide-react";
 import { toast } from "sonner";
+import { cleanImageUrl } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -54,7 +55,7 @@ const CategoryPage = () => {
         {/* Open Graph Tags */}
         <meta property="og:title" content={`${categoryName} | صناع السعادة`} />
         <meta property="og:description" content={`استكشف تشكيلتنا الحصرية من ${categoryName} الفاخرة في متجر صناع السعادة.`} />
-        <meta property="og:image" content="https://happinessmakers.online/assets/logo.png" />
+        <meta property="og:image" content={products && products.length > 0 ? cleanImageUrl(products[0].image) : "https://happinessmakers.online/assets/logo.png"} />
         <meta property="og:type" content="website" />
         <meta property="og:url" content={window.location.href} />
 
@@ -62,7 +63,7 @@ const CategoryPage = () => {
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={`${categoryName} | صناع السعادة`} />
         <meta name="twitter:description" content={`استكشف تشكيلتنا الحصرية من ${categoryName} الفاخرة في متجر صناع السعادة.`} />
-        <meta name="twitter:image" content="https://happinessmakers.online/assets/logo.png" />
+        <meta name="twitter:image" content={products && products.length > 0 ? cleanImageUrl(products[0].image) : "https://happinessmakers.online/assets/logo.png"} />
       </Helmet>
       <div className="min-h-screen flex flex-col font-tajawal rtl bg-white">
         <Header />

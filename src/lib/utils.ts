@@ -21,16 +21,27 @@ export function formatPrice(price: number): string {
 }
 
 export function cleanImageUrl(url: string | undefined): string {
-  if (!url) return "";
+  if (!url) return "https://happinessmakers.online/assets/logo.png";
+
   try {
-    const urlObj = new URL(url);
-    // Unsplash cleaning: Keep only the base image ID
-    if (urlObj.hostname.includes("unsplash.com")) {
-      return `${urlObj.origin}${urlObj.pathname}`;
+    // If it's already an absolute URL (like Unsplash or Supabase full URL)
+    if (url.startsWith('http')) {
+      const urlObj = new URL(url);
+      if (urlObj.hostname.includes("unsplash.com")) {
+        return `${urlObj.origin}${urlObj.pathname}`;
+      }
+      return url;
     }
-    // General cleaning for other services if needed
-    return url;
+
+    // If it's a relative path, make it absolute
+    const baseUrl = "https://happinessmakers.online";
+    const cleanPath = url.startsWith('/') ? url : `/${url}`;
+    return `${baseUrl}${cleanPath}`;
   } catch (e) {
-    return url || "";
+    // Fallback logic
+    if (url && !url.startsWith('http')) {
+      return `https://happinessmakers.online${url.startsWith('/') ? '' : '/'}${url}`;
+    }
+    return url || "https://happinessmakers.online/assets/logo.png";
   }
 }
