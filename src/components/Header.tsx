@@ -392,7 +392,55 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Category Navigation Bar Removed as requested */}
+        {/* Mobile Category Navigation - RESTORED TOP BAR */}
+        <div className="lg:hidden bg-white/70 backdrop-blur-md border-b border-primary/5 overflow-x-auto shadow-sm" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+          <div className="flex items-center gap-2 px-4 py-3 min-w-max">
+            {navLinks.map((link) => {
+              const isActive = location.pathname === link.path;
+              return (
+                <Link
+                  key={link.path}
+                  to={link.path}
+                  className={cn(
+                    "px-5 py-2.5 text-[13px] font-black uppercase tracking-wider rounded-xl transition-all whitespace-nowrap border-b-2 shadow-sm",
+                    isActive
+                      ? "bg-primary text-white border-secondary scale-105 shadow-primary/20"
+                      : "bg-white/50 text-primary/70 border-transparent hover:bg-primary/5 hover:text-primary"
+                  )}
+                >
+                  {link.name}
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Desktop Category Navigation - RESTORED TOP BAR */}
+        <div className="hidden lg:block bg-white/40 border-b border-primary/5">
+          <div className="container mx-auto px-4 md:px-8">
+            <nav className="flex items-center justify-center gap-2 py-1 flex-wrap">
+              {navLinks.map((link) => {
+                const isActive = location.pathname === link.path;
+                return (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    className={cn(
+                      "relative px-5 py-2 text-[13px] font-black uppercase tracking-[0.05em] transition-all duration-300 group whitespace-nowrap",
+                      isActive ? "text-secondary" : "text-primary/60 hover:text-primary"
+                    )}
+                  >
+                    {link.name}
+                    <span className={cn(
+                      "absolute bottom-0 left-1/2 -translate-x-1/2 h-1.5 bg-secondary rounded-t-full transition-all duration-500",
+                      isActive ? "w-10 opacity-100" : "w-0 opacity-0 group-hover:w-8 group-hover:opacity-100"
+                    )} />
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+        </div>
       </header>
 
       {/* Mobile Menu Overlay */}
