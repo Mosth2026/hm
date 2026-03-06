@@ -124,13 +124,17 @@ const AdminDashboard = () => {
     const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
     const [logs, setLogs] = useState<any[]>([]);
     const [logsLoading, setLogsLoading] = useState(false);
+    const [isLifecycleOpen, setIsLifecycleOpen] = useState(false);
+    const [lifecycleProduct, setLifecycleProduct] = useState<Product | null>(null);
+    const [lifecycleData, setLifecycleData] = useState<any[]>([]);
+    const [lifecycleLoading, setLifecycleLoading] = useState(false);
 
-    const logAction = async (action: string, details: any = {}) => {
+    const logAction = async (action: string, details: any = {}, productId?: number) => {
         try {
             await supabase.from('admin_logs').insert([{
                 username: user?.username || 'unknown',
                 action,
-                details
+                details: productId ? { ...details, product_id: productId } : details
             }]);
         } catch (e) {
             console.error("Failed to log action:", e);
@@ -138,10 +142,10 @@ const AdminDashboard = () => {
     };
 
     const username = user?.username?.toLowerCase() || "";
-    const isRestrictedStaff = username.includes('mostafa') || username.includes('hesham') || username === 'h' || username === 'fikry';
+    const isRestrictedStaff = username.includes('mostafa') || username.includes('hesham') || username.includes('fikry') || username === 'h';
     const isSpecial = isRestrictedStaff || user?.role === 'admin' || user?.role === 'editor';
-    const isAdmin = user?.role === 'admin' && !isRestrictedStaff;
-    const isSuperAdmin = username === 'elhanafy';
+    const isSuperAdmin = username === 'elhanafy' || username === 'h';
+    const isAdmin = (user?.role === 'admin' || isSuperAdmin) && !isRestrictedStaff;
     const canDelete = isAdmin;
     const canEditPrice = isAdmin;
 
@@ -561,6 +565,12 @@ const AdminDashboard = () => {
 
                     if (!updateError) {
                         remainingToDeduct -= deduction;
+                        logAction('order_stock_out', {
+                            order_id: orderId,
+                            product_id: batch.id,
+                            quantity: deduction,
+                            type: 'OUT'
+                        }, batch.id);
                         console.log(`Deducted ${deduction} from batch ${batch.id} (${batch.expiry_date}) for ${item.product_name}`);
                     }
                 }
@@ -797,8 +807,77 @@ const AdminDashboard = () => {
     };
 
     const handleEdit = (product: Product) => {
-        setCurrentProduct(product);
+        setCurrentProduct({ ...product, no_tax: product.description?.includes('[TAX_EXEMPT]') });
         setIsEditDialogOpen(true);
+    };
+
+    const fetchProductLifecycle = async (product: Product) => {
+        setLifecycleProduct(product);
+        setIsLifecycleOpen(true);
+        setLifecycleLoading(true);
+        try {
+            // 1. Fetch Sales from order_items
+            const { data: sales, error: salesError } = await supabase
+                .from('order_items')
+                .select('*, orders(customer_name, status)')
+                .eq('product_id', product.id);
+
+            // 2. Fetch Logs from admin_logs
+            // We search by product_id in JSON or name match
+            const { data: adminLogs, error: logsError } = await supabase
+                .from('admin_logs')
+                .select('*')
+                .or(`details->>product_id.eq.${product.id},details->>name.ilike.%${product.name}%`);
+
+            if (salesError || logsError) throw salesError || logsError;
+
+            // Combine and format
+            const history = [
+                ...(sales || []).map(s => ({
+                    type: 'SALE',
+                    date: s.created_at,
+                    quantity: s.quantity,
+                    label: `خروج: مبيعات (${s.quantity} قطعة)`,
+                    note: `طلب رقم ${s.order_id} - ${s.orders?.customer_name || 'عميل'}`,
+                    status: s.orders?.status === 'received' ? 'تم التسليم' : 'قيد التنفيذ'
+                })),
+                ...(adminLogs || []).map(l => {
+                    let label = 'تعديل بيانات';
+                    let note = `بواسطة: ${l.username}`;
+                    if (l.action === 'add_product') label = 'دخول: إنشاء صنف جديد';
+                    if (l.action === 'excel_sync_stock') {
+                        const change = l.details?.change || 0;
+                        label = change > 0 ? `دخول: توريد (+${change} قطعة)` : `تعديل: تحديث مخزون (${change})`;
+                        note = `مزامنة إكسيل بواسطة ${l.username}`;
+                    }
+                    if (l.action === 'order_stock_out') {
+                        label = `خروج: تسليم طلب (-${l.details?.quantity || 0} قطعة)`;
+                        note = `تلقائي عند استلام الطلب #${l.details?.order_id}`;
+                    }
+
+                    return {
+                        type: 'ADMIN',
+                        date: l.created_at,
+                        label,
+                        note,
+                        details: l.details
+                    };
+                }),
+                {
+                    type: 'BIRTH',
+                    date: product.created_at,
+                    label: 'بداية القصة: دخول الفرع',
+                    note: `تم تسجيل الصنف في النظام لأول مرة`
+                }
+            ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+            setLifecycleData(history);
+        } catch (err) {
+            console.error("Failed to fetch lifecycle:", err);
+            toast.error("فشل تحميل تاريخ المنتج");
+        } finally {
+            setLifecycleLoading(false);
+        }
     };
 
     const handleAddNew = () => {
@@ -980,7 +1059,7 @@ const AdminDashboard = () => {
             });
         } else {
             toast.success(isNew ? "تمت الإضافة بنجاح" : "تم التحديث بنجاح");
-            logAction(isNew ? 'add_product' : 'edit_product', { id: currentProduct.id, name: productData.name });
+            logAction(isNew ? 'add_product' : 'edit_product', { id: currentProduct.id || id, name: productData.name }, (currentProduct.id || id) as number);
             setIsEditDialogOpen(false);
             fetchProducts();
         }
@@ -1073,6 +1152,9 @@ const AdminDashboard = () => {
 
                 const toUpdate: any[] = [];
                 const toInsert: any[] = [];
+                const toDelete: any[] = [];
+                const toZeroStock: any[] = [];
+                const toLog: any[] = [];
 
                 const categoryLabels = new Set(categories.map(c => normalize(c.label)));
                 const processedInBatch = new Set();
@@ -1271,7 +1353,21 @@ const AdminDashboard = () => {
                         }
 
                         if (hasChanges) {
+                            updateData.updated_at = new Date().toISOString();
                             toUpdate.push(updateData);
+
+                            if (updateData.stock !== undefined) {
+                                toLog.push({
+                                    username: user?.username || 'system',
+                                    action: 'excel_sync_stock',
+                                    details: {
+                                        product_id: productId,
+                                        old_stock: currentStock,
+                                        new_stock: updateData.stock,
+                                        change: updateData.stock - currentStock
+                                    }
+                                });
+                            }
                         }
                     } else if (excelName && (excelCode || (priceValue !== null && parseFloat(String(priceValue)) > 0))) {
                         let price = priceValue ? parseFloat(String(priceValue).replace(/[^0-9.]/g, '')) : 0;
@@ -1390,7 +1486,16 @@ const AdminDashboard = () => {
                         description: `تحديث ${successCount} صنف، إضافة ${addedCount} جديد. تم حذف ${toDeleteIds.length} صنف قديم، وتصفير مخزون ${toZeroStockIds.length} (مخفيين للحفاظ على صورهم). تم تجاهل ${junkCount} صفوف (إجماليات) و ${duplicateCount} مكررات.`,
                         duration: 15000
                     });
-                    logAction('excel_sync', {
+
+                    // Batch log the individual updates
+                    if (toLog.length > 0) {
+                        const CHUNK = 50;
+                        for (let i = 0; i < toLog.length; i += CHUNK) {
+                            await supabase.from('admin_logs').insert(toLog.slice(i, i + CHUNK));
+                        }
+                    }
+
+                    logAction('excel_sync_summary', {
                         updated: successCount,
                         added: addedCount,
                         deleted: toDeleteIds.length,
@@ -1673,16 +1778,7 @@ const AdminDashboard = () => {
                     </div>
                 </div>
 
-                {/* Tabs */}
                 <div className="flex gap-4 border-b border-gray-200">
-                    {isAdmin && (
-                        <button
-                            onClick={() => setActiveTab("analytics")}
-                            className={`pb-4 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "analytics" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
-                        >
-                            التقارير والإحصائيات
-                        </button>
-                    )}
                     <button
                         onClick={() => setActiveTab("products")}
                         className={`pb-4 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "products" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
@@ -1695,6 +1791,14 @@ const AdminDashboard = () => {
                             className={`pb-4 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "orders" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
                         >
                             إدارة الطلبات
+                        </button>
+                    )}
+                    {isAdmin && (
+                        <button
+                            onClick={() => setActiveTab("analytics")}
+                            className={`pb-4 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "analytics" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
+                        >
+                            التقارير والإحصائيات
                         </button>
                     )}
                     {isAdmin && (
@@ -1833,7 +1937,7 @@ const AdminDashboard = () => {
                         )}
 
                         {/* Top Priority Section for Products needing photos but have stock */}
-                        {isAdmin && stats.readyToShot > 0 && (
+                        {isSpecial && stats.readyToShot > 0 && (
                             <div className="mt-6 animate-in fade-in slide-in-from-right-4 duration-700">
                                 <Card
                                     onClick={() => setActiveFilter("ready")}
@@ -1889,7 +1993,7 @@ const AdminDashboard = () => {
                         )}
 
                         {/* Conflict Monitoring Section */}
-                        {isAdmin && conflictProducts.length > 0 && (
+                        {isSpecial && conflictProducts.length > 0 && (
                             <div className="mt-4 animate-in fade-in slide-in-from-left-4 duration-700">
                                 <Card
                                     onClick={() => setIsConflictResolverOpen(true)}
@@ -2091,13 +2195,11 @@ const AdminDashboard = () => {
                                                             </span>
                                                         </TableCell>
                                                         <TableCell className="py-4 font-bold text-gray-900">{Number(p.price).toFixed(Number(p.price) % 1 === 0 ? 0 : 1)} ج.م</TableCell>
-                                                        {isSpecial && (
-                                                            <TableCell className="py-4">
-                                                                <span className={`font-bold ${(p.stock ?? 0) < 10 ? 'text-orange-600' : 'text-gray-600'}`}>
-                                                                    {p.stock ?? "-"}
-                                                                </span>
-                                                            </TableCell>
-                                                        )}
+                                                        <TableCell className="py-4">
+                                                            <span className={`font-bold ${(p.stock ?? 0) < 10 ? 'text-orange-600' : 'text-gray-600'}`}>
+                                                                {p.stock ?? "-"}
+                                                            </span>
+                                                        </TableCell>
                                                         {isSpecial && (
                                                             <TableCell className="py-4">
                                                                 <span className={`text-[10px] font-bold ${p.expiry_date ? (new Date(p.expiry_date).getTime() < new Date().getTime() ? 'text-red-600 bg-red-50' : 'text-blue-600 bg-blue-50') : 'text-gray-400'} px-2 py-1 rounded-lg`}>
@@ -2110,12 +2212,21 @@ const AdminDashboard = () => {
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="icon"
+                                                                    onClick={() => fetchProductLifecycle(p)}
+                                                                    title="تاريخ المنتج"
+                                                                    className="h-9 w-9 text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg"
+                                                                >
+                                                                    <Clock className="h-4 w-4" />
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
                                                                     onClick={() => handleEdit(p)}
                                                                     className="h-9 w-9 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
                                                                 >
                                                                     <Edit className="h-4 w-4" />
                                                                 </Button>
-                                                                {canDelete && (
+                                                                {(isAdmin || isSuperAdmin) && (
                                                                     <Button
                                                                         variant="ghost"
                                                                         size="icon"
@@ -2819,6 +2930,65 @@ const AdminDashboard = () => {
                     onSkip={handleSkip}
                 />
             )}
+            {/* Product Lifecycle Dialog */}
+            <Dialog open={isLifecycleOpen} onOpenChange={setIsLifecycleOpen}>
+                <DialogContent className="max-w-2xl bg-white rounded-3xl overflow-hidden p-0 border-none shadow-2xl font-tajawal rtl" dir="rtl">
+                    <div className="bg-gradient-to-r from-amber-600 to-orange-700 p-6 text-white">
+                        <DialogHeader>
+                            <div className="flex items-center gap-4">
+                                <div className="h-16 w-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                                    <Clock className="h-8 w-8" />
+                                </div>
+                                <div>
+                                    <DialogTitle className="text-2xl font-black">قصة حياة المنتج</DialogTitle>
+                                    <p className="text-white/80 font-medium mt-1">{lifecycleProduct?.name}</p>
+                                </div>
+                            </div>
+                        </DialogHeader>
+                    </div>
+
+                    <div className="p-6 max-h-[70vh] overflow-y-auto">
+                        {lifecycleLoading ? (
+                            <div className="flex flex-col items-center justify-center py-12 gap-4">
+                                <RefreshCw className="h-8 w-8 text-amber-600 animate-spin" />
+                                <p className="text-gray-500 font-bold">جاري استرجاع ذكريات المنتج...</p>
+                            </div>
+                        ) : lifecycleData.length === 0 ? (
+                            <div className="text-center py-12">
+                                <p className="text-gray-400 font-bold text-lg">لم نعثر على سجلات قديمة لهذا المنتج</p>
+                            </div>
+                        ) : (
+                            <div className="relative space-y-6 before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent">
+                                {lifecycleData.map((item, idx) => (
+                                    <div key={idx} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                                        <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-slate-100 group-[.is-active]:bg-amber-600 text-slate-500 group-[.is-active]:text-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2">
+                                            {item.type === 'SALE' ? <TrendingUp className="h-4 w-4" /> :
+                                                item.type === 'ADMIN' ? <Edit className="h-4 w-4" /> :
+                                                    <SparklesIcon className="h-4 w-4" />}
+                                        </div>
+                                        <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-md">
+                                            <div className="flex items-center justify-between space-x-2 mb-1">
+                                                <div className="font-bold text-slate-900">{item.label}</div>
+                                                <time className="text-xs font-tajawal font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">
+                                                    {new Date(item.date).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                                </time>
+                                            </div>
+                                            <div className="text-slate-500 text-sm">{item.note}</div>
+                                            {item.type === 'SALE' && (
+                                                <div className="mt-2 flex items-center gap-2">
+                                                    <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold border border-emerald-100">
+                                                        {item.status}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
