@@ -10,18 +10,25 @@ import { supabase } from "@/lib/supabase";
 import { Loader2, CheckCircle2, ChevronRight, MapPin, Phone, User, CreditCard, MessageCircle } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { SITE_CONFIG } from "@/lib/constants";
+import { useAnalytics } from "@/hooks/use-analytics";
+import { useEffect as useReactEffect } from "react";
 
 const CheckoutPage = () => {
     const { items, getTotalPrice, getDiscountedTotal, appliedCoupon, clearCart } = useCart();
     const navigate = useNavigate();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const { logEvent } = useAnalytics();
     const [formData, setFormData] = useState({
         name: "",
         phone: "",
         address: "",
         notes: "",
     });
+
+    useReactEffect(() => {
+        logEvent('checkout_view', { items_count: items.length, total: discountedTotal });
+    }, []);
 
     const totalPrice = getTotalPrice();
     const discountedTotal = getDiscountedTotal();
@@ -34,7 +41,13 @@ const CheckoutPage = () => {
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
-        setFormData((prev) => ({ ...prev, [name]: value }));
+        const newFormData = { ...formData, [name]: value };
+        setFormData(newFormData);
+
+        // Smart Capture: Log partial info for abandoned cart recovery
+        if (value.length > 3) {
+            logEvent('checkout_progress', { field: name }, newFormData);
+        }
     };
 
     const handleWhatsAppSubmit = async (e: React.FormEvent) => {
@@ -118,6 +131,7 @@ const CheckoutPage = () => {
 
             // 4. فتح واتساب
             window.open(`https://wa.me/${SITE_CONFIG.whatsappNumber}?text=${message}`, '_blank');
+            logEvent('whatsapp_checkout_complete', { order_id: orderId }, formData);
 
             setIsSuccess(true);
             clearCart();
@@ -174,6 +188,7 @@ const CheckoutPage = () => {
 
             // 3. نجاح الطلب
             setIsSuccess(true);
+            logEvent('order_complete', { order_id: order.id, total: discountedTotal }, formData);
             clearCart();
             toast.success("تم استلام طلبك بنجاح! سنتواصل معك قريباً.");
         } catch (error: any) {

@@ -21,6 +21,7 @@ import ThemeToggle from "./components/ThemeToggle";
 import WhatsAppWidget from "./components/WhatsAppWidget";
 import LuxuryExperience from "./components/LuxuryExperience";
 import PremiumDecorations from "./components/PremiumDecorations";
+import AnalyticsTracker from "./components/AnalyticsTracker";
 
 try {
   const version = "3.3.4-final";
@@ -76,6 +77,7 @@ const App = () => {
                 <LuxuryExperience />
                 <ThemeToggle />
                 <WhatsAppWidget />
+                <AnalyticsTracker />
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/admin" element={<AdminDashboard />} />

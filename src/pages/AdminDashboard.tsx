@@ -29,8 +29,12 @@ import {
     Ticket,
     List,
     Users,
-    Clock
+    Clock,
+    PieChart,
+    Calendar,
+    MousePointer2
 } from "lucide-react";
+import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard";
 import * as XLSX from 'xlsx';
 import ImageCropper from "@/components/admin/ImageCropper";
 import {
@@ -102,7 +106,7 @@ const AdminDashboard = () => {
     });
     const [activeFilter, setActiveFilter] = useState<"all" | "low" | "value" | "categories" | "zero" | "draft" | "published" | "no-tax" | "ready" | "trash">("all");
     const [selectedCategoryLabel, setSelectedCategoryLabel] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<"products" | "orders" | "coupons" | "logs" | "subscribers">("products");
+    const [activeTab, setActiveTab] = useState<"products" | "orders" | "coupons" | "logs" | "subscribers" | "analytics">("products");
     const [coupons, setCoupons] = useState<any[]>([]);
     const [couponsLoading, setCouponsLoading] = useState(false);
     const [isCouponDialogOpen, setIsCouponDialogOpen] = useState(false);
@@ -1671,6 +1675,14 @@ const AdminDashboard = () => {
 
                 {/* Tabs */}
                 <div className="flex gap-4 border-b border-gray-200">
+                    {isAdmin && (
+                        <button
+                            onClick={() => setActiveTab("analytics")}
+                            className={`pb-4 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "analytics" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
+                        >
+                            التقارير والإحصائيات
+                        </button>
+                    )}
                     <button
                         onClick={() => setActiveTab("products")}
                         className={`pb-4 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "products" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
@@ -2329,6 +2341,8 @@ const AdminDashboard = () => {
                             </DialogContent>
                         </Dialog>
                     </div>
+                ) : activeTab === "analytics" ? (
+                    <AnalyticsDashboard />
                 ) : activeTab === "subscribers" ? (
                     <Card className="border-none shadow-xl bg-white overflow-hidden">
                         <CardHeader className="border-b border-gray-100 bg-white p-6 flex flex-row items-center justify-between">

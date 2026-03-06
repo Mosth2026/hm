@@ -14,6 +14,7 @@ import { cn, cleanProductName, cleanImageUrl, getShareUrl } from "@/lib/utils";
 import { SITE_CONFIG } from "@/lib/constants";
 import { saveOrderToDb } from "@/lib/orders";
 import { useAuth } from "@/hooks/use-auth";
+import { useAnalytics } from "@/hooks/use-analytics";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,14 +29,20 @@ const ProductDetails = () => {
   const isAdmin = user?.role === 'admin' || user?.role === 'editor';
 
   const [quantity, setQuantity] = useState(1);
-  const addItem = useCart((state) => state.addItem);
-  const updateQuantity = useCart((state) => state.updateQuantity);
-  const items = useCart((state) => state.items);
+  const { addItem, items } = useCart(); // Consolidated useCart state and actions
+  const { trackAddToCart, trackWhatsAppClick, logEvent } = useAnalytics();
+
+  useEffect(() => {
+    if (product) {
+      logEvent('view_product', { id: product.id, name: product.name, price: product.price });
+    }
+  }, [product, logEvent]);
 
   const handleAddToCart = () => {
     if (product) {
       const cleanName = cleanProductName(product.name);
       addItem(product, quantity);
+      trackAddToCart(product, quantity); // Track add to cart event
       toast.success(`تم إضافة ${quantity} من ${cleanName} إلى السلة`, {
         duration: 2500,
         action: {
@@ -268,6 +275,7 @@ const ProductDetails = () => {
 
                   <Button
                     onClick={async () => {
+                      trackWhatsAppClick(product);
                       const cleanPrice = parseFloat(finalPrice.toString().replace(/,/g, ''));
                       const roundedPrice = Math.round(cleanPrice * 100) / 100;
 
@@ -395,6 +403,21 @@ const ProductDetails = () => {
                   >
                     <Heart className="h-6 w-6 group-hover:fill-secondary group-hover:text-secondary transition-colors" />
                   </Button>
+                </div>
+
+                <div className="pt-6 border-t border-primary/5">
+                  <div className="p-6 bg-emerald-50 rounded-[2.5rem] border border-emerald-100 flex flex-col md:flex-row items-center gap-6 group hover:shadow-xl hover:shadow-emerald-500/10 transition-all cursor-pointer">
+                    <div className="h-16 w-16 bg-white rounded-3xl flex items-center justify-center text-emerald-600 shadow-sm group-hover:rotate-12 transition-transform">
+                      <MessageCircle className="h-8 w-8" />
+                    </div>
+                    <div className="text-center md:text-right flex-grow">
+                      <h4 className="text-emerald-900 font-black text-xl mb-1">دعم فني مباشر 24/7</h4>
+                      <p className="text-emerald-700/70 text-sm font-bold">اترك استفسارك وسيقوم خبراؤنا بالرد عليك فوراً</p>
+                    </div>
+                    <Button variant="ghost" className="text-emerald-600 font-black gap-2 hover:bg-white rounded-2xl h-12">
+                      ابدأ المحادثة
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="pt-8 border-t border-primary/10 flex items-center gap-4 text-xs font-bold text-muted-foreground">

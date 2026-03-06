@@ -1,8 +1,9 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Menu, User, X, Search, Heart, Trash2, Plus, Minus, ShoppingBag, ArrowLeft, MessageCircle, Moon } from "lucide-react";
+import { ShoppingCart, Menu, User, X, Search, Heart, Trash2, Plus, Minus, ShoppingBag, ArrowLeft, MessageCircle, Moon, RefreshCw } from "lucide-react";
+import LiveVisitors from "./LiveVisitors";
+import { useAnalytics } from "@/hooks/use-analytics";
 import { SITE_CONFIG } from "@/lib/constants";
 import { cn, cleanProductName } from "@/lib/utils";
 import { useCart } from "@/hooks/use-cart";
@@ -28,6 +29,7 @@ const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { items, removeItem, updateQuantity, getTotalPrice, getDiscountedTotal, getItemCount, appliedCoupon, applyCoupon, removeCoupon } = useCart();
+  const { logEvent } = useAnalytics();
   const itemCount = getItemCount();
   const totalPrice = getTotalPrice();
   const discountedTotal = getDiscountedTotal();
@@ -116,6 +118,10 @@ const Header = () => {
               </div>
             </Link>
 
+            <div className="hidden lg:block">
+              <LiveVisitors />
+            </div>
+
             <div className="hidden md:flex flex-1 max-w-2xl relative group items-center lg:mx-8">
               <div className="absolute inset-0 bg-primary/5 rounded-2xl blur-0 group-focus-within:blur-md group-focus-within:bg-secondary/10 transition-all duration-500" />
               <div className="relative w-full flex items-center">
@@ -138,7 +144,7 @@ const Header = () => {
                 </Button>
               </Link>
 
-              <Sheet>
+              <Sheet onOpenChange={(open) => open && logEvent('cart_view', { items_count: itemCount })}>
                 <SheetTrigger asChild>
                   <Button
                     className="relative h-12 px-5 md:px-7 bg-primary hover:bg-black text-white rounded-2xl shadow-[0_10px_20px_rgba(0,0,0,0.15)] transition-all hover:scale-105 active:scale-95 group flex items-center gap-3 border-b-4 border-black/20"
