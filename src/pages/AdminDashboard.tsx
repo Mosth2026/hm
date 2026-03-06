@@ -571,6 +571,14 @@ const AdminDashboard = () => {
                             quantity: deduction,
                             type: 'OUT'
                         }, batch.id);
+
+                        if (newStock === 0) {
+                            logAction('product_out_of_stock', {
+                                product_id: batch.id,
+                                name: batch.name,
+                                reason: 'order_sale'
+                            }, batch.id);
+                        }
                         console.log(`Deducted ${deduction} from batch ${batch.id} (${batch.expiry_date}) for ${item.product_name}`);
                     }
                 }
@@ -854,9 +862,13 @@ const AdminDashboard = () => {
                         label = `خروج: تسليم طلب (-${l.details?.quantity || 0} قطعة)`;
                         note = `تلقائي عند استلام الطلب #${l.details?.order_id}`;
                     }
+                    if (l.action === 'product_out_of_stock') {
+                        label = `نفاد المخزون (صِفر)`;
+                        note = `أصبح الرصيد صفراً بسبب ${l.details?.reason === 'order_sale' ? 'مبيعات' : 'تحديث إكسيل'}`;
+                    }
 
                     return {
-                        type: 'ADMIN',
+                        type: l.action === 'product_out_of_stock' ? 'ALERT' : 'ADMIN',
                         date: l.created_at,
                         label,
                         note,
@@ -1367,6 +1379,18 @@ const AdminDashboard = () => {
                                         change: updateData.stock - currentStock
                                     }
                                 });
+
+                                if (updateData.stock === 0 && currentStock > 0) {
+                                    toLog.push({
+                                        username: user?.username || 'system',
+                                        action: 'product_out_of_stock',
+                                        details: {
+                                            product_id: productId,
+                                            name: dbProduct.name,
+                                            reason: 'excel_sync'
+                                        }
+                                    });
+                                }
                             }
                         }
                     } else if (excelName && (excelCode || (priceValue !== null && parseFloat(String(priceValue)) > 0))) {
@@ -2961,17 +2985,27 @@ const AdminDashboard = () => {
                             <div className="relative space-y-6 before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent">
                                 {lifecycleData.map((item, idx) => (
                                     <div key={idx} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                                        <div className="flex items-center justify-center w-10 h-10 rounded-full border border-white bg-slate-100 group-[.is-active]:bg-amber-600 text-slate-500 group-[.is-active]:text-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2">
-                                            {item.type === 'SALE' ? <TrendingUp className="h-4 w-4" /> :
-                                                item.type === 'ADMIN' ? <Edit className="h-4 w-4" /> :
-                                                    <SparklesIcon className="h-4 w-4" />}
+                                        <div className={`flex items-center justify-center w-10 h-10 rounded-full border border-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 ${item.type === 'ALERT' ? 'bg-red-600 text-white' :
+                                                (item.label.includes('دخول') ? 'bg-emerald-600 text-white' :
+                                                    (item.label.includes('خروج') ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-500'))
+                                            }`}>
+                                            {item.type === 'SALE' || item.label.includes('خروج') ? <TrendingUp className="h-4 w-4" /> :
+                                                item.type === 'ALERT' ? <AlertTriangle className="h-4 w-4" /> :
+                                                    item.type === 'ADMIN' ? <Edit className="h-4 w-4" /> :
+                                                        <SparklesIcon className="h-4 w-4" />}
                                         </div>
-                                        <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-md">
+                                        <div className={`w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border bg-white shadow-sm transition-all hover:shadow-md ${item.type === 'ALERT' ? 'border-red-200 bg-red-50/30' : 'border-slate-200'
+                                            }`}>
                                             <div className="flex items-center justify-between space-x-2 mb-1">
                                                 <div className="font-bold text-slate-900">{item.label}</div>
-                                                <time className="text-xs font-tajawal font-medium text-amber-600 bg-amber-50 px-2 py-1 rounded-lg">
-                                                    {new Date(item.date).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                                </time>
+                                                <div className="flex flex-col items-end gap-1">
+                                                    <time className="text-[10px] font-tajawal font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg whitespace-nowrap">
+                                                        {new Date(item.date).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                                    </time>
+                                                    <time className="text-[10px] font-bold text-gray-400">
+                                                        {new Date(item.date).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
+                                                    </time>
+                                                </div>
                                             </div>
                                             <div className="text-slate-500 text-sm">{item.note}</div>
                                             {item.type === 'SALE' && (
