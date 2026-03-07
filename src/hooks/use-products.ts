@@ -102,7 +102,7 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean) => {
                 // Grouping logic for the store facade
                 const groupedMap = new Map<string, Product>();
 
-                (data as any[]).forEach(p => {
+                ((data || []) as any[]).forEach(p => {
                     const price = Number(p.price);
                     const stock = Number(p.stock);
                     const isDraft = p.description?.includes('[DRAFT]');
@@ -128,7 +128,7 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean) => {
                 return Array.from(groupedMap.values());
             }
 
-            return (data as any[]).map(p => processProduct(p, true));
+            return ((data || []) as any[]).map(p => processProduct(p, true));
         },
     });
 };

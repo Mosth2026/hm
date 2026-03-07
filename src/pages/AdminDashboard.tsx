@@ -1,5 +1,6 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth, UserRole } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
 import {
@@ -78,6 +79,7 @@ const PLACEHOLDER_IMAGE = SITE_CONFIG.placeholderImage;
 
 const AdminDashboard = () => {
     const { user, isAuthenticated, login, logout, initialize } = useAuth();
+    const queryClient = useQueryClient();
 
     useEffect(() => {
         initialize();
@@ -151,13 +153,15 @@ const AdminDashboard = () => {
 
     // Define filteredProducts near the top but as a derived value
 
-    const filteredProducts = products.sort((a, b) => {
-        const aUpdated = updatedSessionIds.includes(a.id);
-        const bUpdated = updatedSessionIds.includes(b.id);
-        if (aUpdated && !bUpdated) return -1;
-        if (!aUpdated && bUpdated) return 1;
-        return (new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
-    });
+    const filteredProducts = useMemo(() => {
+        return [...products].sort((a, b) => {
+            const aUpdated = updatedSessionIds.includes(a.id);
+            const bUpdated = updatedSessionIds.includes(b.id);
+            if (aUpdated && !bUpdated) return -1;
+            if (!aUpdated && bUpdated) return 1;
+            return (new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+        });
+    }, [products, updatedSessionIds]);
 
     useEffect(() => {
         setSelectedProductIds([]);
@@ -994,6 +998,14 @@ const AdminDashboard = () => {
                 fetchProducts();
             }
             setIsCropperOpen(false);
+            
+            // Invalidate caches to show updated image everywhere
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+            if (currentProduct.id) {
+                queryClient.invalidateQueries({ queryKey: ['product', currentProduct.id] });
+                setUpdatedSessionIds(prev => [...new Set([...prev, currentProduct.id as number])]);
+            }
+            
             toast.success("تم تجهيز الصورة وحفظها تلقائياً");
         } catch (error: any) {
             toast.error("خطأ في الرفع", {
@@ -1026,6 +1038,14 @@ const AdminDashboard = () => {
                 fetchProducts();
             }
             setIsCropperOpen(false);
+            
+            // Invalidate caches to show updated image everywhere
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+            if (currentProduct.id) {
+                queryClient.invalidateQueries({ queryKey: ['product', currentProduct.id] });
+                setUpdatedSessionIds(prev => [...new Set([...prev, currentProduct.id as number])]);
+            }
+            
             toast.success("تم رفع الصورة الأصلية");
         } catch (error: any) {
             toast.error("فشل الرفع", {
@@ -1071,7 +1091,15 @@ const AdminDashboard = () => {
             });
         } else {
             toast.success(isNew ? "تمت الإضافة بنجاح" : "تم التحديث بنجاح");
-            logAction(isNew ? 'add_product' : 'edit_product', { id: currentProduct.id || id, name: productData.name }, (currentProduct.id || id) as number);
+            
+            const savedId = currentProduct.id || id;
+            if (savedId) {
+                setUpdatedSessionIds(prev => [...new Set([...prev, savedId as number])]);
+                queryClient.invalidateQueries({ queryKey: ['product', savedId] });
+            }
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+
+            logAction(isNew ? 'add_product' : 'edit_product', { id: savedId, name: productData.name }, savedId as number);
             setIsEditDialogOpen(false);
             fetchProducts();
         }
@@ -2770,7 +2798,7 @@ const AdminDashboard = () => {
                                 </div>
                             </div>
 
-                            <div className={`aspect - video w - full bg - gray - 100 rounded - 2xl overflow - hidden border - 2 border - dashed border - gray - 200 flex items - center justify - center relative group ${isUploading ? 'animate-pulse' : ''} `}>
+                            <div className={`aspect-video w-full bg-gray-100 rounded-2xl overflow-hidden border-2 border-dashed border-gray-200 flex items-center justify-center relative group ${isUploading ? 'animate-pulse' : ''}`}>
                                 {isUploading ? (
                                     <div className="flex flex-col items-center gap-2 text-saada-brown">
                                         <Upload className="h-8 w-8 animate-bounce" />
@@ -2835,9 +2863,13 @@ const AdminDashboard = () => {
                                 إضافة صلاحية/باتش جديد
                             </Button>
                         )}
-                        <Button onClick={handleSave} className="h-11 px-8 rounded-xl bg-saada-brown hover:bg-saada-brown/90 text-white shadow-lg">
+                        <Button 
+                            onClick={handleSave} 
+                            disabled={isUploading}
+                            className={`h-11 px-8 rounded-xl bg-saada-brown hover:bg-saada-brown/90 text-white shadow-lg ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
                             <Check className="h-4 w-4 ml-2" />
-                            حفظ التعديلات
+                            {isUploading ? "جاري الحفظ..." : "حفظ التعديلات"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
