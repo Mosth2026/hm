@@ -139,9 +139,7 @@ const ProductDetails = () => {
         <meta name="twitter:description" content={product.description} />
         <meta name="twitter:image" content={cleanImageUrl(product.image)} />
 
-        <script type="application/ld+json">
-          {JSON.stringify(productSchema)}
-        </script>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
       </Helmet>
       <div className="min-h-screen flex flex-col font-tajawal rtl bg-white">
         <Header />
