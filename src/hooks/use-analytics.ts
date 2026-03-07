@@ -12,9 +12,13 @@ export const useAnalytics = () => {
         // Initialize session if not exists
         let sessionId = localStorage.getItem(SESSION_KEY);
         if (!sessionId) {
-            sessionId = crypto.randomUUID();
-            localStorage.setItem(SESSION_KEY, sessionId);
-            logEvent('session_start', { userAgent: navigator.userAgent });
+            try {
+                sessionId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
+                localStorage.setItem(SESSION_KEY, sessionId);
+                logEvent('session_start', { userAgent: navigator.userAgent });
+            } catch (e) {
+                sessionId = 'temp-session-' + Date.now();
+            }
         }
 
         // Log page view
