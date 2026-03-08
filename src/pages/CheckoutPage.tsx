@@ -24,6 +24,7 @@ const CheckoutPage = () => {
         phone: "",
         address: "",
         notes: "",
+        confirm_email: "", // Honeypot field for bot protection
     });
 
     useReactEffect(() => {
@@ -56,6 +57,14 @@ const CheckoutPage = () => {
             toast.error("يرجى ملء البيانات الأساسية أولاً");
             return;
         }
+
+        // Honeypot check: If bot fills this, silently fail
+        if (formData.confirm_email) {
+            console.warn("Honeypot triggered - bot detected");
+            setIsSuccess(true);
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
@@ -146,6 +155,14 @@ const CheckoutPage = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        
+        // Honeypot check: If bot fills this, silently fail
+        if (formData.confirm_email) {
+            console.warn("Honeypot triggered - bot detected");
+            setIsSuccess(true);
+            return;
+        }
+
         setIsSubmitting(true);
 
         try {
@@ -249,6 +266,17 @@ const CheckoutPage = () => {
                                     </h2>
 
                                     <form onSubmit={handleSubmit} className="space-y-5">
+                                        {/* Honeypot field - absolute hidden */}
+                                        <div className="hidden" aria-hidden="true" style={{ position: 'absolute', left: '-5000px' }}>
+                                            <input
+                                                type="text"
+                                                name="confirm_email"
+                                                tabIndex={-1}
+                                                value={formData.confirm_email}
+                                                onChange={handleInputChange}
+                                                autoComplete="off"
+                                            />
+                                        </div>
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-2">الاسم الكامل</label>
                                             <div className="relative">
