@@ -404,7 +404,17 @@ const ProductDetails = () => {
                 </div>
 
                 <div className="pt-6 border-t border-primary/5">
-                  <div className="p-6 bg-emerald-50 rounded-[2.5rem] border border-emerald-100 flex flex-col md:flex-row items-center gap-6 group hover:shadow-xl hover:shadow-emerald-500/10 transition-all cursor-pointer">
+                  <div 
+                    onClick={() => {
+                      if (!product) return;
+                      const cleanName = cleanProductName(product.name);
+                      const message = encodeURIComponent(
+                        `مرحباً صناع السعادة، أود الاستفسار عن منتج: ${cleanName}\nالرابط: ${window.location.href}`
+                      );
+                      window.open(`https://wa.me/${SITE_CONFIG.whatsappNumber}?text=${message}`, '_blank');
+                    }}
+                    className="p-6 bg-emerald-50 rounded-[2.5rem] border border-emerald-100 flex flex-col md:flex-row items-center gap-6 group hover:shadow-xl hover:shadow-emerald-500/10 transition-all cursor-pointer"
+                  >
                     <div className="h-16 w-16 bg-white rounded-3xl flex items-center justify-center text-emerald-600 shadow-sm group-hover:rotate-12 transition-transform">
                       <MessageCircle className="h-8 w-8" />
                     </div>
@@ -412,7 +422,7 @@ const ProductDetails = () => {
                       <h4 className="text-emerald-900 font-black text-xl mb-1">دعم فني مباشر 24/7</h4>
                       <p className="text-emerald-700/70 text-sm font-bold">اترك استفسارك وسيقوم خبراؤنا بالرد عليك فوراً</p>
                     </div>
-                    <Button variant="ghost" className="text-emerald-600 font-black gap-2 hover:bg-white rounded-2xl h-12">
+                    <Button variant="ghost" className="text-emerald-600 font-black gap-2 hover:bg-white rounded-2xl h-12 pointer-events-none">
                       ابدأ المحادثة
                     </Button>
                   </div>
