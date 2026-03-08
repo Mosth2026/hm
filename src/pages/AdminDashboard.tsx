@@ -1302,37 +1302,44 @@ const AdminDashboard = () => {
                     const dbProduct = productId ? dbProductMap.get(productId) : null;
 
                     const excelCat = getRowValue(row, catKey);
-
-                    // Determine Category ID from Excel or Name
-                    let finalCatId: string | null = null;
+                    let excelCatId: string | null = null;
                     if (excelCat) {
-                        const normExcelCat = normalize(excelCat);
-                        const match = categories.find(c => normalize(c.label) === normExcelCat);
-                        if (match) finalCatId = match.id;
+                        const normExcelCat = normalize(excelCat).replace(/^ال/, '');
+                        const match = categories.find(c => {
+                            const nLabel = normalize(c.label).replace(/^ال/, '');
+                            return nLabel === normExcelCat;
+                        });
+                        if (match) excelCatId = match.id;
                     }
 
-                    // Fallback to name keywords if no category found
-                    if (!finalCatId && excelName) {
-                        const normName = normalize(excelName);
-                        if (normName.includes('بدون ضريبه') || normName.includes('بدون ضريبة')) finalCatId = 'no-tax';
-                        else if (normName.includes('شوكولاته') || normName.includes('شوكولاتة') || normName.includes('نوتيلا')) finalCatId = 'chocolate';
-                        else if (normName.includes('قهوه') || normName.includes('قهوة')) finalCatId = 'coffee';
-                        else if (normName.includes('بسكويت') || normName.includes('بسكوت') || normName.includes('كوكيز')) finalCatId = 'cookies';
-                        else if (normName.includes('كاندي')) finalCatId = 'candy';
-                        else if (normName.includes('عصير') || normName.includes('بيبسي') || normName.includes('مشروب')) finalCatId = 'drinks';
-                        else if (normName.includes('كوزمتك') || normName.includes('مستحضرات')) finalCatId = 'cosmetics';
-                        else if (normName.includes('هدايا') || normName.includes('بوكس')) finalCatId = 'gifts';
+                    let guessedCatId: string | null = null;
+                    if (!excelCatId && excelName) {
+                        const n = normalize(excelName);
+                        // Priority guess for Candy (Toybox contains the word 'box' but should be candy)
+                        if (n.includes('كاندي') || n.includes('جيلي') || n.includes('تويبوكس') || n.includes('مصاصه') || n.includes('مارشميلو')) {
+                            guessedCatId = 'candy';
+                        }
+                        else if (n.includes('بدونضريبه')) guessedCatId = 'no-tax';
+                        else if (n.includes('شوكولاته') || n.includes('نوتيلا') || n.includes('ميلكا') || n.includes('كيندر')) guessedCatId = 'chocolate';
+                        else if (n.includes('قهوه')) guessedCatId = 'coffee';
+                        else if (n.includes('بسكويت') || n.includes('بسكوت') || n.includes('كوكيز')) guessedCatId = 'cookies';
+                        else if (n.includes('عصير') || n.includes('بيبسي') || n.includes('مشروب')) guessedCatId = 'drinks';
+                        else if (n.includes('كوزمتك') || n.includes('تجميل')) guessedCatId = 'cosmetics';
+                        else if (n.includes('هدايا') || n.includes('بوكس')) guessedCatId = 'gifts';
                     }
+
+                    const finalCatId = excelCatId || guessedCatId;
 
                     if (productId && dbProduct) {
                         importedIds.add(productId);
                         const updateData: any = { id: productId };
                         let hasChanges = false;
 
-                        const currentCatId = finalCatId || dbProduct.category_id;
+                        // For tax calculation on existing products, use Excel category if provided, otherwise stick to DB category
+                        const currentCatId = excelCatId || dbProduct.category_id;
                         const isExempt = (currentCatId === 'no-tax') ||
                             dbProduct.description?.includes('[TAX_EXEMPT]') ||
-                            (finalCatId === 'no-tax');
+                            (excelCatId === 'no-tax');
 
                         // PERSISTENT DRAFT LOGIC: المخبأ السري
                         const isOldDraft = dbProduct?.description?.includes('[DRAFT]');
@@ -1371,10 +1378,11 @@ const AdminDashboard = () => {
                             }
                         }
 
-                        // 3. تحديث القسم (فقط إذا اختلف)
-                        if (finalCatId && finalCatId !== dbProduct?.category_id) {
-                            updateData.category_id = finalCatId;
-                            const catObj = categories.find(c => c.id === finalCatId);
+                        // 3. تحديث القسم (فقط إذا اختلف وطلبنا ذلك صراحة في الإكسيل)
+                        // الحماية: لا يتم نقل المنتج الموجود مسبقاً بناءً على "التخمين التلقائي" (Guessed) لمنع أخطاء مثل Toybox
+                        if (excelCatId && excelCatId !== dbProduct?.category_id) {
+                            updateData.category_id = excelCatId;
+                            const catObj = categories.find(c => c.id === excelCatId);
                             updateData.category_name = catObj ? catObj.label : 'الاسناكس';
                             hasChanges = true;
                         }
