@@ -60,6 +60,7 @@ const Testimonials = () => {
                   src={t.avatar}
                   alt={t.name}
                   className="relative w-24 h-24 rounded-full object-cover border-4 border-white mx-auto shadow-2xl"
+                  loading="lazy"
                 />
                 <div className="absolute -bottom-2 -left-2 h-10 w-10 bg-secondary rounded-full flex items-center justify-center border-4 border-primary">
                   <Quote className="h-4 w-4 text-primary fill-primary" />
