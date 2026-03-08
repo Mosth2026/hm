@@ -265,6 +265,13 @@ const AdminDashboard = () => {
             .replace(/[^a-z0-9\u0621-\u064A]/g, ''); // إزالة كل الرموز والمسافات
     };
 
+    const normalizeBarcode = (code: any) => {
+        if (!code) return '';
+        // تنظيف الباركود من الأصفار الشمال (التي يحذفها الإكسيل) ومن أي مسافات أو رموز
+        const cleaned = String(code).replace(/\D/g, '').replace(/^0+/, '');
+        return cleaned || '0';
+    };
+
     const [conflictProducts, setConflictProducts] = useState<{ key: string, items: Product[] }[]>([]);
     const [isConflictResolverOpen, setIsConflictResolverOpen] = useState(false);
 
@@ -282,7 +289,7 @@ const AdminDashboard = () => {
                 let pureBarcode = null;
                 if (p.description && p.description.includes('باركود:')) {
                     const match = p.description.match(/باركود:\s*(\d+)/);
-                    if (match) pureBarcode = match[1].trim();
+                    if (match) pureBarcode = normalizeBarcode(match[1]);
                 }
 
                 // 2. تجميع بالباركود (الأولوية القصوى)
@@ -1157,7 +1164,7 @@ const AdminDashboard = () => {
                     // استخراج الباركود بشكل ذكي باستخدام Regex
                     if (p.description && p.description.includes('باركود:')) {
                         const match = p.description.match(/باركود:\s*(\d+)/);
-                        if (match) pureBarcode = normalize(match[1]);
+                        if (match) pureBarcode = normalizeBarcode(match[1]);
                     }
 
                     const hasImage = p.image && p.image !== PLACEHOLDER_IMAGE && !p.image.includes('unsplash.com');
@@ -1277,7 +1284,7 @@ const AdminDashboard = () => {
                     }
 
                     const normName = excelName ? normalize(excelName) : null;
-                    const normCode = excelCode ? normalize(excelCode) : null;
+                    const normCode = excelCode ? normalizeBarcode(excelCode) : null;
 
                     const uniqueKey = excelId || normCode || normName;
                     if (uniqueKey && processedInBatch.has(uniqueKey)) {
