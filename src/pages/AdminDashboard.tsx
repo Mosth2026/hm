@@ -106,7 +106,8 @@ const AdminDashboard = () => {
         readyToShot: 0,
         trash: 0,
         dailyChanges: 0,
-        dailyValue: 0
+        dailyValue: 0,
+        salesProductIds: [] as number[]
     });
     const [activeFilter, setActiveFilter] = useState<"all" | "low" | "value" | "categories" | "zero" | "draft" | "published" | "no-tax" | "ready" | "trash" | "daily">("all");
     const [selectedCategoryLabel, setSelectedCategoryLabel] = useState<string | null>(null);
@@ -712,9 +713,13 @@ const AdminDashboard = () => {
         if (activeFilter === "low") {
             query = query.lt('stock', 10).gt('stock', 0);
         } else if (activeFilter === "daily") {
-            const startOfToday = new Date();
-            startOfToday.setHours(0, 0, 0, 0);
-            query = query.gte('updated_at', startOfToday.toISOString());
+            if (stats.salesProductIds && stats.salesProductIds.length > 0) {
+                query = query.in('id', stats.salesProductIds);
+            } else {
+                const startOfToday = new Date();
+                startOfToday.setHours(0, 0, 0, 0);
+                query = query.gte('updated_at', startOfToday.toISOString());
+            }
         } else if (activeFilter === "zero") {
             query = query.eq('stock', 0).not('image', 'ilike', '%unsplash.com%').not('image', 'is', null).neq('image', '').neq('image', PLACEHOLDER_IMAGE);
         } else if (activeFilter === "draft") {
@@ -819,10 +824,12 @@ const AdminDashboard = () => {
             // Get session stats from last log (Sales tracking)
             let dailyChanges = 0;
             let dailyValue = 0;
+            let salesProductIds: number[] = [];
             if (lastSyncLog && lastSyncLog.length > 0) {
                 const details = lastSyncLog[0].details;
                 dailyChanges = details.sales_count || 0;
                 dailyValue = details.sales_value || 0;
+                salesProductIds = details.sales_product_ids || [];
             }
 
             setStats({
@@ -837,7 +844,8 @@ const AdminDashboard = () => {
                 readyToShot: readyToShotCount || 0,
                 trash: trash,
                 dailyChanges,
-                dailyValue
+                dailyValue,
+                salesProductIds
             });
         } catch (err) {
             console.error("Error calculating stats:", err);
@@ -1491,6 +1499,7 @@ const AdminDashboard = () => {
                 // Track session-specific financial value (Sales/Difference)
                 let sessionSalesCount = 0;
                 let sessionSalesValue = 0;
+                let sessionSalesProductIds: number[] = [];
                 
                 toUpdate.forEach(item => {
                     const dbProd = dbProductMap.get(item.id);
@@ -1499,6 +1508,7 @@ const AdminDashboard = () => {
                         if (stockDiff > 0) {
                             // This is a sale/deduction
                             sessionSalesCount++;
+                            sessionSalesProductIds.push(dbProd.id);
                             // Use the price from the file (or DB if not in file) to calculate value
                             const salePrice = item.price !== undefined ? item.price : dbProd.price;
                             sessionSalesValue += (stockDiff * salePrice);
@@ -1608,14 +1618,16 @@ const AdminDashboard = () => {
                         deleted: toDeleteIds.length,
                         zeroed: toZeroStockIds.length,
                         sales_count: sessionSalesCount,
-                        sales_value: sessionSalesValue
+                        sales_value: sessionSalesValue,
+                        sales_product_ids: sessionSalesProductIds
                     });
 
                     // Update local stats instantly
                     setStats(prev => ({
                         ...prev,
                         dailyChanges: sessionSalesCount,
-                        dailyValue: sessionSalesValue
+                        dailyValue: sessionSalesValue,
+                        salesProductIds: sessionSalesProductIds
                     }));
                 }
 
