@@ -177,23 +177,34 @@ const AdminDashboard = () => {
             return;
         }
 
-        const exportData = filteredProducts.map(p => ({
-            "الاسم": p.name,
-            "الباركود": p.description?.includes('باركود:') ? p.description.split('باركود:')[1].trim().replace('[TAX_EXEMPT]', '').replace('[DRAFT]', '').trim() : "",
-            "القسم": p.category_name,
-            "السعر": p.price,
-            "المخزون": p.stock,
-            "الحالة": p.description?.includes('[DRAFT]') ? 'مسودة' : ((p.stock ?? 0) > 0 ? 'نشط' : 'منتهي')
-        }));
+        const exportData = filteredProducts.map(p => {
+            const row: any = {
+                "الاسم": p.name,
+                "الباركود": p.description?.includes('باركود:') ? p.description.split('باركود:')[1].trim().replace('[TAX_EXEMPT]', '').replace('[DRAFT]', '').trim() : "",
+                "القسم": p.category_name,
+                "السعر": p.price,
+                "المخزون": p.stock,
+            };
+
+            // إضافة عمود المباع فقط إذا كنا في قسم مبيعات الجرد
+            if (activeFilter === "daily") {
+                row["المباع (الفرق)"] = stats.salesQuantities[p.id] || 0;
+                row["إجمالي القيمة"] = (stats.salesQuantities[p.id] || 0) * p.price;
+            }
+
+            row["الحالة"] = p.description?.includes('[DRAFT]') ? 'مسودة' : ((p.stock ?? 0) > 0 ? 'نشط' : 'منتهي');
+            return row;
+        });
 
         const ws = XLSX.utils.json_to_sheet(exportData);
         const wb = XLSX.utils.book_new();
         const sheetName = activeFilter === "all" ? "جميع المنتجات" :
+            activeFilter === "daily" ? "فاتورة مبيعات الجرد" : 
             activeFilter === "categories" ? (selectedCategoryLabel || "قسم محدد") :
                 activeFilter === "trash" ? "الدرافت" : "تقرير المنتجات";
 
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
-        XLSX.writeFile(wb, `saada_export_${new Date().getTime()}.xlsx`);
+        XLSX.writeFile(wb, `saada_export_${activeFilter}_${new Date().getTime()}.xlsx`);
         toast.success("تم تصدير البيانات بنجاح");
     };
 
