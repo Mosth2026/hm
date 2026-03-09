@@ -791,7 +791,8 @@ const AdminDashboard = () => {
                 { count: noTaxCount },
                 { count: readyToShotCount },
                 { count: trashCount },
-                { data: allProducts }
+                { data: allProducts },
+                { data: lastSyncLog }
             ] = await Promise.all([
                 supabase.from('products').select('*', { count: 'exact', head: true }).not('description', 'ilike', '%[DRAFT]%'),
                 supabase.from('products').select('*', { count: 'exact', head: true }).lt('stock', 10).gte('stock', 1).not('description', 'ilike', '%[DRAFT]%'),
@@ -801,7 +802,8 @@ const AdminDashboard = () => {
                 supabase.from('products').select('*', { count: 'exact', head: true }).ilike('description', '%[TAX_EXEMPT]%'),
                 supabase.from('products').select('*', { count: 'exact', head: true }).gte('stock', 1).or('image.is.null,image.eq.,image.ilike.%unsplash%').not('description', 'ilike', '%[DRAFT]%'),
                 supabase.from('products').select('*', { count: 'exact', head: true }).ilike('description', '%[DRAFT]%'),
-                supabase.from('products').select('price, stock, updated_at')
+                supabase.from('products').select('price, stock, updated_at'),
+                supabase.from('admin_logs').select('details, created_at').eq('action', 'excel_sync_summary').order('created_at', { ascending: false }).limit(1)
             ]);
 
             const total = totalCount || 0;
@@ -812,19 +814,16 @@ const AdminDashboard = () => {
             const noTax = noTaxCount || 0;
             const trash = trashCount || 0;
 
-            const startOfToday = new Date();
-            startOfToday.setHours(0, 0, 0, 0);
-            
+            const value = (allProducts || []).reduce((acc, p) => acc + (p.price * (p.stock ?? 0)), 0);
+
+            // Get session stats from last log
             let dailyChanges = 0;
             let dailyValue = 0;
-            const value = (allProducts || []).reduce((acc, p) => {
-                const currentVal = (p.price * (p.stock ?? 0));
-                if (p.updated_at && new Date(p.updated_at) >= startOfToday) {
-                    dailyChanges++;
-                    dailyValue += currentVal;
-                }
-                return acc + currentVal;
-            }, 0);
+            if (lastSyncLog && lastSyncLog.length > 0) {
+                const details = lastSyncLog[0].details;
+                dailyChanges = (details.updated || 0) + (details.added || 0);
+                dailyValue = details.session_value || 0;
+            }
 
             setStats({
                 totalProducts: total,
@@ -1467,10 +1466,13 @@ const AdminDashboard = () => {
 
                             const isDraft = (stockValue || 0) <= 0;
                             const catObj = categories.find(c => c.id === newCatId);
+                            const finalItemPrice = Number(price.toFixed(1));
+                            const finalItemStock = stockValue || 0;
+
                             toInsert.push({
                                 name: excelName.trim(),
-                                price: Number(price.toFixed(1)),
-                                stock: stockValue || 0,
+                                price: finalItemPrice,
+                                stock: finalItemStock,
                                 category_id: newCatId,
                                 category_name: catObj ? catObj.label : 'الاسناكس',
                                 description: excelCode ? (isDraft ? `باركود: ${excelCode} [DRAFT]` : `باركود: ${excelCode}`) : (isDraft ? '[DRAFT]' : ''),
@@ -1485,6 +1487,18 @@ const AdminDashboard = () => {
                 let firstUpdateError: any = null;
                 let firstInsertError: any = null;
                 const finalTotal = toUpdate.length + toInsert.length;
+
+                // Track session-specific financial value
+                let sessionChangesValue = 0;
+                toUpdate.forEach(item => {
+                    const dbProd = dbProductMap.get(item.id);
+                    const finalPrice = item.price !== undefined ? item.price : dbProd.price;
+                    const finalStock = item.stock !== undefined ? item.stock : dbProd.stock;
+                    sessionChangesValue += (finalPrice * finalStock);
+                });
+                toInsert.forEach(item => {
+                    sessionChangesValue += (item.price * item.stock);
+                });
 
                 // --- PHASE 1: PARALLEL UPDATES (Faster) ---
                 const UPDATE_BATCH_SIZE = 15; // عدد التحديثات المتزامنة
@@ -1586,8 +1600,16 @@ const AdminDashboard = () => {
                         updated: successCount,
                         added: addedCount,
                         deleted: toDeleteIds.length,
-                        zeroed: toZeroStockIds.length
+                        zeroed: toZeroStockIds.length,
+                        session_value: sessionChangesValue
                     });
+
+                    // Update local stats instantly
+                    setStats(prev => ({
+                        ...prev,
+                        dailyChanges: successCount + addedCount,
+                        dailyValue: sessionChangesValue
+                    }));
                 }
 
                 if (failCount > 0) {
@@ -1960,7 +1982,7 @@ const AdminDashboard = () => {
                                     <CardContent className="p-4">
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <p className="text-xs font-medium text-gray-500">أصناف تغيرت اليوم</p>
+                                                <p className="text-xs font-medium text-gray-500">أصناف آخر رفع</p>
                                                 <h3 className="text-2xl font-bold mt-1 text-indigo-600">{stats.dailyChanges}</h3>
                                             </div>
                                             <div className="h-10 w-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform">
@@ -1977,7 +1999,7 @@ const AdminDashboard = () => {
                                     <CardContent className="p-4">
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <p className="text-xs font-medium text-gray-500">قيمة تغييرات اليوم</p>
+                                                <p className="text-xs font-medium text-gray-500">قيمة آخر رفع</p>
                                                 <h3 className="text-2xl font-bold mt-1 text-violet-600">{Number(stats.dailyValue).toLocaleString()} ج.م</h3>
                                             </div>
                                             <div className="h-10 w-10 bg-violet-50 rounded-xl flex items-center justify-center text-violet-500 group-hover:scale-110 transition-transform">
