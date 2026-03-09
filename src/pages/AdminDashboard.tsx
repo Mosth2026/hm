@@ -816,13 +816,13 @@ const AdminDashboard = () => {
 
             const value = (allProducts || []).reduce((acc, p) => acc + (p.price * (p.stock ?? 0)), 0);
 
-            // Get session stats from last log
+            // Get session stats from last log (Sales tracking)
             let dailyChanges = 0;
             let dailyValue = 0;
             if (lastSyncLog && lastSyncLog.length > 0) {
                 const details = lastSyncLog[0].details;
-                dailyChanges = (details.updated || 0) + (details.added || 0);
-                dailyValue = details.session_value || 0;
+                dailyChanges = details.sales_count || 0;
+                dailyValue = details.sales_value || 0;
             }
 
             setStats({
@@ -1488,16 +1488,22 @@ const AdminDashboard = () => {
                 let firstInsertError: any = null;
                 const finalTotal = toUpdate.length + toInsert.length;
 
-                // Track session-specific financial value
-                let sessionChangesValue = 0;
+                // Track session-specific financial value (Sales/Difference)
+                let sessionSalesCount = 0;
+                let sessionSalesValue = 0;
+                
                 toUpdate.forEach(item => {
                     const dbProd = dbProductMap.get(item.id);
-                    const finalPrice = item.price !== undefined ? item.price : dbProd.price;
-                    const finalStock = item.stock !== undefined ? item.stock : dbProd.stock;
-                    sessionChangesValue += (finalPrice * finalStock);
-                });
-                toInsert.forEach(item => {
-                    sessionChangesValue += (item.price * item.stock);
+                    if (item.stock !== undefined) {
+                        const stockDiff = dbProd.stock - item.stock;
+                        if (stockDiff > 0) {
+                            // This is a sale/deduction
+                            sessionSalesCount++;
+                            // Use the price from the file (or DB if not in file) to calculate value
+                            const salePrice = item.price !== undefined ? item.price : dbProd.price;
+                            sessionSalesValue += (stockDiff * salePrice);
+                        }
+                    }
                 });
 
                 // --- PHASE 1: PARALLEL UPDATES (Faster) ---
@@ -1601,14 +1607,15 @@ const AdminDashboard = () => {
                         added: addedCount,
                         deleted: toDeleteIds.length,
                         zeroed: toZeroStockIds.length,
-                        session_value: sessionChangesValue
+                        sales_count: sessionSalesCount,
+                        sales_value: sessionSalesValue
                     });
 
                     // Update local stats instantly
                     setStats(prev => ({
                         ...prev,
-                        dailyChanges: successCount + addedCount,
-                        dailyValue: sessionChangesValue
+                        dailyChanges: sessionSalesCount,
+                        dailyValue: sessionSalesValue
                     }));
                 }
 
@@ -1982,7 +1989,7 @@ const AdminDashboard = () => {
                                     <CardContent className="p-4">
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <p className="text-xs font-medium text-gray-500">أصناف آخر رفع</p>
+                                                <p className="text-xs font-medium text-gray-500">أصناف مبيعات الجرد</p>
                                                 <h3 className="text-2xl font-bold mt-1 text-indigo-600">{stats.dailyChanges}</h3>
                                             </div>
                                             <div className="h-10 w-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform">
@@ -1999,7 +2006,7 @@ const AdminDashboard = () => {
                                     <CardContent className="p-4">
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <p className="text-xs font-medium text-gray-500">قيمة آخر رفع</p>
+                                                <p className="text-xs font-medium text-gray-500">قيمة مبيعات الجرد</p>
                                                 <h3 className="text-2xl font-bold mt-1 text-violet-600">{Number(stats.dailyValue).toLocaleString()} ج.م</h3>
                                             </div>
                                             <div className="h-10 w-10 bg-violet-50 rounded-xl flex items-center justify-center text-violet-500 group-hover:scale-110 transition-transform">
