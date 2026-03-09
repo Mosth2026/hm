@@ -104,9 +104,11 @@ const AdminDashboard = () => {
         published: 0,
         noTax: 0,
         readyToShot: 0,
-        trash: 0
+        trash: 0,
+        dailyChanges: 0,
+        dailyValue: 0
     });
-    const [activeFilter, setActiveFilter] = useState<"all" | "low" | "value" | "categories" | "zero" | "draft" | "published" | "no-tax" | "ready" | "trash">("all");
+    const [activeFilter, setActiveFilter] = useState<"all" | "low" | "value" | "categories" | "zero" | "draft" | "published" | "no-tax" | "ready" | "trash" | "daily">("all");
     const [selectedCategoryLabel, setSelectedCategoryLabel] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<"products" | "orders" | "coupons" | "logs" | "subscribers" | "analytics">("products");
     const [coupons, setCoupons] = useState<any[]>([]);
@@ -709,6 +711,10 @@ const AdminDashboard = () => {
 
         if (activeFilter === "low") {
             query = query.lt('stock', 10).gt('stock', 0);
+        } else if (activeFilter === "daily") {
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+            query = query.gte('updated_at', startOfToday.toISOString());
         } else if (activeFilter === "zero") {
             query = query.eq('stock', 0).not('image', 'ilike', '%unsplash.com%').not('image', 'is', null).neq('image', '').neq('image', PLACEHOLDER_IMAGE);
         } else if (activeFilter === "draft") {
@@ -795,7 +801,7 @@ const AdminDashboard = () => {
                 supabase.from('products').select('*', { count: 'exact', head: true }).ilike('description', '%[TAX_EXEMPT]%'),
                 supabase.from('products').select('*', { count: 'exact', head: true }).gte('stock', 1).or('image.is.null,image.eq.,image.ilike.%unsplash%').not('description', 'ilike', '%[DRAFT]%'),
                 supabase.from('products').select('*', { count: 'exact', head: true }).ilike('description', '%[DRAFT]%'),
-                supabase.from('products').select('price, stock')
+                supabase.from('products').select('price, stock, updated_at')
             ]);
 
             const total = totalCount || 0;
@@ -806,7 +812,19 @@ const AdminDashboard = () => {
             const noTax = noTaxCount || 0;
             const trash = trashCount || 0;
 
-            const value = (allProducts || []).reduce((acc, p) => acc + (p.price * (p.stock ?? 0)), 0);
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+            
+            let dailyChanges = 0;
+            let dailyValue = 0;
+            const value = (allProducts || []).reduce((acc, p) => {
+                const currentVal = (p.price * (p.stock ?? 0));
+                if (p.updated_at && new Date(p.updated_at) >= startOfToday) {
+                    dailyChanges++;
+                    dailyValue += currentVal;
+                }
+                return acc + currentVal;
+            }, 0);
 
             setStats({
                 totalProducts: total,
@@ -818,7 +836,9 @@ const AdminDashboard = () => {
                 published: published,
                 noTax: noTax,
                 readyToShot: readyToShotCount || 0,
-                trash: trash
+                trash: trash,
+                dailyChanges,
+                dailyValue
             });
         } catch (err) {
             console.error("Error calculating stats:", err);
@@ -1928,6 +1948,40 @@ const AdminDashboard = () => {
                                             </div>
                                             <div className="h-10 w-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-500 group-hover:scale-110 transition-transform">
                                                 <CheckCircle2 className="h-5 w-5" />
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card
+                                    onClick={() => { setActiveFilter("daily"); setSelectedCategoryLabel(null); }}
+                                    className={`border-none shadow-md bg-white overflow-hidden group hover:shadow-xl transition-all border-r-4 ${activeFilter === "daily" ? "ring-2 ring-indigo-500 border-r-indigo-600" : "border-r-indigo-500 opacity-80"}`}
+                                >
+                                    <CardContent className="p-4">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-xs font-medium text-gray-500">أصناف تغيرت اليوم</p>
+                                                <h3 className="text-2xl font-bold mt-1 text-indigo-600">{stats.dailyChanges}</h3>
+                                            </div>
+                                            <div className="h-10 w-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform">
+                                                <RefreshCw className="h-5 w-5" />
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card
+                                    onClick={() => { setActiveFilter("daily"); setSelectedCategoryLabel(null); }}
+                                    className={`border-none shadow-md bg-white overflow-hidden group hover:shadow-xl transition-all border-r-4 ${activeFilter === "daily" ? "ring-2 ring-violet-500 border-r-violet-600" : "border-r-violet-500 opacity-80"}`}
+                                >
+                                    <CardContent className="p-4">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-xs font-medium text-gray-500">قيمة تغييرات اليوم</p>
+                                                <h3 className="text-2xl font-bold mt-1 text-violet-600">{Number(stats.dailyValue).toLocaleString()} ج.م</h3>
+                                            </div>
+                                            <div className="h-10 w-10 bg-violet-50 rounded-xl flex items-center justify-center text-violet-500 group-hover:scale-110 transition-transform">
+                                                <TrendingUp className="h-5 w-5" />
                                             </div>
                                         </div>
                                     </CardContent>

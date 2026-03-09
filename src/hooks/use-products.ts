@@ -20,6 +20,7 @@ export interface Product {
     no_tax?: boolean;
     expiry_date?: string;
     created_at?: string;
+    updated_at?: string;
 }
 
 const processProduct = (p: any, isAdmin: boolean): Product => {
