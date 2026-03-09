@@ -107,7 +107,8 @@ const AdminDashboard = () => {
         trash: 0,
         dailyChanges: 0,
         dailyValue: 0,
-        salesProductIds: [] as number[]
+        salesProductIds: [] as number[],
+        salesQuantities: {} as Record<number, number>
     });
     const [activeFilter, setActiveFilter] = useState<"all" | "low" | "value" | "categories" | "zero" | "draft" | "published" | "no-tax" | "ready" | "trash" | "daily">("all");
     const [selectedCategoryLabel, setSelectedCategoryLabel] = useState<string | null>(null);
@@ -825,11 +826,13 @@ const AdminDashboard = () => {
             let dailyChanges = 0;
             let dailyValue = 0;
             let salesProductIds: number[] = [];
+            let salesQuantities: Record<number, number> = {};
             if (lastSyncLog && lastSyncLog.length > 0) {
                 const details = lastSyncLog[0].details;
                 dailyChanges = details.sales_count || 0;
                 dailyValue = details.sales_value || 0;
                 salesProductIds = details.sales_product_ids || [];
+                salesQuantities = details.sales_quantities || {};
             }
 
             setStats({
@@ -845,7 +848,8 @@ const AdminDashboard = () => {
                 trash: trash,
                 dailyChanges,
                 dailyValue,
-                salesProductIds
+                salesProductIds,
+                salesQuantities
             });
         } catch (err) {
             console.error("Error calculating stats:", err);
@@ -1500,6 +1504,7 @@ const AdminDashboard = () => {
                 let sessionSalesCount = 0;
                 let sessionSalesValue = 0;
                 let sessionSalesProductIds: number[] = [];
+                let sessionSalesQuantities: Record<number, number> = {};
                 
                 toUpdate.forEach(item => {
                     const dbProd = dbProductMap.get(item.id);
@@ -1509,6 +1514,7 @@ const AdminDashboard = () => {
                             // This is a sale/deduction
                             sessionSalesCount++;
                             sessionSalesProductIds.push(dbProd.id);
+                            sessionSalesQuantities[dbProd.id] = stockDiff;
                             // Use the price from the file (or DB if not in file) to calculate value
                             const salePrice = item.price !== undefined ? item.price : dbProd.price;
                             sessionSalesValue += (stockDiff * salePrice);
@@ -1619,7 +1625,8 @@ const AdminDashboard = () => {
                         zeroed: toZeroStockIds.length,
                         sales_count: sessionSalesCount,
                         sales_value: sessionSalesValue,
-                        sales_product_ids: sessionSalesProductIds
+                        sales_product_ids: sessionSalesProductIds,
+                        sales_quantities: sessionSalesQuantities
                     });
 
                     // Update local stats instantly
@@ -1627,7 +1634,8 @@ const AdminDashboard = () => {
                         ...prev,
                         dailyChanges: sessionSalesCount,
                         dailyValue: sessionSalesValue,
-                        salesProductIds: sessionSalesProductIds
+                        salesProductIds: sessionSalesProductIds,
+                        salesQuantities: sessionSalesQuantities
                     }));
                 }
 
@@ -2205,7 +2213,7 @@ const AdminDashboard = () => {
                                         variant={selectedCategoryLabel === cat.label ? "default" : "outline"}
                                         onClick={() => setSelectedCategoryLabel(cat.label)}
                                         className={`rounded - full px - 8 h - 10 font - bold transition - all ${selectedCategoryLabel === cat.label ? 'bg-saada-brown text-white' : ''} `}
-                                    >
+                                >
                                         {cat.label}
                                     </Button>
                                 ))}
@@ -2288,6 +2296,9 @@ const AdminDashboard = () => {
                                                 <TableHead className="text-right py-4 font-bold text-saada-brown">القسم</TableHead>
                                                 <TableHead className="text-right py-4 font-bold text-saada-brown">السعر</TableHead>
                                                 <TableHead className="text-right py-4 font-bold text-saada-brown">المخزون</TableHead>
+                                                {activeFilter === "daily" && (
+                                                    <TableHead className="text-right py-4 font-bold text-saada-red bg-red-50/50">تم بيعه (الفرق)</TableHead>
+                                                )}
                                                 {isSpecial && (
                                                     <TableHead className="text-right py-4 font-bold text-saada-brown">الصلاحية</TableHead>
                                                 )}
@@ -2362,6 +2373,13 @@ const AdminDashboard = () => {
                                                                 {p.stock ?? "-"}
                                                             </span>
                                                         </TableCell>
+                                                        {activeFilter === "daily" && (
+                                                            <TableCell className="py-4 bg-red-50/30">
+                                                                <span className="font-black text-saada-red bg-white px-2 py-1 rounded-md border border-red-100 shadow-sm">
+                                                                    -{stats.salesQuantities[p.id] || 0}
+                                                                </span>
+                                                            </TableCell>
+                                                        )}
                                                         {isSpecial && (
                                                             <TableCell className="py-4">
                                                                 <span className={`text-[10px] font-bold ${p.expiry_date ? (new Date(p.expiry_date).getTime() < new Date().getTime() ? 'text-red-600 bg-red-50' : 'text-blue-600 bg-blue-50') : 'text-gray-400'} px-2 py-1 rounded-lg`}>
