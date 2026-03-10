@@ -1344,8 +1344,14 @@ const AdminDashboard = () => {
                     } else if (normCode && barcodeMap.has(normCode)) {
                         productId = barcodeMap.get(normCode);
                         barcodeMatches++;
-                    } else if (normName && categoryMap.has(normName)) {
-                        productId = categoryMap.get(normName);
+                    }
+
+                    // الحماية الكبرى: الاعتماد حصراً على الباركود لتحديث الأصناف الموجودة مسبقاً
+                    // إذا كان الاسم موجوداً في الداتابيز ولكن الصف في الإكسيل ليس له باركود مطابق، نتجاهله تماماً
+                    // هذا يمنع تصفير الرصيد أو تسجيل مبيعات وهمية بسبب صفوف الإكسيل المكررة أو غير المكتملة
+                    if (!productId && normName && categoryMap.has(normName)) {
+                        duplicateCount++;
+                        continue;
                     }
 
                     const dbProduct = productId ? dbProductMap.get(productId) : null;
