@@ -1426,7 +1426,7 @@ const AdminDashboard = () => {
 
                                 // الحماية الكبرى: إذا كان السعر المحسوب مطابقاً للسعر الحالي في الداتابيز، لا نعتبره تغييراً.
                                 // هذا يمنع إعادة حساب الضريبة على سعر تم حسابه مسبقاً.
-                                if (finalCalculatedPrice !== currentPrice && Math.abs(finalCalculatedPrice - currentPrice) > 0.1) {
+                                if (finalCalculatedPrice !== currentPrice && Math.abs(finalCalculatedPrice - currentPrice) > 0.005) {
                                     updateData.price = finalCalculatedPrice;
                                     hasChanges = true;
                                 }
