@@ -1121,7 +1121,7 @@ const AdminDashboard = () => {
         const productData = {
             ...cleanUpdateFields,
             description: finalDescription,
-            price: Number(Number(updateFields.price).toFixed(1)),
+            price: Number(Number(updateFields.price).toFixed(2)),
             category_name: cat ? cat.label : (currentProduct.category_name || '')
         };
         let error;
@@ -1421,7 +1421,7 @@ const AdminDashboard = () => {
 
                                 // إذا لم يكن المنتج معفياً من الضريبة، نضيف 14%
                                 if (!isExempt) {
-                                    finalCalculatedPrice = Number((excelPrice * 1.14).toFixed(1));
+                                    finalCalculatedPrice = Number((excelPrice * 1.14).toFixed(2));
                                 }
 
                                 // الحماية الكبرى: إذا كان السعر المحسوب مطابقاً للسعر الحالي في الداتابيز، لا نعتبره تغييراً.
@@ -1495,7 +1495,7 @@ const AdminDashboard = () => {
 
                             const isDraft = (stockValue || 0) <= 0;
                             const catObj = categories.find(c => c.id === newCatId);
-                            const finalItemPrice = Number(price.toFixed(1));
+                            const finalItemPrice = Number(price.toFixed(2));
                             const finalItemStock = stockValue || 0;
 
                             toInsert.push({
@@ -3067,7 +3067,7 @@ const AdminDashboard = () => {
                                                             <p className="text-xs text-gray-500 mt-1 truncate">{item.description || 'بدون وصف'}</p>
                                                             <div className="flex items-center gap-3 mt-2">
                                                                 <span className="text-xs font-black text-saada-red">رصيد: {item.stock}</span>
-                                                                <span className="text-xs text-saada-brown font-bold">{Number(item.price).toFixed(Number(item.price) % 1 === 0 ? 0 : 1)} ج.م</span>
+                                                                <span className="text-xs text-saada-brown font-bold">{Number(item.price).toFixed(Number(item.price) % 1 === 0 ? 0 : 2)} ج.م</span>
                                                             </div>
                                                         </div>
                                                     </div>
