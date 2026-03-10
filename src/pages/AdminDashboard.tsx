@@ -2384,7 +2384,7 @@ const AdminDashboard = () => {
                                                                 {p.category_name}
                                                             </span>
                                                         </TableCell>
-                                                        <TableCell className="py-4 font-bold text-gray-900">{Number(p.price).toFixed(Number(p.price) % 1 === 0 ? 0 : 1)} ج.م</TableCell>
+                                                        <TableCell className="py-4 font-bold text-gray-900">{Number(p.price).toFixed(Number(p.price) % 1 === 0 ? 0 : 2)} ج.م</TableCell>
                                                         <TableCell className="py-4">
                                                             <span className={`font-bold ${(p.stock ?? 0) < 10 ? 'text-orange-600' : 'text-gray-600'}`}>
                                                                 {p.stock ?? "-"}
@@ -2492,7 +2492,7 @@ const AdminDashboard = () => {
                                                     <TableCell className="py-4 text-sm text-gray-500">
                                                         {new Date(order.created_at).toLocaleDateString('ar-EG')}
                                                     </TableCell>
-                                                    <TableCell className="py-4 font-black text-saada-red">{Number(order.total_price).toFixed(Number(order.total_price) % 1 === 0 ? 0 : 1)} ج.م</TableCell>
+                                                    <TableCell className="py-4 font-black text-saada-red">{Number(order.total_price).toFixed(Number(order.total_price) % 1 === 0 ? 0 : 2)} ج.م</TableCell>
                                                     <TableCell className="py-4">
                                                         <span className={`px - 3 py - 1 rounded - full text - xs font - bold ${order.status === 'received' ? 'bg-green-100 text-green-700' : 'bg-saada-red/10 text-saada-red'
                                                             } `}>
