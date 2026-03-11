@@ -30,6 +30,17 @@ const OrderTracking = () => {
         return num.toFixed(num % 1 === 0 ? 0 : 1);
     };
 
+    const formatDate = (dateStr: any) => {
+        if (!dateStr) return "غير محدد";
+        try {
+            const date = new Date(dateStr);
+            if (isNaN(date.getTime())) return "غير محدد";
+            return date.toLocaleDateString('ar-EG', { dateStyle: 'long' });
+        } catch (e) {
+            return "غير محدد";
+        }
+    };
+
     const fetchOrderDetails = async () => {
         if (!orderId) return;
         setLoading(true);
@@ -205,7 +216,7 @@ const OrderTracking = () => {
         <div className="min-h-screen flex flex-col font-tajawal rtl bg-gray-50/50" dir="rtl">
             <Helmet>
                 <title>فاتورة رقم #{order.id} | صناع السعادة</title>
-                <meta name="description" content={`تفاصيل طلب العميل ${order.customer_name} - إجمالي ${Number(order.total_price).toFixed(Number(order.total_price) % 1 === 0 ? 0 : 1)} ج.م`} />
+                <meta name="description" content={`تفاصيل طلب العميل ${order.customer_name} - إجمالي ${formatPrice(order.total_price)} ج.م`} />
                 <meta property="og:title" content={`📦 فاتورة رقم #${order.id}`} />
                 <meta property="og:description" content="اضغط لمعاينة تفاصيل طلبك من صناع السعادة" />
                 <meta property="og:image" content="/assets/logo.png" />
@@ -222,7 +233,7 @@ const OrderTracking = () => {
                                     <Package className="h-8 w-8 text-saada-red" />
                                     تفاصيل الطلب #{order.id}
                                 </h1>
-                                <p className="text-gray-500">تاريخ الطلب: {new Date(order.created_at).toLocaleDateString('ar-EG', { dateStyle: 'long' })}</p>
+                                <p className="text-gray-500">تاريخ الطلب: {formatDate(order.created_at)}</p>
                             </div>
                             <div className={`px-6 py-2 rounded-full font-bold text-sm ${order.is_draft
                                 ? 'bg-amber-100 text-amber-700'
