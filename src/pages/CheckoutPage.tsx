@@ -73,7 +73,7 @@ const CheckoutPage = () => {
 
             try {
                 // 1. إنشاء الطلب في سوبابيز
-                const { data: order, error: orderError } = await supabase
+                const { data: orderData, error: orderError } = await supabase
                     .from("orders")
                     .insert([
                         {
@@ -87,10 +87,10 @@ const CheckoutPage = () => {
                             status: "pending",
                         },
                     ])
-                    .select()
-                    .single();
+                    .select();
 
-                if (!orderError && order) {
+                if (!orderError && orderData && orderData.length > 0) {
+                    const order = orderData[0];
                     orderId = order.id;
 
                     // 2. إضافة تفاصيل المنتجات في جدول order_items
@@ -106,9 +106,13 @@ const CheckoutPage = () => {
 
                     await supabase.from("order_items").insert(orderItems);
                     success = true;
+                } else {
+                    console.error("Supabase Order Insert Error:", orderError);
+                    toast.error("فشل حفظ الطلب في السجل، سيتم إرساله كطلب يدوي عبر الواتساب");
                 }
             } catch (dbErr) {
                 console.error("Database backup failed, proceeding with direct WhatsApp", dbErr);
+                toast.error("سيتم إرسال الطلب عبر الواتساب فقط لتعذر الوصول لقاعدة البيانات");
             }
 
             // 3. تحضير رسالة الواتساب

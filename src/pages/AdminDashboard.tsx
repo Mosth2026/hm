@@ -148,7 +148,7 @@ const AdminDashboard = () => {
     };
 
     const username = user?.username?.toLowerCase() || "";
-    const isRestrictedStaff = username.includes('mostafa') || username.includes('hesham') || username.includes('fikry') || username === 'h';
+    const isRestrictedStaff = username.includes('mostafa') || username.includes('hesham') || username.includes('fikry') || username.includes('fekry') || username === 'h';
     const isSpecial = isRestrictedStaff || user?.role === 'admin' || user?.role === 'editor';
     const isSuperAdmin = username === 'elhanafy' || username === 'h';
     const isAdmin = (user?.role === 'admin' || isSuperAdmin) && !isRestrictedStaff;
@@ -1938,7 +1938,7 @@ const AdminDashboard = () => {
                     >
                         إدارة المنتجات
                     </button>
-                    {isAdmin && (
+                    {(isAdmin || isRestrictedStaff) && (
                         <button
                             onClick={() => setActiveTab("orders")}
                             className={`pb-4 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "orders" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
@@ -1946,7 +1946,7 @@ const AdminDashboard = () => {
                             إدارة الطلبات
                         </button>
                     )}
-                    {isAdmin && (
+                    {(isAdmin || isRestrictedStaff) && (
                         <button
                             onClick={() => setActiveTab("analytics")}
                             className={`pb-4 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "analytics" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
@@ -2269,7 +2269,7 @@ const AdminDashboard = () => {
                                         )}
                                     </CardTitle>
                                     <div className="flex flex-col md:flex-row md:items-center gap-3 w-full md:w-auto">
-                                        {isAdmin && (
+                                        {(isAdmin || isRestrictedStaff) && (
                                             <Button
                                                 variant="outline"
                                                 size="sm"

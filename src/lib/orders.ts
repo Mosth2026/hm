@@ -40,20 +40,22 @@ export const saveOrderToDb = async (
         if (orderError || !orders || orders.length === 0) {
             console.error("Supabase First Attempt Failed:", orderError);
 
-            // 2. Minimal Fallback (only absolute essentials)
+            // 2. Minimal Fallback (only absolute essentials + required fields)
             const { data: fallback, error: fallbackError } = await supabase
                 .from("orders")
                 .insert([{
-                    customer_name: "طلب سريع",
-                    customer_phone: "000",
+                    customer_name: "طلب سريع (فشل الحفظ الأول)",
+                    customer_phone: customerInfo.phone || "000",
+                    customer_address: "غير محدد - طلب سلة",
                     total_price: roundedTotal,
                     coupon_code: couponCode,
-                    discount_amount: roundedDiscount
+                    discount_amount: roundedDiscount,
+                    status: 'pending'
                 }])
                 .select();
 
             if (fallbackError || !fallback || fallback.length === 0) {
-                console.error("Supabase Second Attempt Failed:", fallbackError);
+                console.error("Supabase Fallback Failed:", fallbackError);
                 return { success: false, error: "Database save failed" };
             }
 
