@@ -268,17 +268,22 @@ const OrderTracking = () => {
                                 </div>
                             </div>
                             <div className="space-y-4">
-                                <h3 className="font-bold text-gray-400 uppercase text-xs tracking-widest">ملخص الحساب</h3>
-                                <div className="space-y-2 bg-gray-50 p-4 rounded-2xl">
-                                    <div className="flex justify-between items-center text-gray-600 gap-2">
-                                        <span className="whitespace-nowrap">إجمالي المنتجات</span>
-                                        <span className="text-sm font-bold text-left">{formatPrice(order.total_price)} ج.م</span>
+                                <h3 className="font-bold text-gray-400 uppercase text-xs tracking-widest px-2">ملخص الحساب</h3>
+                                <div className="bg-gray-50 p-6 rounded-3xl space-y-4 border border-gray-100 flex flex-col justify-center min-h-[160px]">
+                                    <div className="flex justify-between items-center text-gray-600">
+                                        <span className="text-sm opacity-80">إجمالي المنتجات</span>
+                                        <span className="font-bold text-saada-brown">{formatPrice(order.total_price)} ج.م</span>
                                     </div>
-                                    <div className="pt-3 border-t mt-3 flex flex-wrap justify-between items-center text-saada-brown gap-2">
-                                        <span className="font-black">الإجمالي الكلي</span>
-                                        <span className={`${isNaN(Number(order.total_price)) ? 'text-lg' : 'text-2xl'} font-black text-saada-red text-left`}>
-                                            {formatPrice(order.total_price)} ج.م
-                                        </span>
+                                    <div className="pt-4 border-t border-gray-200/50">
+                                        <div className="flex flex-col gap-1 items-start">
+                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-tighter">الإجمالي الكلي للدفع</span>
+                                            <div className="flex items-baseline gap-1">
+                                                <span className={`${isNaN(Number(order.total_price)) ? 'text-xl' : 'text-3xl'} font-black text-saada-red leading-tight break-all`}>
+                                                    {formatPrice(order.total_price)}
+                                                </span>
+                                                <span className="text-sm font-bold text-saada-red/70">ج.م</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
