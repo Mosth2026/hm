@@ -6,11 +6,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function cleanProductName(name: string): string {
+export function cleanProductName(name: any): string {
   if (!name) return "";
-  // Removes patterns like "* 12 ق", "* 24 ق", " * 13 ق", etc.
-  // Also removes the quote mark at the beginning if present
-  return name
+  const strName = String(name);
+  return strName
     .replace(/^"/, '')
     .replace(/\[TAX_EXEMPT\]/g, '') // Remove tax tag
     .split('*')[0] // Take everything before the first '*'

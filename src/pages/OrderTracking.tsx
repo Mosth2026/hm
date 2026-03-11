@@ -26,7 +26,7 @@ const OrderTracking = () => {
     const formatPrice = (price: any) => {
         if (price === null || price === undefined) return "0";
         const num = Number(price);
-        if (isNaN(num)) return price.toString();
+        if (isNaN(num)) return String(price);
         return num.toFixed(num % 1 === 0 ? 0 : 1);
     };
 
@@ -319,10 +319,10 @@ const OrderTracking = () => {
                             <div className="mt-12 pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                                 <div className="flex items-center gap-4">
                                     <div className="h-12 w-12 bg-saada-brown text-white rounded-full flex items-center justify-center font-bold">
-                                        {user?.username[0].toUpperCase()}
+                                        {user?.username ? user.username[0].toUpperCase() : 'A'}
                                     </div>
                                     <div>
-                                        <p className="text-sm text-gray-500">مرحباً {user?.username}</p>
+                                        <p className="text-sm text-gray-500">مرحباً {user?.username || 'مسؤول'}</p>
                                         <p className="text-xs text-saada-brown font-bold">أنت تشاهد نسخة الإدارة</p>
                                     </div>
                                 </div>
