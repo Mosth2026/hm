@@ -6,7 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
-import { CheckCircle2, Package, MapPin, Phone, User, FileText } from "lucide-react";
+import { CheckCircle2, Package, MapPin, Phone, User, FileText, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import { cleanProductName } from "@/lib/utils";
 import { Helmet } from "react-helmet-async";
@@ -137,8 +137,8 @@ const OrderTracking = () => {
                                 </div>
                                 <p className="text-gray-400 text-sm">تاريخ الإنشاء: {displayDate}</p>
                             </div>
-                            <div className={`px-5 py-2 rounded-full font-bold text-xs ${order.is_draft ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
-                                {order.is_draft ? 'طلب واتساب (قيد المراجعة)' : 'تم التأكيد'}
+                            <div className={`px-5 py-2 rounded-full font-bold text-xs ${order?.is_draft ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                                {order?.is_draft ? 'طلب واتساب (قيد المراجعة)' : 'تم التأكيد'}
                             </div>
                         </div>
 
@@ -166,11 +166,11 @@ const OrderTracking = () => {
                         <div className="mt-8 space-y-4">
                             <h3 className="font-bold text-saada-brown flex items-center gap-2 text-sm"><ShoppingBag className="h-4 w-4" />المنتجات المطلوبة</h3>
                             <div className="grid gap-3">
-                                {items.length > 0 ? items.map((item, i) => (
+                                {items.length > 0 ? items.filter(Boolean).map((item, i) => (
                                     <div key={i} className="flex items-center gap-4 p-3 bg-gray-50 rounded-2xl border border-transparent hover:border-saada-red/10 transition-colors">
-                                        <div className="h-14 w-14 bg-white rounded-xl shadow-sm overflow-hidden flex-shrink-0"><img src={item.product_image || item.image || "/assets/logo.png"} className="h-full w-full object-contain" /></div>
-                                        <div className="flex-grow min-w-0"><h4 className="font-bold text-saada-brown text-sm truncate">{cleanProductName(item.product_name || item.name)}</h4><p className="text-[10px] text-gray-400">الكمية: {item.quantity}</p></div>
-                                        <div className="text-saada-red font-black text-sm whitespace-nowrap">{safeFormatPrice((item.price || 0) * (item.quantity || 1))} ج.م</div>
+                                        <div className="h-14 w-14 bg-white rounded-xl shadow-sm overflow-hidden flex-shrink-0"><img src={item?.product_image || item?.image || "/assets/logo.png"} className="h-full w-full object-contain" /></div>
+                                        <div className="flex-grow min-w-0"><h4 className="font-bold text-saada-brown text-sm truncate">{cleanProductName(item?.product_name || item?.name)}</h4><p className="text-[10px] text-gray-400">الكمية: {item?.quantity || 1}</p></div>
+                                        <div className="text-saada-red font-black text-sm whitespace-nowrap">{safeFormatPrice((item?.price || 0) * (item?.quantity || 1))} ج.م</div>
                                     </div>
                                 )) : <div className="text-center py-6 text-gray-400 text-xs italic">يرجى مراجعة تفاصيل المنتجات في رسالة الواتساب</div>}
                             </div>
@@ -178,7 +178,7 @@ const OrderTracking = () => {
 
                         {isAuthenticated && (
                             <div className="mt-8 pt-6 border-t border-gray-50 flex items-center justify-between">
-                                <div className="flex items-center gap-3"><div className="h-8 w-8 bg-saada-brown text-white rounded-lg flex items-center justify-center font-bold text-xs">{user?.username?.[0].toUpperCase()}</div><p className="text-xs text-gray-500">مرحباً {user?.username}</p></div>
+                                <div className="flex items-center gap-3"><div className="h-8 w-8 bg-saada-brown text-white rounded-lg flex items-center justify-center font-bold text-xs">{user?.username?.[0]?.toUpperCase() || 'U'}</div><p className="text-xs text-gray-500">مرحباً {user?.username}</p></div>
                                 {order.status !== 'received' && <Button size="sm" onClick={async () => {
                                     const { error } = await supabase.from("orders").update({ status: 'received' }).eq("id", orderId);
                                     if (!error) { toast.success("تم تحديث الحالة"); fetchOrderDetails(); }
