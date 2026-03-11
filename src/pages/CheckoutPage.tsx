@@ -72,43 +72,35 @@ const CheckoutPage = () => {
             let success = false;
 
             try {
-                // 1. إنشاء الطلب في سوبابيز
-                const { data: orderData, error: orderError } = await supabase
-                    .from("orders")
-                    .insert([
-                        {
-                            customer_name: formData.name,
-                            customer_phone: formData.phone,
-                            customer_address: formData.address,
-                            customer_notes: formData.notes + " (طلب عبر واتساب من صفحة الدفع)",
-                            total_price: discountedTotal,
-                            coupon_code: appliedCoupon?.code || "",
-                            discount_amount: discountAmount,
-                            status: "pending",
-                        },
-                    ])
-                    .select();
-
-                if (!orderError && orderData && orderData.length > 0) {
-                    const order = orderData[0];
-                    orderId = order.id;
-
-                    // 2. إضافة تفاصيل المنتجات في جدول order_items
-                    const orderItems = items.map((item) => ({
-                        order_id: order.id,
-                        product_id: item.id,
-                        product_name: item.name,
+                // 1. إنشاء الطلب في سوبابيز عبر الدالة الموحدة
+                const result = await saveOrderToDb(
+                    {
+                        name: formData.name,
+                        phone: formData.phone,
+                        address: formData.address,
+                        notes: formData.notes + " (طلب عبر واتساب من صفحة الدفع)"
+                    },
+                    items.map(item => ({
+                        id: item.id,
+                        name: item.name,
                         quantity: item.quantity,
                         price: item.is_on_sale
                             ? item.price - (item.price * (item.discount || 0) / 100)
                             : item.price,
-                    }));
+                        image: item.image
+                    })),
+                    discountedTotal,
+                    "pending",
+                    appliedCoupon?.code || "",
+                    discountAmount
+                );
 
-                    await supabase.from("order_items").insert(orderItems);
+                if (result.success) {
+                    orderId = result.orderId!;
                     success = true;
                 } else {
-                    console.error("Supabase Order Insert Error:", orderError);
-                    toast.error("فشل حفظ الطلب في السجل، سيتم إرساله كطلب يدوي عبر الواتساب");
+                    console.error("Order Save Failed:", result.error);
+                    toast.error("تنبيه: " + result.error);
                 }
             } catch (dbErr) {
                 console.error("Database backup failed, proceeding with direct WhatsApp", dbErr);

@@ -1982,8 +1982,8 @@ const AdminDashboard = () => {
 
                 {activeTab === "products" ? (
                     <>
-                        {/* Stats Grid - Hidden for limited Editors */}
-                        {isAdmin && (
+                        {/* Stats Grid - Hidden for limited Editors but shown to special staff */}
+                        {(isAdmin || isRestrictedStaff) && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 cursor-pointer">
                                 <Card
                                     onClick={() => { setActiveFilter("all"); setSelectedCategoryLabel(null); }}

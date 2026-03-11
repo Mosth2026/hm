@@ -8,7 +8,7 @@ import { cleanProductName } from "@/lib/utils";
 import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { SITE_CONFIG } from "@/lib/constants";
-import { saveOrderToDb } from "@/lib/orders";
+import { saveOrderToDb, OrderItem } from "@/lib/orders";
 import { toast } from "sonner";
 
 const CartPage = () => {
@@ -163,7 +163,7 @@ const CartPage = () => {
                                                     }).join('\n\n');
 
                                                     // الحفظ في قاعدة البيانات كمسودة
-                                                    const orderItems = items.map(item => ({
+                                                    const orderItems: OrderItem[] = items.map(item => ({
                                                         id: item.id,
                                                         name: item.name,
                                                         quantity: item.quantity,
@@ -174,7 +174,11 @@ const CartPage = () => {
                                                     const roundedTotal = Math.round(totalPrice * 100) / 100;
 
                                                     const result = await saveOrderToDb(
-                                                        { name: "عميل واتساب سريع", phone: "01000000000" },
+                                                        { 
+                                                            name: "عميل واتساب سريع (سلة)", 
+                                                            phone: "01000000000",
+                                                            notes: "تم الطلب مباشرة من صفحة السلة"
+                                                        },
                                                         orderItems,
                                                         roundedTotal,
                                                         "pending"
@@ -182,6 +186,7 @@ const CartPage = () => {
 
                                                     if (!result.success) {
                                                         console.error("Order Save Failed:", result.error);
+                                                        toast.error("تنبيه: " + result.error);
                                                     }
 
                                                     const finalOrderId = result.success ? result.orderId : `DRAFT${Date.now()}`;
