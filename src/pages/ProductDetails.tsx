@@ -294,6 +294,7 @@ const ProductDetails = () => {
 
                       if (!result.success) {
                         console.error("Order Save Failed:", result.error);
+                        toast.error("تنبيه: " + result.error);
                       }
 
                       const finalOrderId = result.success ? result.orderId : `DRAFT${Date.now()}`;

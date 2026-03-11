@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase";
 import { Loader2, CheckCircle2, ChevronRight, MapPin, Phone, User, CreditCard, MessageCircle } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { SITE_CONFIG } from "@/lib/constants";
+import { saveOrderToDb } from "@/lib/orders";
 import { useAnalytics } from "@/hooks/use-analytics";
 import { useEffect as useReactEffect } from "react";
 
@@ -162,42 +163,32 @@ const CheckoutPage = () => {
         setIsSubmitting(true);
 
         try {
-            // 1. إنشاء الطلب في سوبابيز
-            const { data: order, error: orderError } = await supabase
-                .from("orders")
-                .insert([
-                    {
-                        customer_name: formData.name,
-                        customer_phone: formData.phone,
-                        customer_address: formData.address,
-                        customer_notes: formData.notes,
-                        total_price: discountedTotal,
-                        coupon_code: appliedCoupon?.code || "",
-                        discount_amount: discountAmount,
-                        status: "pending",
-                    },
-                ])
-                .select()
-                .single();
+            // 1. إنشاء الطلب في سوبابيز عبر الدالة الموحدة
+            const result = await saveOrderToDb(
+                {
+                    name: formData.name,
+                    phone: formData.phone,
+                    address: formData.address,
+                    notes: formData.notes
+                },
+                items.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    quantity: item.quantity,
+                    price: item.is_on_sale
+                        ? item.price - (item.price * (item.discount || 0) / 100)
+                        : item.price,
+                    image: item.image
+                })),
+                discountedTotal,
+                "pending",
+                appliedCoupon?.code || "",
+                discountAmount
+            );
 
-            if (orderError) throw orderError;
+            if (!result.success) throw new Error(result.error);
 
-            // 2. إضافة تفاصيل المنتجات في جدول order_items
-            const orderItems = items.map((item) => ({
-                order_id: order.id,
-                product_id: item.id,
-                product_name: item.name,
-                quantity: item.quantity,
-                price: item.is_on_sale
-                    ? item.price - (item.price * (item.discount || 0) / 100)
-                    : item.price,
-            }));
-
-            const { error: itemsError } = await supabase
-                .from("order_items")
-                .insert(orderItems);
-
-            if (itemsError) throw itemsError;
+            const finalOrderId = result.orderId!;
 
             // 3. نجاح الطلب
             setIsSuccess(true);
