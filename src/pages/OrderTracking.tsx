@@ -257,26 +257,28 @@ const OrderTracking = () => {
                                         <User className="h-5 w-5 text-saada-red/50" />
                                         <span className="font-bold">{order.customer_name}</span>
                                     </div>
-                                    <div className="flex items-center gap-3 text-saada-brown">
+                                    <div className="flex items-center gap-3 text-saada-brown min-h-[1.5rem]">
                                         <Phone className="h-5 w-5 text-saada-red/50" />
-                                        <span className="font-bold" dir="ltr">{order.customer_phone}</span>
+                                        <span className="font-bold whitespace-nowrap" dir="ltr">{order.customer_phone || "جاري التحميل..."}</span>
                                     </div>
-                                    <div className="flex items-start gap-3 text-saada-brown">
+                                    <div className="flex items-start gap-3 text-saada-brown min-h-[1.5rem]">
                                         <MapPin className="h-5 w-5 text-saada-red/50 mt-1" />
-                                        <span className="leading-relaxed">{order.customer_address}</span>
+                                        <span className="leading-relaxed">{order.customer_address || "عنوان العميل بالرسالة"}</span>
                                     </div>
                                 </div>
                             </div>
                             <div className="space-y-4">
                                 <h3 className="font-bold text-gray-400 uppercase text-xs tracking-widest">ملخص الحساب</h3>
                                 <div className="space-y-2 bg-gray-50 p-4 rounded-2xl">
-                                    <div className="flex justify-between text-gray-600">
-                                        <span>إجمالي المنتجات</span>
-                                        <span>{formatPrice(order.total_price)} ج.م</span>
+                                    <div className="flex justify-between items-center text-gray-600 gap-2">
+                                        <span className="whitespace-nowrap">إجمالي المنتجات</span>
+                                        <span className="text-sm font-bold text-left">{formatPrice(order.total_price)} ج.م</span>
                                     </div>
-                                    <div className="pt-2 border-t mt-2 flex justify-between text-saada-brown">
+                                    <div className="pt-3 border-t mt-3 flex flex-wrap justify-between items-center text-saada-brown gap-2">
                                         <span className="font-black">الإجمالي الكلي</span>
-                                        <span className="text-2xl font-black text-saada-red">{formatPrice(order.total_price)} ج.م</span>
+                                        <span className={`${isNaN(Number(order.total_price)) ? 'text-lg' : 'text-2xl'} font-black text-saada-red text-left`}>
+                                            {formatPrice(order.total_price)} ج.م
+                                        </span>
                                     </div>
                                 </div>
                             </div>
