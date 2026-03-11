@@ -33,7 +33,10 @@ const OrderTracking = () => {
         try {
             const date = new Date(dateStr);
             if (isNaN(date.getTime())) return "غير محدد";
-            return date.toLocaleDateString('ar-EG', { dateStyle: 'long' });
+            return date.toLocaleString('ar-EG', { 
+                dateStyle: 'long',
+                timeStyle: 'medium'
+            });
         } catch (e) { return "غير محدد"; }
     };
 
@@ -88,9 +91,24 @@ const OrderTracking = () => {
             if (orderErr) throw orderErr;
             setOrder(orderData);
 
-            const { data: itemsData } = await supabase.from("order_items").select("*").eq("order_id", orderId);
+            const { data: itemsData, error: itemsErr } = await supabase.from("order_items").select("*").eq("order_id", orderId);
+            
             if (itemsData && itemsData.length > 0) {
-                setItems(itemsData);
+                // Fetch images for these products
+                const productIds = itemsData.map(i => i.product_id).filter(Boolean);
+                if (productIds.length > 0) {
+                    const { data: productsData } = await supabase.from('products').select('id, image').in('id', productIds);
+                    const imageMap = new Map();
+                    productsData?.forEach(p => imageMap.set(p.id, p.image));
+                    
+                    const enrichedItems = itemsData.map(item => ({
+                        ...item,
+                        product_image: imageMap.get(item.product_id) || item.image
+                    }));
+                    setItems(enrichedItems);
+                } else {
+                    setItems(itemsData);
+                }
             } else if (itemsString) {
                 setItems(await fetchItemsFromUrl(itemsString));
             }
@@ -137,8 +155,8 @@ const OrderTracking = () => {
                                 </div>
                                 <p className="text-gray-400 text-sm">تاريخ الإنشاء: {displayDate}</p>
                             </div>
-                            <div className={`px-5 py-2 rounded-full font-bold text-xs ${order?.is_draft ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
-                                {order?.is_draft ? 'طلب واتساب (قيد المراجعة)' : 'تم التأكيد'}
+                            <div className={`px-5 py-2 rounded-full font-bold text-xs ${(order?.is_draft || order?.status === 'pending') ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                                {(order?.is_draft || order?.status === 'pending') ? 'طلب واتساب (قيد المراجعة)' : (order?.status === 'received' ? 'تم الاستلام' : 'تم التأكيد')}
                             </div>
                         </div>
 
