@@ -47,47 +47,46 @@ const OrderTracking = () => {
 
         const urlParams = new URLSearchParams(window.location.search);
         const urlTotal = urlParams.get('t');
-        const itemsString = urlParams.get('i') || urlParams.get('p'); // Support both new 'i' and old 'p' 
+        const itemsString = urlParams.get('i') || urlParams.get('p'); 
 
-        const isOrderIdDraft = orderId.toString().toUpperCase().startsWith('DRAFT');
+        const isOrderIdDraft = String(orderId || "").toUpperCase().startsWith('DRAFT');
 
-        // Helper to fetch product details for draft preview
         const fetchDraftItems = async (iStr: string) => {
-            const itemPairs = iStr.split('_');
-            const itemMap = new Map<number, number>();
-            const productIds: number[] = [];
+            try {
+                const itemPairs = iStr.split('_');
+                const itemMap = new Map<number, number>();
+                const productIds: number[] = [];
 
-            for (const pair of itemPairs) {
-                const [pid, qty] = pair.split('-');
-                if (pid && qty) {
-                    const id = parseInt(pid);
-                    const q = parseInt(qty);
-                    itemMap.set(id, q);
-                    productIds.push(id);
+                for (const pair of itemPairs) {
+                    const [pid, qty] = pair.split('-');
+                    if (pid && qty) {
+                        const id = parseInt(pid);
+                        const q = parseInt(qty);
+                        itemMap.set(id, q);
+                        productIds.push(id);
+                    }
                 }
-            }
 
-            if (productIds.length === 0) return [];
+                if (productIds.length === 0) return [];
 
-            const { data: productsData, error } = await supabase
-                .from('products')
-                .select('*')
-                .in('id', productIds);
+                const { data: productsData, error } = await supabase
+                    .from('products')
+                    .select('*')
+                    .in('id', productIds);
 
-            if (error || !productsData) return [];
+                if (error || !productsData) return [];
 
-            return productsData.map(product => {
-                const hasNoTax = product.description?.includes('[TAX_EXEMPT]');
-                return {
+                return productsData.map(product => ({
                     product_name: product.name,
                     quantity: itemMap.get(product.id) || 1,
-                    no_tax: hasNoTax,
                     price: product.is_on_sale
                         ? product.price - (product.price * (product.discount || 0) / 100)
                         : product.price,
                     product_image: product.image
-                };
-            });
+                }));
+            } catch (e) {
+                return [];
+            }
         };
 
         if (isOrderIdDraft) {
@@ -105,16 +104,12 @@ const OrderTracking = () => {
             if (itemsString) {
                 const draftItems = await fetchDraftItems(itemsString);
                 setItems(draftItems);
-            } else {
-                setItems([]);
             }
-
             setLoading(false);
             return;
         }
 
         try {
-            // Fetch order
             const { data: orderData, error: orderError } = await supabase
                 .from("orders")
                 .select("*")
@@ -124,27 +119,20 @@ const OrderTracking = () => {
             if (orderError) throw orderError;
             setOrder(orderData);
 
-            // Fetch order items
             const { data: itemsData, error: itemsError } = await supabase
                 .from("order_items")
                 .select("*")
                 .eq("order_id", orderId);
 
             if (itemsError) {
-                // If items fail but order exists, try to recover from URL if available
                 if (itemsString) {
                     const recoveredItems = await fetchDraftItems(itemsString);
                     setItems(recoveredItems);
-                } else {
-                    setItems([]);
                 }
             } else {
                 setItems(itemsData || []);
             }
         } catch (error: any) {
-            console.error("Error fetching order:", error);
-
-            // Fallback for failed fetches
             setOrder({
                 id: orderId,
                 customer_name: "عميل صناع السعادة",
@@ -153,7 +141,6 @@ const OrderTracking = () => {
                 created_at: new Date().toISOString(),
                 is_draft: true
             });
-
             if (itemsString) {
                 const draftItems = await fetchDraftItems(itemsString);
                 setItems(draftItems);
@@ -169,30 +156,26 @@ const OrderTracking = () => {
             navigate("/admin");
             return;
         }
-
         try {
             const { error } = await supabase
                 .from("orders")
                 .update({
                     status: 'received',
                     processed_by: user.username,
-                    customer_notes: (order.customer_notes || "") + ` \n[تم الاستلام بواسطة: ${user.username}]`
+                    customer_notes: (order?.customer_notes || "") + ` \n[تم الاستلام بواسطة: ${user.username}]`
                 })
                 .eq("id", orderId);
-
             if (error) throw error;
-
-            toast.success("تم تحديث حالة الطلب إلى (تم الاستلام)");
+            toast.success("تم تحديث حالة الطلب");
             fetchOrderDetails();
         } catch (error: any) {
-            console.error("Error updating order:", error);
             toast.error("فشل تحديث الطلب");
         }
     };
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
+            <div className="min-h-screen flex items-center justify-center bg-white">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-saada-red"></div>
             </div>
         );
@@ -200,7 +183,7 @@ const OrderTracking = () => {
 
     if (!order) {
         return (
-            <div className="min-h-screen flex flex-col pt-20 text-center font-tajawal rtl">
+            <div className="min-h-screen flex flex-col pt-20 text-center font-tajawal rtl bg-gray-50">
                 <Header />
                 <div className="flex-grow flex flex-col items-center justify-center p-4">
                     <FileText className="h-20 w-20 text-gray-200 mb-4" />
@@ -212,11 +195,14 @@ const OrderTracking = () => {
         );
     }
 
+    const orderTotal = order?.total_price || 0;
+    const customerName = order?.customer_name || "عميل صناع السعادة";
+
     return (
         <div className="min-h-screen flex flex-col font-tajawal rtl bg-gray-50/50" dir="rtl">
             <Helmet>
                 <title>فاتورة رقم #{order.id} | صناع السعادة</title>
-                <meta name="description" content={`تفاصيل طلب العميل ${order.customer_name} - إجمالي ${formatPrice(order.total_price)} ج.م`} />
+                <meta name="description" content={`تفاصيل طلب العميل ${customerName} - إجمالي ${formatPrice(orderTotal)} ج.م`} />
                 <meta property="og:title" content={`📦 فاتورة رقم #${order.id}`} />
                 <meta property="og:description" content="اضغط لمعاينة تفاصيل طلبك من صناع السعادة" />
                 <meta property="og:image" content="/assets/logo.png" />
@@ -225,27 +211,17 @@ const OrderTracking = () => {
             <Header />
             <main className="flex-grow pt-24 md:pt-28 pb-12 px-4">
                 <div className="max-w-3xl mx-auto space-y-6">
-                    {/* Header Card */}
-                    <div className="bg-white rounded-3xl p-8 shadow-xl shadow-gray-200/50 border border-gray-100 animate-in fade-in slide-in-from-top-4 duration-500">
+                    <div className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100 animate-in fade-in slide-in-from-top-4 duration-500">
                         <div className="flex flex-col md:flex-row justify-between items-start gap-4 mb-8">
                             <div>
                                 <h1 className="text-3xl font-black text-saada-brown mb-2 flex items-center gap-3">
                                     <Package className="h-8 w-8 text-saada-red" />
                                     تفاصيل الطلب #{order.id}
                                 </h1>
-                                <p className="text-gray-500">تاريخ الطلب: {formatDate(order.created_at)}</p>
+                                <p className="text-gray-500">تاريخ الطلب: {formatDate(order?.created_at)}</p>
                             </div>
-                            <div className={`px-6 py-2 rounded-full font-bold text-sm ${order.is_draft
-                                ? 'bg-amber-100 text-amber-700'
-                                : order.status === 'received'
-                                    ? 'bg-green-100 text-green-700'
-                                    : 'bg-saada-red/10 text-saada-red'
-                                }`}>
-                                {order.is_draft
-                                    ? 'طلب مرسل (قيد المراجعة)'
-                                    : order.status === 'received'
-                                        ? 'تم الاستلام بنجاح'
-                                        : 'جاري التجهيز'}
+                            <div className={`px-6 py-2 rounded-full font-bold text-sm ${order?.is_draft ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'}`}>
+                                {order?.is_draft ? 'طلب مرسل (قيد المراجعة)' : 'تم الاستلام بنجاح'}
                             </div>
                         </div>
 
@@ -255,31 +231,31 @@ const OrderTracking = () => {
                                 <div className="space-y-3">
                                     <div className="flex items-center gap-3 text-saada-brown">
                                         <User className="h-5 w-5 text-saada-red/50" />
-                                        <span className="font-bold">{order.customer_name}</span>
+                                        <span className="font-bold">{customerName}</span>
                                     </div>
-                                    <div className="flex items-center gap-3 text-saada-brown min-h-[1.5rem]">
+                                    <div className="flex items-center gap-3 text-saada-brown">
                                         <Phone className="h-5 w-5 text-saada-red/50" />
-                                        <span className="font-bold whitespace-nowrap" dir="ltr">{order.customer_phone || "جاري التحميل..."}</span>
+                                        <span className="font-bold" dir="ltr">{order?.customer_phone || "جاري التحميل..."}</span>
                                     </div>
-                                    <div className="flex items-start gap-3 text-saada-brown min-h-[1.5rem]">
+                                    <div className="flex items-start gap-3 text-saada-brown">
                                         <MapPin className="h-5 w-5 text-saada-red/50 mt-1" />
-                                        <span className="leading-relaxed">{order.customer_address || "عنوان العميل بالرسالة"}</span>
+                                        <span className="leading-relaxed">{order?.customer_address || "عنوان العميل بالرسالة"}</span>
                                     </div>
                                 </div>
                             </div>
                             <div className="space-y-4">
                                 <h3 className="font-bold text-gray-400 uppercase text-xs tracking-widest px-2">ملخص الحساب</h3>
-                                <div className="bg-gray-50 p-6 rounded-3xl space-y-4 border border-gray-100 flex flex-col justify-center min-h-[160px]">
+                                <div className="bg-gray-50 p-6 rounded-3xl space-y-4 border border-gray-100 min-h-[160px] flex flex-col justify-center">
                                     <div className="flex justify-between items-center text-gray-600">
                                         <span className="text-sm opacity-80">إجمالي المنتجات</span>
-                                        <span className="font-bold text-saada-brown">{formatPrice(order.total_price)} ج.م</span>
+                                        <span className="font-bold text-saada-brown">{formatPrice(orderTotal)} ج.م</span>
                                     </div>
                                     <div className="pt-4 border-t border-gray-200/50">
-                                        <div className="flex flex-col gap-1 items-start">
-                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-tighter">الإجمالي الكلي للدفع</span>
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-xs font-bold text-gray-400">الإجمالي الكلي للدفع</span>
                                             <div className="flex items-baseline gap-1">
-                                                <span className={`${isNaN(Number(order.total_price)) ? 'text-xl' : 'text-3xl'} font-black text-saada-red leading-tight break-all`}>
-                                                    {formatPrice(order.total_price)}
+                                                <span className={`${isNaN(Number(orderTotal)) ? 'text-xl' : 'text-3xl'} font-black text-saada-red`}>
+                                                    {formatPrice(orderTotal)}
                                                 </span>
                                                 <span className="text-sm font-bold text-saada-red/70">ج.م</span>
                                             </div>
@@ -289,72 +265,48 @@ const OrderTracking = () => {
                             </div>
                         </div>
 
-                        {/* Order Items Table */}
                         <div className="mt-8 space-y-4">
                             <h3 className="font-bold text-saada-brown flex items-center gap-2">
                                 <Package className="h-5 w-5" />
                                 المنتجات المطلوبة
                             </h3>
                             <div className="space-y-3">
-                                {items.map((item, idx) => (
+                                {items && items.length > 0 ? items.map((item, idx) => (
                                     <div key={idx} className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl">
                                         <div className="h-16 w-16 bg-white rounded-xl shadow-sm flex items-center justify-center p-1 overflow-hidden">
-                                            {(item.product_image || item.image) ? (
-                                                <img
-                                                    src={item.product_image || item.image}
-                                                    alt={item.product_name}
-                                                    className="h-full w-full object-contain"
-                                                />
-                                            ) : (
-                                                <Package className="h-8 w-8 text-gray-200" />
-                                            )}
+                                            <img src={item?.product_image || item?.image || "/assets/logo.png"} className="h-full w-full object-contain" />
                                         </div>
                                         <div className="flex-grow">
-                                            <h4 className="font-bold text-saada-brown">{cleanProductName(item.product_name)}</h4>
-                                            <p className="text-sm text-gray-500">الكمية: {item.quantity}</p>
+                                            <h4 className="font-bold text-saada-brown text-sm">{cleanProductName(item?.product_name || "منتج")}</h4>
+                                            <p className="text-xs text-gray-500">الكمية: {item?.quantity || 1}</p>
                                         </div>
-                                        <div className="text-saada-red font-black">
-                                            {formatPrice(item.price * item.quantity)} ج.م
+                                        <div className="text-saada-red font-black text-sm">
+                                            {formatPrice((item?.price || 0) * (item?.quantity || 1))} ج.م
                                         </div>
                                     </div>
-                                ))}
+                                )) : (
+                                    <div className="text-center py-8 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                                        <p className="text-gray-400 text-sm italic">سيتم عرض قائمة المنتجات عند تأكيد الطلب</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
-                        {/* Admin Action */}
                         {isAuthenticated && (
                             <div className="mt-12 pt-8 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                                 <div className="flex items-center gap-4">
                                     <div className="h-12 w-12 bg-saada-brown text-white rounded-full flex items-center justify-center font-bold">
                                         {user?.username ? user.username[0].toUpperCase() : 'A'}
                                     </div>
-                                    <div>
-                                        <p className="text-sm text-gray-500">مرحباً {user?.username || 'مسؤول'}</p>
-                                        <p className="text-xs text-saada-brown font-bold">أنت تشاهد نسخة الإدارة</p>
-                                    </div>
+                                    <p className="text-sm text-gray-500">مرحباً {user?.username || 'مسؤول'}</p>
                                 </div>
-
-                                {order.status !== 'received' ? (
-                                    <Button
-                                        onClick={handleMarkAsReceived}
-                                        className="bg-green-600 hover:bg-green-700 text-white h-14 px-8 rounded-2xl font-black shadow-xl shadow-green-100 transition-all hover:scale-105 gap-2"
-                                    >
-                                        <CheckCircle2 className="h-5 w-5" />
-                                        تأكيد الاستلام مع العميل
+                                {order?.status !== 'received' && (
+                                    <Button onClick={handleMarkAsReceived} className="bg-green-600 hover:bg-green-700 text-white h-14 px-8 rounded-2xl font-black">
+                                        تأكيد الاستلام
                                     </Button>
-                                ) : (
-                                    <div className="text-green-600 font-bold flex items-center gap-2 bg-green-50 px-6 py-3 rounded-xl border border-green-100">
-                                        <CheckCircle2 className="h-5 w-5" />
-                                        تم الاستلام مسبقاً
-                                    </div>
                                 )}
                             </div>
                         )}
-                    </div>
-
-                    {/* Footer Info */}
-                    <div className="text-center text-gray-400 text-xs px-8">
-                        هذه الفاتورة منشأة تلقائياً برقم مرجعي #{order.id}. في حال وجود أي استفسار يرجى التواصل مع الدعم الفني.
                     </div>
                 </div>
             </main>
