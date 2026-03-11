@@ -23,6 +23,13 @@ const OrderTracking = () => {
         fetchOrderDetails();
     }, [orderId]);
 
+    const formatPrice = (price: any) => {
+        if (price === null || price === undefined) return "0";
+        const num = Number(price);
+        if (isNaN(num)) return price.toString();
+        return num.toFixed(num % 1 === 0 ? 0 : 1);
+    };
+
     const fetchOrderDetails = async () => {
         if (!orderId) return;
         setLoading(true);
@@ -254,11 +261,11 @@ const OrderTracking = () => {
                                 <div className="space-y-2 bg-gray-50 p-4 rounded-2xl">
                                     <div className="flex justify-between text-gray-600">
                                         <span>إجمالي المنتجات</span>
-                                        <span>{Number(order.total_price).toFixed(Number(order.total_price) % 1 === 0 ? 0 : 1)} ج.م</span>
+                                        <span>{formatPrice(order.total_price)} ج.م</span>
                                     </div>
                                     <div className="pt-2 border-t mt-2 flex justify-between text-saada-brown">
                                         <span className="font-black">الإجمالي الكلي</span>
-                                        <span className="text-2xl font-black text-saada-red">{Number(order.total_price).toFixed(Number(order.total_price) % 1 === 0 ? 0 : 1)} ج.م</span>
+                                        <span className="text-2xl font-black text-saada-red">{formatPrice(order.total_price)} ج.م</span>
                                     </div>
                                 </div>
                             </div>
@@ -289,7 +296,7 @@ const OrderTracking = () => {
                                             <p className="text-sm text-gray-500">الكمية: {item.quantity}</p>
                                         </div>
                                         <div className="text-saada-red font-black">
-                                            {(item.price * item.quantity).toFixed((item.price * item.quantity) % 1 === 0 ? 0 : 1)} ج.م
+                                            {formatPrice(item.price * item.quantity)} ج.م
                                         </div>
                                     </div>
                                 ))}

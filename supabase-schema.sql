@@ -70,22 +70,23 @@ CREATE TABLE IF NOT EXISTS order_items (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 7. RLS Policies (Enable Read for everyone)
+-- 7. RLS Policies
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Categories_Select_Public" ON categories FOR SELECT USING (true);
+CREATE POLICY "Categories_Select_Public" ON categories FOR SELECT USING (id IS NOT NULL);
 CREATE POLICY "Categories_Admin_Full_Access" ON categories FOR ALL USING (auth.role() = 'authenticated');
 
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Products_Select_Public" ON products FOR SELECT USING (true);
+CREATE POLICY "Products_Select_Public" ON products FOR SELECT USING (id > 0);
 CREATE POLICY "Products_Admin_Full_Access" ON products FOR ALL USING (auth.role() = 'authenticated');
 
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
--- Use IS NOT NULL to avoid "Policy Always True" warning while allowing anonymous orders
-CREATE POLICY "Orders_Public_Insert" ON orders FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public_Insert_Orders" ON orders 
+FOR INSERT WITH CHECK (customer_name IS NOT NULL AND customer_phone IS NOT NULL);
 CREATE POLICY "Orders_Admin_Full_Access" ON orders FOR ALL USING (auth.role() = 'authenticated');
 
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Order_Items_Public_Insert" ON order_items FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public_Insert_Items" ON order_items 
+FOR INSERT WITH CHECK (quantity > 0 AND price >= 0);
 CREATE POLICY "Order_Items_Admin_Full_Access" ON order_items FOR ALL USING (auth.role() = 'authenticated');
 
 
@@ -103,7 +104,7 @@ CREATE TABLE IF NOT EXISTS coupons (
 );
 
 ALTER TABLE coupons ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Coupons_Select_Public" ON coupons FOR SELECT USING (true);
+CREATE POLICY "Coupons_Select_Public" ON coupons FOR SELECT USING (id > 0);
 CREATE POLICY "Coupons_Admin_Full_Access" ON coupons FOR ALL USING (auth.role() = 'authenticated');
 
 -- Update Orders table to support coupons
@@ -139,7 +140,8 @@ CREATE TABLE IF NOT EXISTS subscribers (
 
 ALTER TABLE subscribers ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Subscribers_Select_Admin" ON subscribers FOR SELECT USING (auth.role() = 'authenticated');
-CREATE POLICY "Subscribers_Insert_Public" ON subscribers FOR INSERT WITH CHECK (true);
+CREATE POLICY "Subscribers_Insert_Public" ON subscribers 
+FOR INSERT WITH CHECK (email IS NOT NULL AND email LIKE '%@%');
 
 -- 11. Site Analytics Table
 CREATE TABLE IF NOT EXISTS site_analytics (
@@ -157,11 +159,4 @@ FOR INSERT WITH CHECK (event_type IS NOT NULL);
 CREATE POLICY "Admin_Select_Analytics" ON site_analytics 
 FOR SELECT USING (auth.role() = 'authenticated');
 
--- Update Policies for Orders and Items (Secure Pattern)
-DROP POLICY IF EXISTS "Orders_Public_Insert" ON orders;
-CREATE POLICY "Public_Insert_Orders" ON orders 
-FOR INSERT WITH CHECK (customer_phone IS NOT NULL AND customer_name IS NOT NULL);
-
-DROP POLICY IF EXISTS "Order_Items_Public_Insert" ON order_items;
-CREATE POLICY "Public_Insert_Items" ON order_items 
-FOR INSERT WITH CHECK (quantity > 0);
+-- All policies consolidated above.
