@@ -82,11 +82,13 @@ CREATE POLICY "Products_Admin_Full_Access" ON products FOR ALL USING (auth.role(
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public_Insert_Orders" ON orders 
 FOR INSERT WITH CHECK (customer_name IS NOT NULL AND customer_phone IS NOT NULL);
+CREATE POLICY "Public_Select_Orders" ON orders FOR SELECT USING (id IS NOT NULL);
 CREATE POLICY "Orders_Admin_Full_Access" ON orders FOR ALL USING (auth.role() = 'authenticated');
 
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public_Insert_Items" ON order_items 
 FOR INSERT WITH CHECK (quantity > 0 AND price >= 0);
+CREATE POLICY "Public_Select_Items" ON order_items FOR SELECT USING (id IS NOT NULL);
 CREATE POLICY "Order_Items_Admin_Full_Access" ON order_items FOR ALL USING (auth.role() = 'authenticated');
 
 
