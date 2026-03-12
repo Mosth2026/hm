@@ -47,6 +47,13 @@ export default async function handler(req, res) {
             }
         }
 
+        // تحسين اكتشاف نوع الصورة ديناميكياً
+        let imageType = "image/jpeg"; // الافتراضي
+        if (image.toLowerCase().endsWith('.webp')) imageType = "image/webp";
+        else if (image.toLowerCase().endsWith('.png')) imageType = "image/png";
+        else if (image.toLowerCase().endsWith('.gif')) imageType = "image/gif";
+        else if (image.toLowerCase().endsWith('.jpg') || image.toLowerCase().endsWith('.jpeg')) imageType = "image/jpeg";
+
         const html = `<!DOCTYPE html>
 <html lang="ar" dir="rtl" prefix="og: http://ogp.me/ns#">
 <head>
@@ -78,7 +85,7 @@ export default async function handler(req, res) {
   <meta name="twitter:image" content="${image}">
   
   <!-- WhatsApp Specific -->
-  <meta property="og:image:type" content="image/webp">
+  <meta property="og:image:type" content="${imageType}">
   <link rel="image_src" href="${image}">
 
   <!-- Redirect to the real page -->
