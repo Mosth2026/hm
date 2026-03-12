@@ -33,7 +33,8 @@ import {
     Clock,
     PieChart,
     Calendar,
-    MousePointer2
+    MousePointer2,
+    RotateCcw
 } from "lucide-react";
 import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard";
 import * as XLSX from 'xlsx';
@@ -632,6 +633,71 @@ const AdminDashboard = () => {
                 description: error.message,
                 id: toastId
             });
+        }
+    };
+
+    const handleReturnOrder = async (orderId: number) => {
+        if (!confirm("هل أنت متأكد من عمل مرتجع لهذا الطلب؟ سيتم إعادة الكميات للمخزون.")) return;
+        const toastId = toast.loading("جاري تنفيذ المرتجع...");
+        try {
+            // 1. Fetch order items
+            const { data: items, error: itemsError } = await supabase
+                .from("order_items")
+                .select("*")
+                .eq("order_id", orderId);
+
+            if (itemsError) throw itemsError;
+
+            // 2. Return quantities to stock
+            for (const item of (items || [])) {
+                const normName = normalize(item.product_name);
+                const { data: batches, error: batchError } = await supabase
+                    .from("products")
+                    .select("*")
+                    .or(`name.ilike.%${item.product_name}%`);
+
+                if (batchError) continue;
+
+                const matchingBatches = (batches || []).filter(b => normalize(b.name) === normName);
+                
+                if (matchingBatches.length > 0) {
+                    // Try to return to the batch with latest expiry (LEFO) as it's the most likely one to be fresh
+                    const targetBatch = matchingBatches.sort((a, b) => {
+                        if (!a.expiry_date) return 1;
+                        if (!b.expiry_date) return -1;
+                        return new Date(b.expiry_date).getTime() - new Date(a.expiry_date).getTime();
+                    })[0];
+
+                    const { error: updateError } = await supabase
+                        .from("products")
+                        .update({ stock: targetBatch.stock + item.quantity })
+                        .eq("id", targetBatch.id);
+
+                    if (!updateError) {
+                        logAction('order_return_stock_in', {
+                            order_id: orderId,
+                            product_id: targetBatch.id,
+                            quantity: item.quantity,
+                            type: 'IN'
+                        }, targetBatch.id);
+                    }
+                }
+            }
+
+            // 3. Set status back to pending
+            const { error: orderError } = await supabase
+                .from("orders")
+                .update({ status: 'pending' })
+                .eq("id", orderId);
+
+            if (orderError) throw orderError;
+
+            toast.success("تم تنفيذ المرتجع وإعادة الكميات للمخزون", { id: toastId });
+            logAction('order_returned', { order_id: orderId });
+            fetchOrders();
+        } catch (error: any) {
+            console.error("Return order error:", error);
+            toast.error("فشل تنفيذ المرتجع", { description: error.message, id: toastId });
         }
     };
 
@@ -2542,6 +2608,17 @@ const AdminDashboard = () => {
                                                                 >
                                                                     <CheckCircle2 className="h-4 w-4" />
                                                                     تم الاستلام
+                                                                </Button>
+                                                            )}
+                                                            {order.status === 'received' && (
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    onClick={() => handleReturnOrder(order.id)}
+                                                                    className="h-9 gap-1 border-amber-600 text-amber-600 hover:bg-amber-600 hover:text-white"
+                                                                >
+                                                                    <RotateCcw className="h-4 w-4" />
+                                                                    مرتجع
                                                                 </Button>
                                                             )}
                                                             {isSuperAdmin && (
