@@ -150,7 +150,7 @@ const AdminDashboard = () => {
     const username = user?.username?.toLowerCase() || "";
     const isRestrictedStaff = username.includes('mostafa') || username.includes('hesham') || username.includes('fikry') || username.includes('fekry') || username === 'h';
     const isSpecial = isRestrictedStaff || user?.role === 'admin' || user?.role === 'editor';
-    const isSuperAdmin = username === 'elhanafy' || username === 'h';
+    const isSuperAdmin = username === 'elhanafy' || username === 'elhanafyadmin' || username === 'h';
     const isAdmin = (user?.role === 'admin' || isSuperAdmin) && !isRestrictedStaff;
     const canDelete = isAdmin;
     const canEditPrice = isAdmin;
