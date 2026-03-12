@@ -48,17 +48,25 @@ export default async function handler(req, res) {
         }
 
         // تحجيم الصور الكبيرة من سوبابيس لضمان ظهورها في واتساب (لأن الحجم يكون كبيراً جداً 2 ميجا)
+        // واتساب يفضل صيغة JPG بدلاً من WebP في المعاينات، لذا سنقوم بالتحويل فوراً
         if (image.includes('supabase.co/storage/v1/object/public/')) {
-            image = image.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') + '?width=400&quality=75';
+            image = image.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') + '?width=400&quality=60&format=jpg&v=2';
         }
 
         // تحسين اكتشاف نوع الصورة ديناميكياً (نتجاهل البرامترات في الآخر للفحص)
         let imageType = "image/jpeg"; 
         const testUrl = image.split('?')[0].toLowerCase();
-        if (testUrl.endsWith('.webp')) imageType = "image/webp";
-        else if (testUrl.endsWith('.png')) imageType = "image/png";
-        else if (testUrl.endsWith('.gif')) imageType = "image/gif";
-        else if (testUrl.endsWith('.jpg') || testUrl.endsWith('.jpeg')) imageType = "image/jpeg";
+        
+        // إذا كان هناك بارامتر format=jpg في الرابط، فنحن نعرف مسبقاً النوع
+        if (image.includes('format=jpg')) {
+            imageType = "image/jpeg";
+        } else if (testUrl.endsWith('.webp')) {
+            imageType = "image/webp";
+        } else if (testUrl.endsWith('.png')) {
+            imageType = "image/png";
+        } else if (testUrl.endsWith('.gif')) {
+            imageType = "image/gif";
+        }
 
         const html = `<!DOCTYPE html>
 <html lang="ar" dir="rtl" prefix="og: http://ogp.me/ns#">
