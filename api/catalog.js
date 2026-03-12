@@ -32,6 +32,22 @@ export default async function handler(req, res) {
                 .replace(/'/g, '&apos;');
         };
 
+        // دالة لتعيين فئة جوجل بناءً على معرف القسم لدينا
+        const getGoogleCategory = (catId) => {
+            const mapping = {
+                'chocolate': 'Food, Beverages & Tobacco > Food Items > Candy & Chocolate',
+                'coffee': 'Food, Beverages & Tobacco > Beverages > Coffee',
+                'drinks': 'Food, Beverages & Tobacco > Beverages > Soda & Pop',
+                'cookies': 'Food, Beverages & Tobacco > Food Items > Bakery > Cookies',
+                'candy': 'Food, Beverages & Tobacco > Food Items > Candy & Chocolate',
+                'snacks': 'Food, Beverages & Tobacco > Food Items > Snack Foods',
+                'cosmetics': 'Health & Beauty > Personal Care > Cosmetics',
+                'gifts': 'Arts & Entertainment > Party & Celebration > Gift Baskets',
+                'no-tax': 'Food, Beverages & Tobacco > Food Items'
+            };
+            return mapping[catId] || 'Food, Beverages & Tobacco > Food Items';
+        };
+
         // 2. بناء ملف XML بتنسيق Facebook (RSS 2.0)
         let xml = `<?xml version="1.0"?>
 <rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
@@ -50,13 +66,9 @@ export default async function handler(req, res) {
                 return; // نتخطى هذا المنتج
             }
 
-            // تحقق من الضريبة (14%)
-            const isTaxExempt = name.includes('[TAX_EXEMPT]') || desc.includes('[TAX_EXEMPT]');
-            let rawPrice = Number(product.price || 0);
-            if (!isTaxExempt) {
-                rawPrice = rawPrice * 1.14;
-            }
-            const price = rawPrice.toFixed(2);
+            // الأسعار في قاعدة البيانات تشمل الضريبة بالفعل كما يتم رفعها من الإكسيل
+            // لذا لا نقوم بضربها مرة أخرى هنا.
+            const price = Number(product.price || 0).toFixed(2);
             
             let finalImageUrl = imageUrl;
             if (!finalImageUrl.startsWith('http')) {
@@ -74,6 +86,9 @@ export default async function handler(req, res) {
             const cleanDesc = escapeXml((desc || name).replace(/\[TAX_EXEMPT\]/g, '').trim());
             const linkTag = escapeXml(`${SITE_URL}/products/${product.id}`);
             const availability = 'in stock';
+            
+            const categoryName = escapeXml(product.category_name || 'الأصناف');
+            const googleCategory = escapeXml(getGoogleCategory(product.category_id));
 
             xml += `
     <item>
@@ -86,7 +101,8 @@ export default async function handler(req, res) {
       <g:availability>${availability}</g:availability>
       <g:price>${price} EGP</g:price>
       <g:brand>صناع السعادة</g:brand>
-      <g:google_product_category>Food &gt; Beverages &gt; Coffee</g:google_product_category>
+      <g:google_product_category>${googleCategory}</g:google_product_category>
+      <g:product_type>${categoryName}</g:product_type>
     </item>`;
         });
 
