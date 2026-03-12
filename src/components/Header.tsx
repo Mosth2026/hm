@@ -350,6 +350,9 @@ const Header = () => {
                               if (!result.success) {
                                 const itemsParam = orderItems.map(i => `${i.id}-${i.quantity}`).join('_');
                                 invoiceUrl += `?t=${roundedTotal}&i=${itemsParam}`;
+                                if (appliedCoupon) {
+                                  invoiceUrl += `&c=${appliedCoupon.code}&d=${discountAmount}`;
+                                }
                               }
 
                               const message = encodeURIComponent(

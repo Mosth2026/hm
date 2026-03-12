@@ -121,6 +121,9 @@ const CheckoutPage = () => {
             if (!success) {
                 const itemsParam = items.map(i => `${i.id}-${i.quantity}`).join('_');
                 invoiceUrl += `?t=${discountedTotal}&i=${itemsParam}`;
+                if (appliedCoupon) {
+                    invoiceUrl += `&c=${appliedCoupon.code}&d=${discountAmount}`;
+                }
             }
 
             const message = encodeURIComponent(

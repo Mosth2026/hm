@@ -47,7 +47,8 @@ const OrderTracking = () => {
         const urlParams = new URLSearchParams(window.location.search);
         const urlTotal = urlParams.get('t');
         const itemsString = urlParams.get('i') || urlParams.get('p'); 
-
+        const urlCoupon = urlParams.get('c');
+        const urlDiscount = urlParams.get('d');
         const isDraft = String(orderId).toUpperCase().startsWith('DRAFT');
 
         const fetchItemsFromUrl = async (iStr: string) => {
@@ -79,7 +80,9 @@ const OrderTracking = () => {
                 customer_address: "طلب مرسل مباشرة",
                 total_price: urlTotal || "0",
                 created_at: new Date().toISOString(),
-                is_draft: true
+                is_draft: true,
+                coupon_code: urlCoupon,
+                discount_amount: urlDiscount
             });
             if (itemsString) setItems(await fetchItemsFromUrl(itemsString));
             setLoading(false);
@@ -172,7 +175,17 @@ const OrderTracking = () => {
                             <div className="space-y-4">
                                 <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">ملخص الحساب</h3>
                                 <div className="bg-gray-50 p-5 rounded-3xl border border-gray-100">
-                                    <div className="flex justify-between items-center text-xs text-gray-500 mb-3"><span>إجمالي المنتجات</span><span className="font-bold">{displayTotal} ج.م</span></div>
+                                    <div className="flex justify-between items-center text-xs text-gray-500 mb-2"><span>إجمالي المنتجات</span><span className="font-bold">{safeFormatPrice((Number(order.total_price) || 0) + (Number(order.discount_amount) || 0))} ج.م</span></div>
+                                    
+                                    {order.coupon_code && (
+                                        <div className="flex justify-between items-center text-xs text-emerald-600 mb-3 bg-emerald-50 p-2 rounded-xl border border-emerald-100/50">
+                                            <div className="flex items-center gap-1.5 font-bold italic">
+                                                <span>كود الخصم: ({order.coupon_code})</span>
+                                            </div>
+                                            <span className="font-bold">-{safeFormatPrice(order.discount_amount)} ج.م</span>
+                                        </div>
+                                    )}
+
                                     <div className="pt-3 border-t border-gray-200/50 flex flex-col gap-1">
                                         <span className="text-[10px] font-bold text-gray-400 uppercase">الإجمالي الكلي</span>
                                         <div className="flex items-baseline gap-1"><span className="text-3xl font-black text-saada-red">{displayTotal}</span><span className="text-xs font-bold text-saada-red/60">ج.م</span></div>
