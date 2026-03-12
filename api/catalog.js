@@ -22,7 +22,7 @@ export default async function handler(req, res) {
             throw new Error("Failed to fetch products");
         }
 
-        // دالة مساعدة لهروب المحارف الخاصة بالـ XML لضمان عدم حدوث أخطاء
+        // دالة مساعدة لهروب المحارف الخاصة بالـ XML
         const escapeXml = (unsafe) => {
             return String(unsafe || '')
                 .replace(/&/g, '&amp;')
@@ -32,27 +32,11 @@ export default async function handler(req, res) {
                 .replace(/'/g, '&apos;');
         };
 
-        // دالة لتعيين فئة جوجل بناءً على معرف القسم لدينا
-        const getGoogleCategory = (catId) => {
-            const mapping = {
-                'chocolate': 'Food, Beverages & Tobacco > Food Items > Candy & Chocolate',
-                'coffee': 'Food, Beverages & Tobacco > Beverages > Coffee',
-                'drinks': 'Food, Beverages & Tobacco > Beverages > Soda & Pop',
-                'cookies': 'Food, Beverages & Tobacco > Food Items > Bakery > Cookies',
-                'candy': 'Food, Beverages & Tobacco > Food Items > Candy & Chocolate',
-                'snacks': 'Food, Beverages & Tobacco > Food Items > Snack Foods',
-                'cosmetics': 'Health & Beauty > Personal Care > Cosmetics',
-                'gifts': 'Arts & Entertainment > Party & Celebration > Gift Baskets',
-                'no-tax': 'Food, Beverages & Tobacco > Food Items'
-            };
-            return mapping[catId] || 'Food, Beverages & Tobacco > Food Items';
-        };
-
         // 2. بناء ملف XML بتنسيق Facebook (RSS 2.0)
         let xml = `<?xml version="1.0"?>
 <rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
   <channel>
-    <title>متجر صناع السعادة - متجر الشوكولاتة الفاخرة</title>
+    <title>متجر صناع السعادة</title>
     <link>${SITE_URL}</link>
     <description>كتالوج المنتجات الرسمي لمتجر صناع السعادة</description>`;
 
@@ -61,13 +45,12 @@ export default async function handler(req, res) {
             const desc = product.description || '';
             const imageUrl = product.image || '';
 
-            // استبعاد صور Unsplash الافتراضية والمنتجات المسودة (DRAFT)
+            // استبعاد صور Unsplash والمسودات
             if (imageUrl.includes('unsplash.com') || desc.includes('[DRAFT]') || name.includes('[DRAFT]')) {
-                return; // نتخطى هذا المنتج
+                return;
             }
 
-            // الأسعار في قاعدة البيانات تشمل الضريبة بالفعل كما يتم رفعها من الإكسيل
-            // لذا لا نقوم بضربها مرة أخرى هنا.
+            // السعر كما هو في قاعدة البيانات (شامل الضريبة)
             const price = Number(product.price || 0).toFixed(2);
             
             let finalImageUrl = imageUrl;
@@ -85,10 +68,7 @@ export default async function handler(req, res) {
             const cleanName = escapeXml(name.replace(/\[TAX_EXEMPT\]/g, '').split('*')[0].trim());
             const cleanDesc = escapeXml((desc || name).replace(/\[TAX_EXEMPT\]/g, '').trim());
             const linkTag = escapeXml(`${SITE_URL}/products/${product.id}`);
-            const availability = 'in stock';
-            
             const categoryName = escapeXml(product.category_name || 'الأصناف');
-            const googleCategory = escapeXml(getGoogleCategory(product.category_id));
 
             xml += `
     <item>
@@ -98,11 +78,12 @@ export default async function handler(req, res) {
       <g:link>${linkTag}</g:link>
       <g:image_link>${imageTag}</g:image_link>
       <g:condition>new</g:condition>
-      <g:availability>${availability}</g:availability>
+      <g:availability>in stock</g:availability>
       <g:price>${price} EGP</g:price>
       <g:brand>صناع السعادة</g:brand>
-      <g:google_product_category>${googleCategory}</g:google_product_category>
+      <g:google_product_category>Food, Beverages &amp; Tobacco &gt; Food Items</g:google_product_category>
       <g:product_type>${categoryName}</g:product_type>
+      <g:custom_label_0>${categoryName}</g:custom_label_0>
     </item>`;
         });
 
@@ -110,7 +91,6 @@ export default async function handler(req, res) {
   </channel>
 </rss>`;
 
-        // 3. إرسال الرد بصيغة XML
         res.setHeader('Content-Type', 'application/xml; charset=utf-8');
         res.setHeader('Cache-Control', 's-maxage=3600, stale-while-revalidate');
         return res.status(200).send(xml);
