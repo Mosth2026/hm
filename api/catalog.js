@@ -4,7 +4,7 @@ export default async function handler(req, res) {
     const SITE_URL = "https://www.happinessmakers.online";
 
     try {
-        // بناء رابط التصفية: نريد المنتجات التي لها صورة ورصيد أكبر من صفر فقط
+        // 1. جلب المنتجات (فلترة: صورة موجودة + رصيد أكبر من صفر)
         const queryParams = new URLSearchParams({
             select: '*',
             image: 'not.is.null',
@@ -22,7 +22,6 @@ export default async function handler(req, res) {
             throw new Error("Failed to fetch products");
         }
 
-        // دالة مساعدة لهروب المحارف الخاصة بالـ XML
         const escapeXml = (unsafe) => {
             return String(unsafe || '')
                 .replace(/&/g, '&amp;')
@@ -32,7 +31,7 @@ export default async function handler(req, res) {
                 .replace(/'/g, '&apos;');
         };
 
-        // 2. بناء ملف XML بتنسيق Facebook (RSS 2.0)
+        // 2. بناء ملف XML بتنسيق Meta (Facebook) Catalog
         let xml = `<?xml version="1.0"?>
 <rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
   <channel>
@@ -45,12 +44,12 @@ export default async function handler(req, res) {
             const desc = product.description || '';
             const imageUrl = product.image || '';
 
-            // استبعاد صور Unsplash والمسودات
+            // استبعاد الصور الوهمية (Unsplash) والمسودات
             if (imageUrl.includes('unsplash.com') || desc.includes('[DRAFT]') || name.includes('[DRAFT]')) {
                 return;
             }
 
-            // السعر كما هو في قاعدة البيانات (شامل الضريبة)
+            // السعر: يتم سحب السعر المعروض في الداتابيز حرفياً بدون أي عمليات حسابية (منع الضريبة المزدوجة)
             const price = Number(product.price || 0).toFixed(2);
             
             let finalImageUrl = imageUrl;
@@ -58,9 +57,9 @@ export default async function handler(req, res) {
                 finalImageUrl = `${SITE_URL}${finalImageUrl.startsWith('/') ? '' : '/'}${finalImageUrl}`;
             }
             
-            // تحجيم وتصغير الصور لضمان قبولها في فيسبوك
+            // تحجيم وتصغير الصور لضمان القبول السريع
             if (finalImageUrl.includes('supabase.co/storage/v1/object/public/')) {
-                finalImageUrl = finalImageUrl.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') + '?width=600&quality=75';
+                finalImageUrl = finalImageUrl.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') + '?width=800&quality=75';
             }
             
             const imageTag = escapeXml(finalImageUrl);
@@ -68,6 +67,8 @@ export default async function handler(req, res) {
             const cleanName = escapeXml(name.replace(/\[TAX_EXEMPT\]/g, '').split('*')[0].trim());
             const cleanDesc = escapeXml((desc || name).replace(/\[TAX_EXEMPT\]/g, '').trim());
             const linkTag = escapeXml(`${SITE_URL}/products/${product.id}`);
+            
+            // الأقسام: نرسل اسم القسم كما هو في المتجر تماماً لفيسبوك
             const categoryName = escapeXml(product.category_name || 'الأصناف');
 
             xml += `
@@ -84,6 +85,7 @@ export default async function handler(req, res) {
       <g:google_product_category>Food, Beverages &amp; Tobacco &gt; Food Items</g:google_product_category>
       <g:product_type>${categoryName}</g:product_type>
       <g:custom_label_0>${categoryName}</g:custom_label_0>
+      <g:item_group_id>${categoryName}</g:item_group_id>
     </item>`;
         });
 
