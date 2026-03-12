@@ -16,6 +16,16 @@ export default async function handler(req, res) {
             throw new Error("Failed to fetch products");
         }
 
+        // دالة مساعدة لهروب المحارف الخاصة بالـ XML لضمان عدم حدوث أخطاء
+        const escapeXml = (unsafe) => {
+            return String(unsafe || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&apos;');
+        };
+
         // 2. بناء ملف XML بتنسيق Facebook (RSS 2.0)
         let xml = `<?xml version="1.0"?>
 <rss xmlns:g="http://base.google.com/ns/1.0" version="2.0">
@@ -25,24 +35,24 @@ export default async function handler(req, res) {
     <description>كتالوج المنتجات الرسمي لمتجر صناع السعادة</description>`;
 
         products.forEach(product => {
-            // معالجة البيانات لضمان توافقها مع XML
-            const name = (product.name || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
-            const desc = (product.description || product.name || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+            const id = escapeXml(product.id);
+            const name = escapeXml((product.name || '').replace(/\[TAX_EXEMPT\]/g, '').split('*')[0].trim());
+            const desc = escapeXml((product.description || product.name || '').replace(/\[TAX_EXEMPT\]/g, '').trim());
             const price = Number(product.price || 0).toFixed(2);
             
-            // تحويل رابط الصورة ليكون الرابط المباشر
-            let image = product.image || '';
-            if (!image.startsWith('http')) {
-                image = `${SITE_URL}${image.startsWith('/') ? '' : '/'}${image}`;
+            let imageUrl = product.image || '';
+            if (!imageUrl.startsWith('http')) {
+                imageUrl = `${SITE_URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
             }
+            const image = escapeXml(imageUrl);
             
             // رابط المنتج على الموقع
-            const link = `${SITE_URL}/products/${product.id}`;
+            const link = escapeXml(`${SITE_URL}/products/${product.id}`);
             const availability = (product.stock > 0) ? 'in stock' : 'out of stock';
 
             xml += `
     <item>
-      <g:id>${product.id}</g:id>
+      <g:id>${id}</g:id>
       <g:title>${name}</g:title>
       <g:description>${desc}</g:description>
       <g:link>${link}</g:link>
