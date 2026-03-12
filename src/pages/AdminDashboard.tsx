@@ -2504,7 +2504,7 @@ const AdminDashboard = () => {
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                onClick={() => window.open(`/ order - preview / ${order.id} `, '_blank')}
+                                                                onClick={() => window.open(`/order-preview/${order.id}`, '_blank')}
                                                                 className="h-9 gap-1 border-saada-brown text-saada-brown hover:bg-saada-brown hover:text-white"
                                                             >
                                                                 <ExternalLink className="h-4 w-4" />
