@@ -636,6 +636,27 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleDeleteOrder = async (orderId: number) => {
+        if (!confirm("هل أنت متأكد من حذف هذا الطلب نهائياً؟")) return;
+        const toastId = toast.loading("جاري حذف الطلب...");
+        try {
+            // we should also delete from order_items but if we have ON DELETE CASCADE it's better
+            // assuming it's structured properly, otherwise we should delete items first
+            const { error: itemsError } = await supabase.from("order_items").delete().eq("order_id", orderId);
+            if (itemsError) throw itemsError;
+
+            const { error: orderError } = await supabase.from("orders").delete().eq("id", orderId);
+            if (orderError) throw orderError;
+
+            toast.success("تم حذف الطلب بنجاح", { id: toastId });
+            logAction('delete_order', { order_id: orderId, processor: user?.username });
+            fetchOrders();
+        } catch (error: any) {
+            console.error("Delete order error:", error);
+            toast.error("فشل حذف الطلب", { description: error.message, id: toastId });
+        }
+    };
+
     const fetchCoupons = async () => {
         setCouponsLoading(true);
         try {
@@ -2522,6 +2543,17 @@ const AdminDashboard = () => {
                                                                 >
                                                                     <CheckCircle2 className="h-4 w-4" />
                                                                     تم الاستلام
+                                                                </Button>
+                                                            )}
+                                                            {isSuperAdmin && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    onClick={() => handleDeleteOrder(order.id)}
+                                                                    className="h-9 w-9 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                                                                    title="حذف الطلب"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
                                                                 </Button>
                                                             )}
                                                         </div>
