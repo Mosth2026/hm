@@ -151,7 +151,7 @@ const AdminDashboard = () => {
     const username = user?.username?.toLowerCase() || "";
     const isRestrictedStaff = username.includes('mostafa') || username.includes('hesham') || username.includes('fikry') || username.includes('fekry') || username === 'h';
     const isSpecial = isRestrictedStaff || user?.role === 'admin' || user?.role === 'editor';
-    const isSuperAdmin = username === 'elhanafy' || username === 'elhanafyadmin' || username === 'h';
+    const isSuperAdmin = username.includes('elhanafy') || username === 'h';
     const isAdmin = (user?.role === 'admin' || isSuperAdmin) && !isRestrictedStaff;
     const canDelete = isAdmin;
     const canEditPrice = isAdmin;
@@ -637,63 +637,66 @@ const AdminDashboard = () => {
     };
 
     const handleReturnOrder = async (orderId: number) => {
-        if (!confirm("هل أنت متأكد من عمل مرتجع لهذا الطلب؟ سيتم إعادة الكميات للمخزون.")) return;
+        if (!confirm("هل أنت متأكد من عمل مرتجع لهذا الطلب؟ سيتم إعادة الكميات للمخزون بدقة.")) return;
         const toastId = toast.loading("جاري تنفيذ المرتجع...");
         try {
-            // 1. Fetch order items
-            const { data: items, error: itemsError } = await supabase
-                .from("order_items")
+            // 1. فحص سجلات النظام لمعرفة أين ذهب المخزون بالضبط لهذا الطلب
+            const { data: stockLogs, error: logsError } = await supabase
+                .from("admin_logs")
                 .select("*")
-                .eq("order_id", orderId);
+                .eq("action", "order_stock_out");
 
-            if (itemsError) throw itemsError;
+            if (logsError) throw logsError;
 
-            // 2. Return quantities to stock
-            for (const item of (items || [])) {
-                const normName = normalize(item.product_name);
-                const { data: batches, error: batchError } = await supabase
-                    .from("products")
-                    .select("*")
-                    .or(`name.ilike.%${item.product_name}%`);
+            // فلترة السجلات يدوياً لضمان الدقة في التعامل مع JSON
+            const relevantLogs = (stockLogs || []).filter(log => 
+                log.details && (log.details.order_id === orderId || log.details.order_id === String(orderId))
+            );
 
-                if (batchError) continue;
-
-                const matchingBatches = (batches || []).filter(b => normalize(b.name) === normName);
-                
-                if (matchingBatches.length > 0) {
-                    // Try to return to the batch with latest expiry (LEFO) as it's the most likely one to be fresh
-                    const targetBatch = matchingBatches.sort((a, b) => {
-                        if (!a.expiry_date) return 1;
-                        if (!b.expiry_date) return -1;
-                        return new Date(b.expiry_date).getTime() - new Date(a.expiry_date).getTime();
-                    })[0];
-
-                    const { error: updateError } = await supabase
+            if (relevantLogs.length > 0) {
+                // إعادة المخزون بناءً على السجلات الحقيقية (دقة 100%)
+                for (const log of relevantLogs) {
+                    const { product_id, quantity } = log.details;
+                    
+                    // جلب الرصيد الحالي أولاً
+                    const { data: product } = await supabase
                         .from("products")
-                        .update({ stock: targetBatch.stock + item.quantity })
-                        .eq("id", targetBatch.id);
+                        .select("stock")
+                        .eq("id", product_id)
+                        .single();
 
-                    if (!updateError) {
-                        logAction('order_return_stock_in', {
+                    if (product) {
+                        await supabase.from("products")
+                            .update({ stock: (product.stock || 0) + (Number(quantity) || 0) })
+                            .eq("id", product_id);
+                        
+                        logAction('order_return_precise_in', {
                             order_id: orderId,
-                            product_id: targetBatch.id,
-                            quantity: item.quantity,
-                            type: 'IN'
-                        }, targetBatch.id);
+                            product_id,
+                            quantity,
+                            type: 'RETURN_IN'
+                        }, product_id);
+                    }
+                }
+            } else {
+                // Fallback: Logic based on name matching (if logs were not found)
+                const { data: items } = await supabase.from("order_items").select("*").eq("order_id", orderId);
+                for (const item of (items || [])) {
+                    const normName = normalize(item.product_name);
+                    const { data: batches } = await supabase.from("products").select("*").or(`name.ilike.%${item.product_name}%`);
+                    const matchingBatches = (batches || []).filter(b => normalize(b.name) === normName);
+                    if (matchingBatches.length > 0) {
+                        const targetBatch = matchingBatches.sort((a, b) => (new Date(b.expiry_date || 0).getTime() - new Date(a.expiry_date || 0).getTime()))[0];
+                        await supabase.from("products").update({ stock: targetBatch.stock + item.quantity }).eq("id", targetBatch.id);
                     }
                 }
             }
 
-            // 3. Set status back to pending
-            const { error: orderError } = await supabase
-                .from("orders")
-                .update({ status: 'pending' })
-                .eq("id", orderId);
+            // 3. إعادة الطلب لحالة الانتظار
+            await supabase.from("orders").update({ status: 'pending' }).eq("id", orderId);
 
-            if (orderError) throw orderError;
-
-            toast.success("تم تنفيذ المرتجع وإعادة الكميات للمخزون", { id: toastId });
-            logAction('order_returned', { order_id: orderId });
+            toast.success("تم تنفيذ المرتجع وإعادة الكميات للمخزون بدقة", { id: toastId });
+            logAction('order_returned_complete', { order_id: orderId });
             fetchOrders();
         } catch (error: any) {
             console.error("Return order error:", error);
@@ -2610,12 +2613,13 @@ const AdminDashboard = () => {
                                                                     تم الاستلام
                                                                 </Button>
                                                             )}
-                                                            {order.status === 'received' && (
+                                                            {(order.status === 'received' || isSuperAdmin) && (
                                                                 <Button
                                                                     variant="outline"
                                                                     size="sm"
                                                                     onClick={() => handleReturnOrder(order.id)}
                                                                     className="h-9 gap-1 border-amber-600 text-amber-600 hover:bg-amber-600 hover:text-white"
+                                                                    title="إرجاع المخزون"
                                                                 >
                                                                     <RotateCcw className="h-4 w-4" />
                                                                     مرتجع
