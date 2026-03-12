@@ -48,23 +48,53 @@ export default async function handler(req, res) {
         }
 
         const html = `<!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" prefix="og: http://ogp.me/ns#">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title}</title>
+  
+  <!-- SEO Basics -->
   <meta name="description" content="${description}">
+  <link rel="canonical" href="${SITE_URL}/${type === 'product' ? 'products' : 'categories'}/${id}">
+  
+  <!-- OpenGraph / Facebook / WhatsApp -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="${SITE_URL}/${type === 'product' ? 'products' : 'categories'}/${id}">
   <meta property="og:title" content="${title}">
   <meta property="og:description" content="${description}">
   <meta property="og:image" content="${image}">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="${SITE_URL}/${type === 'product' ? 'products' : 'categories'}/${id}">
+  <meta property="og:image:secure_url" content="${image}">
+  <meta property="og:image:width" content="600">
+  <meta property="og:image:height" content="600">
+  <meta property="og:image:alt" content="${title}">
+  <meta property="og:site_name" content="صناع السعادة">
+  <meta property="og:locale" content="ar_EG">
+
+  <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${title}">
   <meta name="twitter:description" content="${description}">
   <meta name="twitter:image" content="${image}">
+  
+  <!-- WhatsApp Specific -->
+  <meta property="og:image:type" content="image/webp">
+  <link rel="image_src" href="${image}">
+
+  <!-- Redirect to the real page -->
   <meta http-equiv="refresh" content="0;url=${SITE_URL}/${type === 'product' ? 'products' : 'categories'}/${id}">
 </head>
-<body>جاري التحويل...</body>
+<body>
+  <div style="display:none;">
+    <h1>${title}</h1>
+    <p>${description}</p>
+    <img src="${image}" alt="${title}">
+  </div>
+  <script>
+    window.location.href = "${SITE_URL}/${type === 'product' ? 'products' : 'categories'}/${id}";
+  </script>
+  جاري التحويل...
+</body>
 </html>`;
 
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
