@@ -44,6 +44,12 @@ export default async function handler(req, res) {
             if (!imageUrl.startsWith('http')) {
                 imageUrl = `${SITE_URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
             }
+            
+            // تحجيم وتحويل الصور لـ JPG لضمان قبولها في فيسبوك وواتساب
+            if (imageUrl.includes('supabase.co/storage/v1/object/public/')) {
+                imageUrl = imageUrl.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') + '?width=600&quality=75&format=jpg';
+            }
+            
             const image = escapeXml(imageUrl);
             
             // رابط المنتج على الموقع
