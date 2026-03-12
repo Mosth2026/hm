@@ -617,15 +617,14 @@ const AdminDashboard = () => {
             const { error: orderError } = await supabase
                 .from("orders")
                 .update({
-                    status: 'received',
-                    processed_by: user?.username || 'system'
+                    status: 'received'
                 })
                 .eq("id", orderId);
 
             if (orderError) throw orderError;
 
             toast.success("تم تأكيد الاستلام وتحديث المخزون (FEFO)", { id: toastId });
-            logAction('order_received_stock_deducted', { order_id: orderId, processor: user?.username });
+            logAction('order_received_stock_deducted', { order_id: orderId });
             fetchOrders();
         } catch (error: any) {
             console.error("Order processing error:", error);
@@ -2520,7 +2519,7 @@ const AdminDashboard = () => {
                                                     <TableCell className="py-4">
                                                         <span className={`px - 3 py - 1 rounded - full text - xs font - bold ${order.status === 'received' ? 'bg-green-100 text-green-700' : 'bg-saada-red/10 text-saada-red'
                                                             } `}>
-                                                            {order.status === 'received' ? `تم الاستلام(${order.processed_by || 'سيستم'})` : 'قيد الانتظار'}
+                                                            {order.status === 'received' ? 'تم الاستلام' : 'قيد الانتظار'}
                                                         </span>
                                                     </TableCell>
                                                     <TableCell className="py-4 text-center">
