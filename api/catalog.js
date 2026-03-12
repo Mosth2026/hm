@@ -7,7 +7,7 @@ export default async function handler(req, res) {
         // 1. جلب كافة المنتجات من قاعدة البيانات
         // نختار المنتجات التي لديها سعر ومخزون أكبر من صفر (اختياري حسب رغبتك)
         const response = await fetch(
-            `${SUPABASE_URL}/rest/v1/products?select=*&order=id.desc`,
+            `${SUPABASE_URL}/rest/v1/products?select=*&image=not.is.null&order=id.desc`,
             { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
         );
         const products = await response.json();
