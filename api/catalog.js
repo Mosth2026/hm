@@ -41,7 +41,6 @@ export default async function handler(req, res) {
     <description>كتالوج المنتجات الرسمي لمتجر صناع السعادة</description>`;
 
         products.forEach(product => {
-            // نتحقق يدوياً من جودة المنتج لاستبعاده إذا كان "تجربة" أو "بدون صورة حقيقية"
             const name = product.name || '';
             const desc = product.description || '';
             const imageUrl = product.image || '';
@@ -51,10 +50,13 @@ export default async function handler(req, res) {
                 return; // نتخطى هذا المنتج
             }
 
-            const id = escapeXml(product.id);
-            const cleanName = escapeXml(name.replace(/\[TAX_EXEMPT\]/g, '').split('*')[0].trim());
-            const cleanDesc = escapeXml((desc || name).replace(/\[TAX_EXEMPT\]/g, '').trim());
-            const price = Number(product.price || 0).toFixed(2);
+            // تحقق من الضريبة (14%)
+            const isTaxExempt = name.includes('[TAX_EXEMPT]') || desc.includes('[TAX_EXEMPT]');
+            let rawPrice = Number(product.price || 0);
+            if (!isTaxExempt) {
+                rawPrice = rawPrice * 1.14;
+            }
+            const price = rawPrice.toFixed(2);
             
             let finalImageUrl = imageUrl;
             if (!finalImageUrl.startsWith('http')) {
@@ -67,8 +69,11 @@ export default async function handler(req, res) {
             }
             
             const imageTag = escapeXml(finalImageUrl);
+            const id = escapeXml(product.id);
+            const cleanName = escapeXml(name.replace(/\[TAX_EXEMPT\]/g, '').split('*')[0].trim());
+            const cleanDesc = escapeXml((desc || name).replace(/\[TAX_EXEMPT\]/g, '').trim());
             const linkTag = escapeXml(`${SITE_URL}/products/${product.id}`);
-            const availability = 'in stock'; // بما أننا صفيناهم في الـ Query فهم حتماً In Stock
+            const availability = 'in stock';
 
             xml += `
     <item>
