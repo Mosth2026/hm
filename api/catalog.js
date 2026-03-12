@@ -4,12 +4,18 @@ export default async function handler(req, res) {
     const SITE_URL = "https://www.happinessmakers.online";
 
     try {
-        // 1. جلب كافة المنتجات من قاعدة البيانات
-        // نختار المنتجات التي لديها سعر ومخزون أكبر من صفر (اختياري حسب رغبتك)
-        const response = await fetch(
-            `${SUPABASE_URL}/rest/v1/products?select=*&image=not.is.null&stock=gt.0&order=id.desc`,
-            { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } }
-        );
+        // بناء رابط التصفية: نريد المنتجات التي لها صورة ورصيد أكبر من صفر فقط
+        const queryParams = new URLSearchParams({
+            select: '*',
+            image: 'not.is.null',
+            stock: 'gt.0',
+            order: 'id.desc'
+        });
+
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/products?${queryParams.toString()}`, {
+            headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+        });
+        
         const products = await response.json();
 
         if (!Array.isArray(products)) {
@@ -35,34 +41,42 @@ export default async function handler(req, res) {
     <description>كتالوج المنتجات الرسمي لمتجر صناع السعادة</description>`;
 
         products.forEach(product => {
+            // نتحقق يدوياً من جودة المنتج لاستبعاده إذا كان "تجربة" أو "بدون صورة حقيقية"
+            const name = product.name || '';
+            const desc = product.description || '';
+            const imageUrl = product.image || '';
+
+            // استبعاد صور Unsplash الافتراضية والمنتجات المسودة (DRAFT)
+            if (imageUrl.includes('unsplash.com') || desc.includes('[DRAFT]') || name.includes('[DRAFT]')) {
+                return; // نتخطى هذا المنتج
+            }
+
             const id = escapeXml(product.id);
-            const name = escapeXml((product.name || '').replace(/\[TAX_EXEMPT\]/g, '').split('*')[0].trim());
-            const desc = escapeXml((product.description || product.name || '').replace(/\[TAX_EXEMPT\]/g, '').trim());
+            const cleanName = escapeXml(name.replace(/\[TAX_EXEMPT\]/g, '').split('*')[0].trim());
+            const cleanDesc = escapeXml((desc || name).replace(/\[TAX_EXEMPT\]/g, '').trim());
             const price = Number(product.price || 0).toFixed(2);
             
-            let imageUrl = product.image || '';
-            if (!imageUrl.startsWith('http')) {
-                imageUrl = `${SITE_URL}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+            let finalImageUrl = imageUrl;
+            if (!finalImageUrl.startsWith('http')) {
+                finalImageUrl = `${SITE_URL}${finalImageUrl.startsWith('/') ? '' : '/'}${finalImageUrl}`;
             }
             
-            // تحجيم وتحويل الصور لـ JPG لضمان قبولها في فيسبوك وواتساب
-            if (imageUrl.includes('supabase.co/storage/v1/object/public/')) {
-                imageUrl = imageUrl.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') + '?width=600&quality=75&format=jpg';
+            // تحجيم وتحويل الصور لـ JPG
+            if (finalImageUrl.includes('supabase.co/storage/v1/object/public/')) {
+                finalImageUrl = finalImageUrl.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') + '?width=600&quality=75&format=jpg';
             }
             
-            const image = escapeXml(imageUrl);
-            
-            // رابط المنتج على الموقع
-            const link = escapeXml(`${SITE_URL}/products/${product.id}`);
-            const availability = (product.stock > 0) ? 'in stock' : 'out of stock';
+            const imageTag = escapeXml(finalImageUrl);
+            const linkTag = escapeXml(`${SITE_URL}/products/${product.id}`);
+            const availability = 'in stock'; // بما أننا صفيناهم في الـ Query فهم حتماً In Stock
 
             xml += `
     <item>
       <g:id>${id}</g:id>
-      <g:title>${name}</g:title>
-      <g:description>${desc}</g:description>
-      <g:link>${link}</g:link>
-      <g:image_link>${image}</g:image_link>
+      <g:title>${cleanName}</g:title>
+      <g:description>${cleanDesc}</g:description>
+      <g:link>${linkTag}</g:link>
+      <g:image_link>${imageTag}</g:image_link>
       <g:condition>new</g:condition>
       <g:availability>${availability}</g:availability>
       <g:price>${price} EGP</g:price>
