@@ -61,9 +61,9 @@ export default async function handler(req, res) {
                 finalImageUrl = `${SITE_URL}${finalImageUrl.startsWith('/') ? '' : '/'}${finalImageUrl}`;
             }
             
-            // تحجيم وتحويل الصور لـ JPG
+            // تحجيم وتصغير الصور لضمان قبولها في فيسبوك
             if (finalImageUrl.includes('supabase.co/storage/v1/object/public/')) {
-                finalImageUrl = finalImageUrl.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') + '?width=600&quality=75&format=jpg';
+                finalImageUrl = finalImageUrl.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') + '?width=600&quality=75';
             }
             
             const imageTag = escapeXml(finalImageUrl);
