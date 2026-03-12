@@ -203,8 +203,11 @@ const AdminDashboard = () => {
             activeFilter === "categories" ? (selectedCategoryLabel || "قسم محدد") :
                 activeFilter === "trash" ? "الدرافت" : "تقرير المنتجات";
 
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}-${now.getMinutes().toString().padStart(2, '0')}`;
+
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
-        XLSX.writeFile(wb, `saada_export_${activeFilter}_${new Date().getTime()}.xlsx`);
+        XLSX.writeFile(wb, `saada_export_${activeFilter}_${dateStr}.xlsx`);
         toast.success("تم تصدير البيانات بنجاح");
     };
 
@@ -2661,10 +2664,13 @@ const AdminDashboard = () => {
                             <div className="flex gap-2">
                                 <Button
                                     onClick={() => {
+                                        const now = new Date();
+                                        const dateStr = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}-${now.getMinutes().toString().padStart(2, '0')}`;
+
                                         const ws = XLSX.utils.json_to_sheet(subscribers.map(s => ({ "الإيميل": s.email, "تاريخ الاشتراك": new Date(s.created_at).toLocaleString('ar-EG') })));
                                         const wb = XLSX.utils.book_new();
                                         XLSX.utils.book_append_sheet(wb, ws, "المشتركين");
-                                        XLSX.writeFile(wb, `subscribers_${new Date().getTime()}.xlsx`);
+                                        XLSX.writeFile(wb, `subscribers_${dateStr}.xlsx`);
                                     }}
                                     className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-10 rounded-xl"
                                 >
