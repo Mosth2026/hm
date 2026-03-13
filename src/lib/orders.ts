@@ -16,7 +16,8 @@ export const saveOrderToDb = async (
     totalPrice: number,
     status: string = "pending",
     couponCode: string = "",
-    discountAmount: number = 0
+    discountAmount: number = 0,
+    userId: string | null = null
 ) => {
     try {
         console.log("Saving order to DB...", { customerInfo, totalPrice, itemCount: items.length });
@@ -34,6 +35,7 @@ export const saveOrderToDb = async (
             coupon_code: couponCode || "",
             discount_amount: roundedDiscount,
             status: status || "pending",
+            user_id: userId,
         };
 
         // 2. Insert Order
@@ -74,7 +76,7 @@ export const saveOrderToDb = async (
             }
         }
 
-        return { success: true, orderId: order.id };
+        return { success: true, orderId: order.id, trackingCode: order.tracking_code };
     } catch (error: any) {
         console.error("Fatal order save error:", error);
         

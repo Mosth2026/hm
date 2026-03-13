@@ -289,7 +289,10 @@ const ProductDetails = () => {
                         { name: "عميل واتساب (استفسار منتج)", phone: "01000000000" },
                         orderItems,
                         roundedPrice,
-                        "pending"
+                        "pending",
+                        "",
+                        0,
+                        user?.id
                       );
 
                       if (!result.success) {

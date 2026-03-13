@@ -186,7 +186,8 @@ const CheckoutPage = () => {
                 discountedTotal,
                 "pending",
                 appliedCoupon?.code || "",
-                discountAmount
+                discountAmount,
+                user?.id
             );
 
             if (!result.success) throw new Error(result.error);

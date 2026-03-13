@@ -90,11 +90,19 @@ const OrderTracking = () => {
         }
 
         try {
-            const { data: orderData, error: orderErr } = await supabase.from("orders").select("*").eq("id", orderId).single();
+            // First attempt to fetch by numeric ID or tracking code
+            let query = supabase.from("orders").select("*");
+            if (!isNaN(Number(orderId))) {
+                query = query.eq("id", orderId);
+            } else {
+                query = query.eq("tracking_code", orderId);
+            }
+
+            const { data: orderData, error: orderErr } = await query.single();
             if (orderErr) throw orderErr;
             setOrder(orderData);
 
-            const { data: itemsData, error: itemsErr } = await supabase.from("order_items").select("*").eq("order_id", orderId);
+            const { data: itemsData, error: itemsErr } = await supabase.from("order_items").select("*").eq("order_id", orderData.id);
             
             if (itemsData && itemsData.length > 0) {
                 // Fetch images for these products

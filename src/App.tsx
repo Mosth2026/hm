@@ -15,7 +15,8 @@ import SearchPage from "./pages/SearchPage";
 import CartPage from "./pages/CartPage";
 import CheckoutPage from "./pages/CheckoutPage";
 import OrderTracking from "./pages/OrderTracking";
-
+import MyOrders from "./pages/MyOrders";
+import LoginPage from "./pages/LoginPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import ThemeToggle from "./components/ThemeToggle";
 import WhatsAppWidget from "./components/WhatsAppWidget";
@@ -125,7 +126,10 @@ const App = () => {
                   <Route path="/search" element={<SearchPage />} />
                   <Route path="/cart" element={<CartPage />} />
                   <Route path="/checkout" element={<CheckoutPage />} />
+                  <Route path="/my-orders" element={<MyOrders />} />
+                  <Route path="/login" element={<LoginPage />} />
                   <Route path="/order-preview/:orderId" element={<OrderTracking />} />
+                  <Route path="/order-tracking/:orderId" element={<OrderTracking />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </div>

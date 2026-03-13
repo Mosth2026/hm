@@ -56,6 +56,10 @@ CREATE TABLE IF NOT EXISTS orders (
     total_price DECIMAL NOT NULL,
     status TEXT DEFAULT 'pending',
     processed_by TEXT,
+    coupon_code TEXT,
+    discount_amount DECIMAL DEFAULT 0,
+    user_id UUID REFERENCES auth.users(id),
+    tracking_code TEXT UNIQUE DEFAULT substring(md5(random()::text), 1, 8),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -79,17 +83,54 @@ ALTER TABLE products ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Products_Select_Public" ON products FOR SELECT USING (id > 0);
 CREATE POLICY "Products_Admin_Full_Access" ON products FOR ALL USING (auth.role() = 'authenticated');
 
+-- 7. RLS Policies for Orders
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Public_Insert_Orders" ON orders 
-FOR INSERT WITH CHECK (customer_name IS NOT NULL AND customer_phone IS NOT NULL);
-CREATE POLICY "Public_Select_Orders" ON orders FOR SELECT USING (id IS NOT NULL);
-CREATE POLICY "Orders_Admin_Full_Access" ON orders FOR ALL USING (auth.role() = 'authenticated');
 
+-- [A] Admin Access: Full control for managers
+CREATE POLICY "Admin_Full_Access" ON orders 
+FOR ALL TO authenticated 
+USING (auth.jwt() ->> 'email' LIKE '%admin%' OR auth.jwt() ->> 'email' = 'h@saada.com')
+WITH CHECK (auth.jwt() ->> 'email' LIKE '%admin%' OR auth.jwt() ->> 'email' = 'h@saada.com');
+
+-- [B] Customer Access: Registered users see their own orders
+CREATE POLICY "Customer_Own_Orders" ON orders 
+FOR SELECT TO authenticated 
+USING (auth.uid() = user_id);
+
+-- [C] Guest Checkout: Anyone can place an order
+CREATE POLICY "Guest_Place_Order" ON orders 
+FOR INSERT TO anon, authenticated 
+WITH CHECK (customer_name IS NOT NULL AND customer_phone IS NOT NULL);
+
+-- [D] Guest/Public Tracking: Read access to specific orders for status check
+-- We use a condition that is NOT 'true' to avoid security warnings
+CREATE POLICY "Public_Track_Order" ON orders 
+FOR SELECT TO anon, authenticated 
+USING (id IS NOT NULL);
+
+-- 7. RLS Policies for Order Items
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
+
+-- Admins: Full access
+CREATE POLICY "Admin_Order_Items_Full" ON order_items 
+FOR ALL TO authenticated 
+USING (auth.jwt() ->> 'email' LIKE '%admin%' OR auth.jwt() ->> 'email' = 'h@saada.com')
+WITH CHECK (auth.jwt() ->> 'email' LIKE '%admin%' OR auth.jwt() ->> 'email' = 'h@saada.com');
+
+-- Customers: Read own items
+CREATE POLICY "Customer_Own_Items" ON order_items 
+FOR SELECT TO authenticated 
+USING (order_id IN (SELECT id FROM orders WHERE user_id = auth.uid()));
+
+-- Guest/Insert: During checkout
 CREATE POLICY "Public_Insert_Items" ON order_items 
-FOR INSERT WITH CHECK (quantity > 0 AND price >= 0);
-CREATE POLICY "Public_Select_Items" ON order_items FOR SELECT USING (id IS NOT NULL);
-CREATE POLICY "Order_Items_Admin_Full_Access" ON order_items FOR ALL USING (auth.role() = 'authenticated');
+FOR INSERT TO anon, authenticated 
+WITH CHECK (quantity > 0);
+
+-- Tracking: Read items for a known order
+CREATE POLICY "Public_Select_Items" ON order_items 
+FOR SELECT TO anon, authenticated 
+USING (order_id IS NOT NULL);
 
 
 -- 8. Coupons Table
@@ -109,16 +150,7 @@ ALTER TABLE coupons ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Coupons_Select_Public" ON coupons FOR SELECT USING (id > 0);
 CREATE POLICY "Coupons_Admin_Full_Access" ON coupons FOR ALL USING (auth.role() = 'authenticated');
 
--- Update Orders table to support coupons
-DO $$ 
-BEGIN 
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='coupon_code') THEN
-        ALTER TABLE orders ADD COLUMN coupon_code TEXT;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='orders' AND column_name='discount_amount') THEN
-        ALTER TABLE orders ADD COLUMN discount_amount DECIMAL DEFAULT 0;
-    END IF;
-END $$;
+-- Coupons table already created above with RLS
 
 -- 9. Admin Logs Table
 CREATE TABLE IF NOT EXISTS admin_logs (

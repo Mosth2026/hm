@@ -3,9 +3,10 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { supabase } from '@/lib/supabase';
 
-export type UserRole = 'admin' | 'editor';
+export type UserRole = 'admin' | 'editor' | 'customer';
 
 interface User {
+    id: string;
     username: string;
     email?: string;
     role: UserRole;
@@ -15,6 +16,7 @@ interface AuthState {
     user: User | null;
     isAuthenticated: boolean;
     login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+    register: (email: string, password: string, username: string) => Promise<{ success: boolean; error?: string }>;
     logout: () => Promise<void>;
     initialize: () => Promise<void>;
 }
@@ -26,38 +28,60 @@ export const useAuth = create<AuthState>()(
             isAuthenticated: false,
             login: async (emailRaw, password) => {
                 const email = String(emailRaw || "").trim().toLowerCase();
+                const siteEmail = email.includes('@') ? email : `${email}@saada.com`;
 
-                // 1. Attempt login via Supabase Auth
                 const { data, error } = await supabase.auth.signInWithPassword({
-                    email: email.includes('@') ? email : `${email}@saada.com`, // دعم الدخول بالاسم أو الإيميل
+                    email: siteEmail,
                     password: password
                 });
 
-                if (error) {
-                    return { success: false, error: error.message };
-                }
+                if (error) return { success: false, error: error.message };
 
                 if (data.user) {
-                    // تحديد الدور بناءً على الإيميل أو ميتاداتا المستخدم
-                    const usernamePart = email.split('@')[0] || "";
-                    const role: UserRole = (usernamePart.includes('admin')) ? 'admin' : 'editor';
+                    const usernamePart = data.user.email?.split('@')[0] || "user";
+                    let role: UserRole = 'customer';
+                    
+                    if (usernamePart.includes('admin')) role = 'admin';
+                    else if (usernamePart.includes('editor')) role = 'editor';
 
-                    set({
-                        user: {
-                            username: data.user.email?.split('@')[0] || 'user',
-                            email: data.user.email,
-                            role: role
-                        },
-                        isAuthenticated: true
-                    });
+                    const userData: User = {
+                        id: data.user.id,
+                        username: data.user.user_metadata?.username || usernamePart,
+                        email: data.user.email,
+                        role: role
+                    };
+
+                    set({ user: userData, isAuthenticated: true });
                     return { success: true };
                 }
 
                 return { success: false, error: "حدث خطأ غير متوقع" };
             },
+            register: async (email, password, username) => {
+                const { data, error } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        data: { username }
+                    }
+                });
+
+                if (error) return { success: false, error: error.message };
+                
+                if (data.user) {
+                    const userData: User = {
+                        id: data.user.id,
+                        username: username,
+                        email: data.user.email,
+                        role: 'customer'
+                    };
+                    set({ user: userData, isAuthenticated: true });
+                    return { success: true };
+                }
+                return { success: false, error: "خطأ أثناء التسجيل" };
+            },
             logout: async () => {
                 await supabase.auth.signOut();
-                localStorage.removeItem('saada-final-auth-v1');
                 set({ user: null, isAuthenticated: false });
             },
             initialize: async () => {
@@ -65,10 +89,15 @@ export const useAuth = create<AuthState>()(
                 if (session?.user) {
                     const email = session.user.email || "";
                     const usernamePart = email.split('@')[0] || "";
-                    const role: UserRole = (usernamePart.includes('admin')) ? 'admin' : 'editor';
+                    let role: UserRole = 'customer';
+                    
+                    if (usernamePart.includes('admin')) role = 'admin';
+                    else if (usernamePart.includes('editor')) role = 'editor';
+
                     set({
                         user: {
-                            username: email.split('@')[0] || 'user',
+                            id: session.user.id,
+                            username: session.user.user_metadata?.username || usernamePart,
                             email: email,
                             role: role
                         },
@@ -77,7 +106,6 @@ export const useAuth = create<AuthState>()(
                 }
             }
         }),
-
         {
             name: 'saada-final-auth-v1',
         }

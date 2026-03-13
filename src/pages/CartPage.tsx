@@ -10,9 +10,11 @@ import { Helmet } from "react-helmet-async";
 import { SITE_CONFIG } from "@/lib/constants";
 import { saveOrderToDb, OrderItem } from "@/lib/orders";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
 
 const CartPage = () => {
     const { items, removeItem, updateQuantity, getTotalPrice, getItemCount } = useCart();
+    const { user } = useAuth();
     const navigate = useNavigate();
 
     const totalPrice = getTotalPrice();
@@ -181,7 +183,10 @@ const CartPage = () => {
                                                         },
                                                         orderItems,
                                                         roundedTotal,
-                                                        "pending"
+                                                        "pending",
+                                                        "",
+                                                        0,
+                                                        user?.id
                                                     );
 
                                                     if (!result.success) {

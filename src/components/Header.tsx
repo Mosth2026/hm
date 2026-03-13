@@ -12,6 +12,7 @@ import { saveOrderToDb } from "@/lib/orders";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { Tag, Ticket as TicketIcon, CheckCircle2 as CheckCircleIcon } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 import {
   Sheet,
   SheetContent,
@@ -29,6 +30,7 @@ const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { items, removeItem, updateQuantity, getTotalPrice, getDiscountedTotal, getItemCount, appliedCoupon, applyCoupon, removeCoupon } = useCart();
+  const { user } = useAuth();
   const { logEvent } = useAnalytics();
   const itemCount = getItemCount();
   const totalPrice = getTotalPrice();
@@ -90,6 +92,10 @@ const Header = () => {
     { name: "هدايا السعادة", path: "/categories/gifts" },
   ];
 
+  if (user && user.role === 'customer') {
+    navLinks.push({ name: "طلباتي", path: "/my-orders" });
+  }
+
   return (
     <>
       <header className={cn(
@@ -138,7 +144,7 @@ const Header = () => {
             </div>
 
             <div className="flex items-center gap-2 md:gap-4 shrink-0">
-              <Link to="/admin" className="hidden sm:block">
+              <Link to={user ? (user.role === 'admin' || user.role === 'editor' ? "/admin" : "/my-orders") : "/login"} className="hidden sm:block">
                 <Button variant="ghost" size="icon" className="h-10 w-10 md:h-11 md:w-11 text-primary hover:bg-secondary/10 hover:text-secondary rounded-2xl transition-all border border-transparent hover:border-secondary/20">
                   <User className="h-5 w-5" />
                 </Button>
@@ -340,7 +346,8 @@ const Header = () => {
                                 roundedTotal,
                                 "pending",
                                 appliedCoupon?.code || "",
-                                discountAmount
+                                discountAmount,
+                                user?.id
                               );
 
                               const finalOrderId = result.success ? result.orderId : `DRAFT${Date.now()}`;
