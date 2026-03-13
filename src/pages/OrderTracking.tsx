@@ -21,11 +21,9 @@ const OrderTracking = () => {
 
     // Helpers
     const safeFormatPrice = (price: any) => {
-        if (price === null || price === undefined) return "0";
-        const val = String(price);
-        if (isNaN(Number(val))) return val;
-        const num = Number(val);
-        return num.toFixed(num % 1 === 0 ? 0 : 1);
+        const num = Number(price);
+        if (isNaN(num)) return "0.00";
+        return num.toFixed(2);
     };
 
     const safeFormatDate = (dateStr: any) => {

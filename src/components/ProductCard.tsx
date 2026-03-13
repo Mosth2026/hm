@@ -233,11 +233,11 @@ const ProductCard = ({
           <div className="flex flex-col">
             {showSale ? (
               <>
-                <span className="text-muted-foreground line-through text-[8px] md:text-[10px] font-bold">{Number(price).toFixed(Number(price) % 1 === 0 ? 0 : 1)} ج.م</span>
-                <span className="text-base md:text-lg font-black text-primary tracking-tight">{Number(finalPrice).toFixed(Number(finalPrice) % 1 === 0 ? 0 : 1)} <span className="text-[10px]">ج.م</span></span>
+                <span className="text-muted-foreground line-through text-[8px] md:text-[10px] font-bold">{formatPrice(price)}</span>
+                <span className="text-base md:text-lg font-black text-primary tracking-tight">{formatPrice(finalPrice)}</span>
               </>
             ) : (
-              <span className="text-base md:text-lg font-black text-primary tracking-tight">{Number(price).toFixed(Number(price) % 1 === 0 ? 0 : 1)} <span className="text-[10px]">ج.م</span></span>
+              <span className="text-base md:text-lg font-black text-primary tracking-tight">{formatPrice(price)}</span>
             )}
           </div>
 

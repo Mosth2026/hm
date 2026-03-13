@@ -5,7 +5,7 @@ import { ShoppingCart, Menu, User, X, Search, Heart, Trash2, Plus, Minus, Shoppi
 import LiveVisitors from "./LiveVisitors";
 import { useAnalytics } from "@/hooks/use-analytics";
 import { SITE_CONFIG } from "@/lib/constants";
-import { cn, cleanProductName } from "@/lib/utils";
+import { cn, cleanProductName, formatPrice } from "@/lib/utils";
 import { useCart } from "@/hooks/use-cart";
 import { useNavigate } from "react-router-dom";
 import { saveOrderToDb } from "@/lib/orders";
@@ -226,7 +226,7 @@ const Header = () => {
                                   <h4 className="font-black text-primary text-lg leading-tight group-hover/item:text-secondary transition-colors underline-offset-4 decoration-secondary/30">{cleanProductName(item.name || "منتج")}</h4>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                  <span className="font-black text-xl text-primary">{(price * quantity).toFixed((price * quantity) % 1 === 0 ? 0 : 1)} <span className="text-xs">ج.م</span></span>
+                                  <span className="font-black text-xl text-primary">{formatPrice(price * quantity)}</span>
                                   <div className="flex items-center gap-3 bg-primary/5 rounded-2xl px-3 py-1.5 border border-primary/5">
                                     <button onClick={() => updateQuantity(item.id, Math.max(0, quantity - 1))} className="text-primary hover:text-secondary transition-transform active:scale-75">
                                       <Minus className="h-4 w-4 stroke-[3px]" />
@@ -294,16 +294,16 @@ const Header = () => {
 
                       <div className="flex items-center justify-between px-2">
                         <div className="flex flex-col">
-                          <span className="text-muted-foreground font-black text-xs uppercase tracking-widest">Grand Total</span>
+                          <span className="text-muted-foreground font-black text-xs uppercase tracking-widest">الإجمالي الكلي</span>
                           <span className="text-primary/40 text-[10px] font-bold">
                             {appliedCoupon ? "السعر بعد الخصم" : "شامل كافة الرسوم"}
                           </span>
                         </div>
                         <div className="flex flex-col items-end">
                           {appliedCoupon && (
-                            <span className="text-sm text-gray-400 line-through font-bold">{totalPrice.toFixed(totalPrice % 1 === 0 ? 0 : 1)} ج.م</span>
+                            <span className="text-sm text-gray-400 line-through font-bold">{formatPrice(totalPrice)}</span>
                           )}
-                          <span className="text-4xl font-black text-primary tracking-tighter">{discountedTotal.toFixed(discountedTotal % 1 === 0 ? 0 : 1)} <span className="text-lg">ج.م</span></span>
+                          <span className="text-4xl font-black text-primary tracking-tighter">{formatPrice(discountedTotal)}</span>
                         </div>
                       </div>
 
@@ -327,7 +327,7 @@ const Header = () => {
                                 const discount = item.discount || 0;
                                 const price = item.is_on_sale ? basePrice - (basePrice * discount / 100) : basePrice;
                                 const itemTotal = price * item.quantity;
-                                return `• *${cleanProductName(item.name)}*\n  العدد: ${item.quantity}\n  السعر: ${itemTotal.toFixed(itemTotal % 1 === 0 ? 0 : 1)} ج.م`;
+                                return `• *${cleanProductName(item.name)}*\n  العدد: ${item.quantity}\n  السعر: ${formatPrice(itemTotal)}`;
                               }).join('\n\n');
 
                               const discountAmount = totalPrice - discountedTotal;
@@ -365,8 +365,8 @@ const Header = () => {
                               const message = encodeURIComponent(
                                 `🛍️ *طلب جديد ${orderNum}* 🛍️\n\n` +
                                 `${cartDetails}\n\n` +
-                                (appliedCoupon ? `🎟️ *كود الخصم:* ${appliedCoupon.code} (-${discountAmount.toFixed(0)} ج.م)\n\n` : "") +
-                                `💰 *الإجمالي:* ${roundedTotal.toFixed(roundedTotal % 1 === 0 ? 0 : 1)} ج.م\n\n` +
+                                (appliedCoupon ? `🎟️ *كود الخصم:* ${appliedCoupon.code} (-${formatPrice(discountAmount)})\n\n` : "") +
+                                `💰 *الإجمالي:* ${formatPrice(roundedTotal)}\n\n` +
                                 `📄 *رابط معاينة الفاتورة:* \n\n${invoiceUrl}\n\n` +
                                 `مرحباً صناع السعادة، أود إتمام هذا الطلب من المتجر.`
                               );

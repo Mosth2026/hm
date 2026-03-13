@@ -4,7 +4,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/use-cart";
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, MessageCircle } from "lucide-react";
-import { cleanProductName } from "@/lib/utils";
+import { cleanProductName, formatPrice } from "@/lib/utils";
 import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { SITE_CONFIG } from "@/lib/constants";
@@ -109,9 +109,9 @@ const CartPage = () => {
                                                     </div>
 
                                                     <div className="text-left">
-                                                        <span className="font-bold text-saada-red">{(itemPrice * item.quantity).toFixed((itemPrice * item.quantity) % 1 === 0 ? 0 : 1)} ج.م</span>
+                                                        <span className="font-bold text-saada-red">{formatPrice(itemPrice * item.quantity)}</span>
                                                         {item.quantity > 1 && (
-                                                            <p className="text-[10px] text-gray-400">{itemPrice.toFixed(itemPrice % 1 === 0 ? 0 : 1)} ج.م للقطعة</p>
+                                                            <p className="text-[10px] text-gray-400">{formatPrice(itemPrice)} للقطعة</p>
                                                         )}
                                                     </div>
                                                 </div>
@@ -138,11 +138,11 @@ const CartPage = () => {
                                     <div className="space-y-4 mb-6">
                                         <div className="flex justify-between text-gray-600">
                                             <span>إجمالي المنتجات</span>
-                                            <span>{totalPrice.toFixed(totalPrice % 1 === 0 ? 0 : 1)} ج.م</span>
+                                            <span>{formatPrice(totalPrice)}</span>
                                         </div>
                                         <div className="border-t pt-4 flex justify-between items-center">
                                             <span className="text-lg font-bold text-saada-brown">الإجمالي كلياً</span>
-                                            <span className="text-2xl font-bold text-saada-red">{totalPrice.toFixed(totalPrice % 1 === 0 ? 0 : 1)} ج.م</span>
+                                            <span className="text-2xl font-bold text-saada-red">{formatPrice(totalPrice)}</span>
                                         </div>
                                     </div>
 
@@ -161,7 +161,7 @@ const CartPage = () => {
                                                         const discount = item.discount || 0;
                                                         const price = item.is_on_sale ? basePrice - (basePrice * discount / 100) : basePrice;
                                                         const subTotal = price * item.quantity;
-                                                        return `• *${cleanProductName(item.name)}*\n  العدد/الوزن: ${item.quantity}\n  السعر: ${subTotal.toFixed(subTotal % 1 === 0 ? 0 : 1)} ج.م`;
+                                                        return `• *${cleanProductName(item.name)}*\n  العدد/الوزن: ${item.quantity}\n  السعر: ${formatPrice(subTotal)}`;
                                                     }).join('\n\n');
 
                                                     // الحفظ في قاعدة البيانات كمسودة
@@ -206,7 +206,7 @@ const CartPage = () => {
                                                     const message = encodeURIComponent(
                                                         `🛒 *طلب جديد من السلة ${orderNum}* 🛒\n\n` +
                                                         `${cartDetails}\n\n` +
-                                                        `💰 *الإجمالي الكلي:* ${roundedTotal.toFixed(roundedTotal % 1 === 0 ? 0 : 1)} ج.م\n\n` +
+                                                        `💰 *الإجمالي الكلي:* ${formatPrice(roundedTotal)}\n\n` +
                                                         `📄 *إضغط لعرض الفاتورة:* \n\n${invoiceUrl}\n\n` +
                                                         `مرحباً صناع السعادة، أود إتمام هذا الطلب.`
                                                     );

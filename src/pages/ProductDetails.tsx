@@ -148,7 +148,7 @@ const ProductDetails = () => {
 
             {/* Breadcrumbs */}
             <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-muted-foreground mb-12">
-              <Link to="/" className="hover:text-primary transition-colors">Home</Link>
+              <Link to="/" className="hover:text-primary transition-colors">الرئيسية</Link>
               <ChevronRight className="h-3 w-3" />
               <Link to={`/categories/${product.category_id}`} className="hover:text-primary transition-colors">{product.category_name}</Link>
               <ChevronRight className="h-3 w-3" />
@@ -172,10 +172,10 @@ const ProductDetails = () => {
                   {/* Labels */}
                   <div className="absolute top-8 right-8 flex flex-col gap-2">
                     {product.is_new && (
-                      <span className="bg-secondary text-primary text-[10px] font-black px-4 py-2 rounded-full uppercase tracking-widest shadow-xl ring-4 ring-white">New</span>
+                      <span className="bg-secondary text-primary text-[10px] font-black px-4 py-2 rounded-full uppercase tracking-widest shadow-xl ring-4 ring-white">جديد</span>
                     )}
                     {product.is_on_sale && (
-                      <span className="bg-primary text-white text-[10px] font-black px-4 py-2 rounded-full uppercase tracking-widest shadow-xl ring-4 ring-white">Save {product.discount}%</span>
+                      <span className="bg-primary text-white text-[10px] font-black px-4 py-2 rounded-full uppercase tracking-widest shadow-xl ring-4 ring-white">وفر {product.discount}%</span>
                     )}
                   </div>
                 </div>
@@ -193,18 +193,18 @@ const ProductDetails = () => {
                         <Star key={i} className="h-4 w-4 fill-secondary text-secondary" />
                       ))}
                     </div>
-                    <span className="text-xs font-black text-muted-foreground uppercase tracking-widest">(24 Verified Reviews)</span>
+                    <span className="text-xs font-black text-muted-foreground uppercase tracking-widest">(24 مراجعة موثقة)</span>
                   </div>
                 </div>
 
                 <div className="flex items-baseline gap-4">
                   {product.is_on_sale ? (
                     <>
-                      <span className="text-4xl md:text-5xl font-black text-primary">{Number(finalPrice).toFixed(Number(finalPrice) % 1 === 0 ? 0 : 1)} ج.م</span>
-                      <span className="text-xl text-muted-foreground line-through italic font-medium">{Number(product.price).toFixed(Number(product.price) % 1 === 0 ? 0 : 1)} ج.م</span>
+                      <span className="text-4xl md:text-5xl font-black text-primary">{formatPrice(finalPrice)}</span>
+                      <span className="text-xl text-muted-foreground line-through italic font-medium">{formatPrice(product.price)}</span>
                     </>
                   ) : (
-                    <span className="text-4xl md:text-5xl font-black text-primary">{Number(product.price).toFixed(Number(product.price) % 1 === 0 ? 0 : 1)} ج.م</span>
+                    <span className="text-4xl md:text-5xl font-black text-primary">{formatPrice(product.price)}</span>
                   )}
                 </div>
 
@@ -227,11 +227,11 @@ const ProductDetails = () => {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="p-4 bg-white border border-primary/10 rounded-2xl flex items-center gap-3">
                       <Truck className="h-5 w-5 text-secondary" />
-                      <div className="text-[10px] font-black uppercase tracking-widest text-primary">Fast Delivery</div>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-primary">شحن سريع</div>
                     </div>
                     <div className="p-4 bg-white border border-primary/10 rounded-2xl flex items-center gap-3">
                       <RotateCcw className="h-5 w-5 text-secondary" />
-                      <div className="text-[10px] font-black uppercase tracking-widest text-primary">Free Returns</div>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-primary">إرجاع مجاني</div>
                     </div>
                   </div>
                 </div>
@@ -296,7 +296,7 @@ const ProductDetails = () => {
                       );
 
                       if (!result.success) {
-                        console.error("Order Save Failed:", result.error);
+                        console.error("فشل حفظ الطلب:", result.error);
                         toast.error("تنبيه: " + result.error);
                       }
 
@@ -312,7 +312,7 @@ const ProductDetails = () => {
                       const message = encodeURIComponent(
                         `🛍️ *طلب منتج جديد ${orderNum}* 🛍️\n\n` +
                         `*المنتج:* ${cleanProductName(product.name)}\n` +
-                        `*السعر:* ${Number(roundedPrice).toFixed(Number(roundedPrice) % 1 === 0 ? 0 : 1)} ج.م\n` +
+                        `*السعر:* ${formatPrice(roundedPrice)}\n` +
                         `*الرابط:* ${window.location.href}\n` +
                         `*الملف:* ${cleanImageUrl(product.image)}\n\n` +
                         `📄 *إضغط لعرض الفاتورة:* \n\n${invoiceUrl}\n\n` +
@@ -438,10 +438,10 @@ const ProductDetails = () => {
                 <div className="pt-8 border-t border-primary/10 flex items-center gap-4 text-xs font-bold text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="h-4 w-4 text-secondary" />
-                    Secured Transaction
+                    عملية دفع آمنة
                   </div>
                   <div className="h-1 w-1 rounded-full bg-primary/10" />
-                  <span>Brand Heritage: Makers of Happiness</span>
+                  <span>تراثنا: صناع السعادة</span>
                 </div>
               </div>
             </div>

@@ -74,6 +74,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Product } from "@/hooks/use-products";
 
+import { formatPrice } from "@/lib/utils";
 import { SITE_CONFIG } from "@/lib/constants";
 
 const PLACEHOLDER_IMAGE = SITE_CONFIG.placeholderImage;
@@ -2476,7 +2477,7 @@ const AdminDashboard = () => {
                                                                 {p.category_name}
                                                             </span>
                                                         </TableCell>
-                                                        <TableCell className="py-4 font-bold text-gray-900">{Number(p.price).toFixed(Number(p.price) % 1 === 0 ? 0 : 2)} ج.م</TableCell>
+                                                        <TableCell className="py-4 font-bold text-gray-900">{formatPrice(p.price)}</TableCell>
                                                         <TableCell className="py-4">
                                                             <span className={`font-bold ${(p.stock ?? 0) < 10 ? 'text-orange-600' : 'text-gray-600'}`}>
                                                                 {p.stock ?? "-"}
@@ -2584,7 +2585,7 @@ const AdminDashboard = () => {
                                                     <TableCell className="py-4 text-sm text-gray-500">
                                                         {new Date(order.created_at).toLocaleDateString('ar-EG')}
                                                     </TableCell>
-                                                    <TableCell className="py-4 font-black text-saada-red">{Number(order.total_price).toFixed(Number(order.total_price) % 1 === 0 ? 0 : 2)} ج.م</TableCell>
+                                                    <TableCell className="py-4 font-black text-saada-red">{formatPrice(order.total_price)}</TableCell>
                                                     <TableCell className="py-4">
                                                         <span className={`px - 3 py - 1 rounded - full text - xs font - bold ${order.status === 'received' ? 'bg-green-100 text-green-700' : 'bg-saada-red/10 text-saada-red'
                                                             } `}>
@@ -3185,7 +3186,7 @@ const AdminDashboard = () => {
                                                             <p className="text-xs text-gray-500 mt-1 truncate">{item.description || 'بدون وصف'}</p>
                                                             <div className="flex items-center gap-3 mt-2">
                                                                 <span className="text-xs font-black text-saada-red">رصيد: {item.stock}</span>
-                                                                <span className="text-xs text-saada-brown font-bold">{Number(item.price).toFixed(Number(item.price) % 1 === 0 ? 0 : 2)} ج.م</span>
+                                                                <span className="text-xs text-saada-brown font-bold">{formatPrice(item.price)}</span>
                                                             </div>
                                                         </div>
                                                     </div>

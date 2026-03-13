@@ -16,9 +16,11 @@ export function cleanProductName(name: any): string {
     .trim();
 }
 
-export function formatPrice(price: number): string {
-  const formatted = Number(Number(price).toFixed(1)).toString();
-  return `${formatted} ج.م`;
+export function formatPrice(price: number | string): string {
+  const num = Number(price);
+  if (isNaN(num)) return "0.00 ج.م";
+  // Always show 2 decimal places to ensure precision as requested
+  return `${num.toFixed(2)} ج.م`;
 }
 
 export function getShareUrl(type: 'product' | 'category', id: string | number): string {

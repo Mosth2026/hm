@@ -114,7 +114,7 @@ const CheckoutPage = () => {
                 const discount = item.discount || 0;
                 const price = item.is_on_sale ? basePrice - (basePrice * discount / 100) : basePrice;
                 const itemTotal = price * item.quantity;
-                return `• *${item.name}*\n  العدد: ${item.quantity}\n  السعر: ${itemTotal.toFixed(itemTotal % 1 === 0 ? 0 : 1)} ج.م`;
+                return `• *${item.name}*\n  العدد: ${item.quantity}\n  السعر: ${formatPrice(itemTotal)}`;
             }).join('\n\n');
 
             let invoiceUrl = `${window.location.origin}/order-preview/${orderId}`;
@@ -133,7 +133,7 @@ const CheckoutPage = () => {
                 `📍 *العنوان:* ${formData.address}\n\n` +
                 (appliedCoupon ? `🎟️ *كود الخصم:* ${appliedCoupon.code} (-${discountAmount} ج.م)\n\n` : "") +
                 `📦 *المنتجات:*\n${cartDetails}\n\n` +
-                `💰 *الإجمالي الكلي:* ${Number(discountedTotal).toFixed(Number(discountedTotal) % 1 === 0 ? 0 : 1)} ج.م\n\n` +
+                `💰 *الإجمالي الكلي:* ${formatPrice(discountedTotal)}\n\n` +
                 `📄 *رابط الفاتورة الرقمية:* ${invoiceUrl}\n\n` +
                 `مرحباً صناع السعادة، أود إتمام هذا الطلب الذي سجلته على الموقع.`
             );
@@ -196,7 +196,7 @@ const CheckoutPage = () => {
 
             // 3. نجاح الطلب
             setIsSuccess(true);
-            logEvent('order_complete', { order_id: order.id, total: discountedTotal }, formData);
+            logEvent('order_complete', { order_id: finalOrderId, total: discountedTotal }, formData);
             clearCart();
             toast.success("تم استلام طلبك بنجاح! سنتواصل معك قريباً.");
         } catch (error: any) {
@@ -383,8 +383,8 @@ const CheckoutPage = () => {
                                                         <div className="flex-grow">
                                                             <p className="text-sm font-bold line-clamp-1">{item.name}</p>
                                                             <div className="flex justify-between items-center text-xs mt-1">
-                                                                <span className="text-gray-500">{item.quantity} × {itemPrice.toFixed(itemPrice % 1 === 0 ? 0 : 1)} ج.م</span>
-                                                                <span className="font-bold text-saada-red">{(item.quantity * itemPrice).toFixed((item.quantity * itemPrice) % 1 === 0 ? 0 : 1)} ج.م</span>
+                                                                <span className="text-gray-500">{item.quantity} × {formatPrice(itemPrice)}</span>
+                                                                <span className="font-bold text-saada-red">{formatPrice(item.quantity * itemPrice)}</span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -407,9 +407,9 @@ const CheckoutPage = () => {
                                             <span className="opacity-80">الإجمالي {appliedCoupon ? "بعد الخصم" : "الكلي"}</span>
                                             <div className="text-right">
                                                 {appliedCoupon && (
-                                                    <div className="text-[10px] line-through opacity-50 mb-1">{totalPrice} ج.م</div>
+                                                    <div className="text-[10px] line-through opacity-50 mb-1">{formatPrice(totalPrice)}</div>
                                                 )}
-                                                <span className="text-2xl font-bold">{Number(discountedTotal).toFixed(Number(discountedTotal) % 1 === 0 ? 0 : 1)} ج.م</span>
+                                                <span className="text-2xl font-bold">{formatPrice(discountedTotal)}</span>
                                             </div>
                                         </div>
                                         <p className="text-[10px] opacity-60 text-center mt-4">
