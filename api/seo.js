@@ -2,7 +2,10 @@ export default async function handler(req, res) {
     const { id, type } = req.query;
     const SUPABASE_URL = "https://yacjvrfwcahjqqbuiyxy.supabase.co";
     const SUPABASE_KEY = "sb_publishable_4OzSamMwsyetZNRWd4uNkA_D0135lxS";
-    const SITE_URL = "https://www.happinessmakers.online";
+    // تحديد النطاق ديناميكياً لضمان تطابق رابط المعاينة مع الرابط المشترك (WWW أو بدونها)
+    const host = req.headers.host || "www.happinessmakers.online";
+    const protocol = req.headers['x-forwarded-proto'] || 'https';
+    const SITE_URL = `${protocol}://${host}`;
 
     try {
         let title = "صناع السعادة - متجر الشوكولاتة الفاخرة";
@@ -18,18 +21,20 @@ export default async function handler(req, res) {
 
             if (data && data[0]) {
                 const product = data[0];
-                title = (product.name || '').replace(/^"/, '').replace(/\[TAX_EXEMPT\]/g, '').split('*')[0].trim() + " | صناع السعادة";
+                let rawName = (product.name || '').replace(/^"/, '').replace(/\[TAX_EXEMPT\]/g, '').split('*')[0].trim();
+                title = rawName + " | صناع السعادة";
 
                 let rawDesc = product.description || description;
                 description = rawDesc.replace(/\[TAX_EXEMPT\]/g, '').replace(/باركود\s*:\s*\d+/g, '').trim();
 
+                // التخلص من أي علامات تكسر الميتا تاق
+                const escapeHtml = (str) => (str || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                title = escapeHtml(title);
+                description = escapeHtml(description);
+
                 let rawImage = product.image || '';
                 if (rawImage.startsWith('http')) {
                     image = rawImage;
-                    if (image.includes('unsplash.com')) {
-                        const u = new URL(image);
-                        image = `${u.origin}${u.pathname}`;
-                    }
                 } else if (rawImage) {
                     image = `${SITE_URL}${rawImage.startsWith('/') ? '' : '/'}${rawImage}`;
                 }
@@ -47,10 +52,11 @@ export default async function handler(req, res) {
             }
         }
 
-        // تحجيم الصور الكبيرة من سوبابيس لضمان ظهورها في واتساب (لأن الحجم يكون كبيراً جداً 2 ميجا)
-        // واتساب يفضل صيغة JPG بدلاً من WebP في المعاينات، لذا سنقوم بالتحويل فوراً
-        if (image.includes('supabase.co/storage/v1/object/public/')) {
-            image = image.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') + '?width=400&quality=60&format=jpg&v=2';
+        // تحسين الروابط وضمان كود تتبع (Cache Buster) متوازن لتجنب المشاكل
+        // نستخدم الساعة الحالية ككود تتبع لضمان التحديث كل ساعة بدون إرهاق السيرفر
+        const version = Math.floor(Date.now() / 3600000); 
+        if (image.includes('supabase.co')) {
+            image += (image.includes('?') ? '&' : '?') + 'v=' + version;
         }
 
         // تحسين اكتشاف نوع الصورة ديناميكياً (نتجاهل البرامترات في الآخر للفحص)
@@ -86,8 +92,8 @@ export default async function handler(req, res) {
   <meta property="og:description" content="${description}">
   <meta property="og:image" content="${image}">
   <meta property="og:image:secure_url" content="${image}">
-  <meta property="og:image:width" content="600">
-  <meta property="og:image:height" content="600">
+  <meta property="og:image:width" content="800">
+  <meta property="og:image:height" content="800">
   <meta property="og:image:alt" content="${title}">
   <meta property="og:site_name" content="صناع السعادة">
   <meta property="og:locale" content="ar_EG">
