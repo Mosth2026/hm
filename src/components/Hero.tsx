@@ -5,11 +5,30 @@ import { ChevronRight, ArrowLeft, Star, ShoppingBag, ShoppingCart, Loader2 } fro
 import { Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { cn, cleanImageUrl, cleanProductName, formatPrice } from "@/lib/utils";
+import { useCart } from "@/hooks/use-cart";
+import { toast } from "sonner";
 
 const Hero = () => {
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const addItem = useCart((state) => state.addItem);
+
+  const handleQuickAdd = (e: React.MouseEvent, product: any) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    addItem({
+      ...product,
+      name: cleanProductName(product.name),
+      category_name: product.category_name || "منتج فاخر"
+    });
+
+    toast.success(`تم إضافة ${cleanProductName(product.name)} إلى السلة`, {
+      style: { background: 'var(--primary)', color: 'white', borderRadius: '1rem' },
+      duration: 2000
+    });
+  };
 
   useEffect(() => {
     const fetchFeatured = async () => {
@@ -150,7 +169,10 @@ const Hero = () => {
                   </div>
                 </div>
 
-                <div className="absolute -left-4 md:-left-12 bottom-10 md:bottom-1/4 z-30 bg-primary/90 text-white p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-2xl border border-white/10 animate-float cursor-pointer hover:scale-110 transition-transform">
+                <div 
+                  className="absolute -left-4 md:-left-12 bottom-10 md:bottom-1/4 z-30 bg-primary/90 text-white p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-2xl border border-white/10 animate-float cursor-pointer hover:scale-110 hover:bg-secondary transition-all group/cart"
+                  onClick={(e) => handleQuickAdd(e, currentProduct)}
+                >
                   <div className="flex items-center gap-2 md:gap-4">
                     <div className="h-8 w-8 md:h-12 md:w-12 bg-white/10 rounded-xl flex items-center justify-center">
                       <ShoppingCart className="h-4 w-4 md:h-6 md:w-6" />
