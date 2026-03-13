@@ -50,3 +50,35 @@ export function cleanImageUrl(url: string | undefined): string {
     return url || `${SITE_CONFIG.siteUrl}/assets/logo.png`;
   }
 }
+export function copyToClipboard(text: string): Promise<boolean> {
+  // Try modern API first
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text)
+      .then(() => true)
+      .catch(() => false);
+  }
+
+  // Fallback for non-secure origins
+  return new Promise((resolve) => {
+    try {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      
+      // Ensure the textarea is not visible
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      textArea.style.top = "0";
+      document.body.appendChild(textArea);
+      
+      textArea.focus();
+      textArea.select();
+      
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      resolve(successful);
+    } catch (err) {
+      console.error('Fallback copy failed', err);
+      resolve(false);
+    }
+  });
+}

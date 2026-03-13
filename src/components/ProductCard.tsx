@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart, Heart, Plus, Star, Share2, MessageCircle, Copy } from "lucide-react";
 import { useCart } from "@/hooks/use-cart";
 import { toast } from "sonner";
-import { cn, cleanProductName, getShareUrl } from "@/lib/utils";
+import { cn, cleanProductName, getShareUrl, copyToClipboard } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -95,7 +95,7 @@ const ProductCard = ({
     window.open(`https://wa.me/?text=${message}`, '_blank');
   };
 
-  const handleShare = (e: React.MouseEvent) => {
+  const handleShare = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -104,27 +104,29 @@ const ProductCard = ({
     const shareText = `شوف المنتج الرائع ده من صناع السعادة: ${cleanName}`;
 
     if (navigator.share) {
-      navigator.share({
-        title: cleanName,
-        text: shareText,
-        url: url,
-      }).catch((err) => {
+      try {
+        await navigator.share({
+          title: cleanName,
+          text: shareText,
+          url: url,
+        });
+      } catch (err: any) {
         if (err.name !== 'AbortError') {
-          navigator.clipboard.writeText(url);
-          toast.success("تم نسخ الرابط");
+          const success = await copyToClipboard(url);
+          if (success) toast.success("تم نسخ الرابط");
         }
-      });
+      }
     } else {
-      navigator.clipboard.writeText(url);
-      toast.success("تم نسخ رابط المنتج! يمكنك مشاركته الآن.");
+      const success = await copyToClipboard(url);
+      if (success) toast.success("تم نسخ رابط المنتج! يمكنك مشاركته الآن.");
     }
   };
 
   return (
-    <div className="group relative bg-card rounded-[2rem] border border-primary/10 p-3 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 font-tajawal rtl h-full flex flex-col premium-card">
+    <div className="group relative bg-card rounded-[1.5rem] md:rounded-[2rem] border border-primary/10 p-2 md:p-3 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 font-tajawal rtl h-full flex flex-col premium-card">
 
       {/* Image Container */}
-      <div className="relative aspect-square overflow-hidden rounded-[1.5rem] bg-primary/5">
+      <div className="relative aspect-square overflow-hidden rounded-[1.25rem] md:rounded-[1.5rem] bg-primary/5">
         <Link to={`/products/${id}`} className="block w-full h-full">
           <img
             src={image}
@@ -208,7 +210,7 @@ const ProductCard = ({
       </div>
 
       {/* Content Container */}
-      <div className="p-4 flex-grow flex flex-col space-y-2">
+      <div className="p-2 md:p-4 flex-grow flex flex-col space-y-1.5 md:space-y-2">
         <div className="flex items-center justify-between">
           <Link to={`/categories/${categoryId}`}>
             <span className="text-[10px] uppercase tracking-wider font-black text-secondary bg-secondary/10 px-2 py-0.5 rounded-md">
@@ -222,7 +224,7 @@ const ProductCard = ({
         </div>
 
         <Link to={`/products/${id}`}>
-          <h3 className="font-black text-primary hover:text-secondary transition-colors line-clamp-2 leading-snug">
+          <h3 className="font-bold md:font-black text-primary hover:text-secondary transition-colors line-clamp-2 leading-snug text-sm md:text-base">
             {cleanProductName(name)}
           </h3>
         </Link>
@@ -231,20 +233,20 @@ const ProductCard = ({
           <div className="flex flex-col">
             {showSale ? (
               <>
-                <span className="text-muted-foreground line-through text-[10px] font-bold">{Number(price).toFixed(Number(price) % 1 === 0 ? 0 : 1)} ج.م</span>
-                <span className="text-lg font-black text-primary tracking-tight">{Number(finalPrice).toFixed(Number(finalPrice) % 1 === 0 ? 0 : 1)} <span className="text-xs">ج.م</span></span>
+                <span className="text-muted-foreground line-through text-[8px] md:text-[10px] font-bold">{Number(price).toFixed(Number(price) % 1 === 0 ? 0 : 1)} ج.م</span>
+                <span className="text-base md:text-lg font-black text-primary tracking-tight">{Number(finalPrice).toFixed(Number(finalPrice) % 1 === 0 ? 0 : 1)} <span className="text-[10px]">ج.م</span></span>
               </>
             ) : (
-              <span className="text-lg font-black text-primary tracking-tight">{Number(price).toFixed(Number(price) % 1 === 0 ? 0 : 1)} <span className="text-xs">ج.م</span></span>
+              <span className="text-base md:text-lg font-black text-primary tracking-tight">{Number(price).toFixed(Number(price) % 1 === 0 ? 0 : 1)} <span className="text-[10px]">ج.م</span></span>
             )}
           </div>
 
           <Button
             size="icon"
-            className="bg-primary hover:bg-secondary text-white rounded-xl h-10 w-10 shadow-lg shadow-primary/10 transition-all active:scale-95 group/btn"
+            className="bg-primary hover:bg-secondary text-white rounded-lg md:rounded-xl h-8 w-8 md:h-10 md:w-10 shadow-lg shadow-primary/10 transition-all active:scale-95 group/btn"
             onClick={handleAddToCart}
           >
-            <ShoppingCart className="h-4 w-4 group-hover/btn:animate-bounce" />
+            <ShoppingCart className="h-3.5 w-3.5 md:h-4 md:w-4 group-hover/btn:animate-bounce" />
           </Button>
         </div>
       </div>

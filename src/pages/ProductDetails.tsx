@@ -10,7 +10,7 @@ import { Link } from "react-router-dom";
 import { useProduct } from "@/hooks/use-products";
 import { useCart } from "@/hooks/use-cart";
 import { toast } from "sonner";
-import { cn, cleanProductName, cleanImageUrl, getShareUrl } from "@/lib/utils";
+import { cn, cleanImageUrl, cleanProductName, formatPrice, getShareUrl, copyToClipboard } from "@/lib/utils";
 import { SITE_CONFIG } from "@/lib/constants";
 import { saveOrderToDb } from "@/lib/orders";
 import { useAuth } from "@/hooks/use-auth";
@@ -128,22 +128,22 @@ const ProductDetails = () => {
 
         {/* Open Graph Meta Tags */}
         <meta property="og:title" content={`${cleanProductName(product.name)} | صناع السعادة`} />
-        <meta property="og:description" content={product.description} />
+        <meta property="og:description" content={`${product.description} | متوفر الآن بجميع أصناف سويس فرو (SWISS FRU) جملة وتجزئة لدى صناع السعادة.`} />
         <meta property="og:image" content={cleanImageUrl(product.image)} />
         <meta property="og:type" content="product" />
         <meta property="og:url" content={`${SITE_CONFIG.siteUrl}${window.location.pathname}`} />
 
         {/* Twitter Card Meta Tags */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={cleanProductName(product.name)} />
-        <meta name="twitter:description" content={product.description} />
+        <meta name="twitter:title" content={`${cleanProductName(product.name)} | سويس فرو (SWISS FRU)`} />
+        <meta name="twitter:description" content={`اطلب ${cleanProductName(product.name)} الآن من صناع السعادة. نفخر بتوفير جميع منتجات سويس فرو (SWISS FRU) والماركات العالمية.`} />
         <meta name="twitter:image" content={cleanImageUrl(product.image)} />
 
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
       </Helmet>
       <div className="min-h-screen flex flex-col font-tajawal rtl bg-white">
         <Header />
-        <main className="flex-grow pt-32 md:pt-40 pb-12">
+        <main className="flex-grow pt-28 md:pt-40 pb-8">
           <div className="container mx-auto px-4 md:px-8">
 
             {/* Breadcrumbs */}
@@ -329,24 +329,27 @@ const ProductDetails = () => {
                     variant="outline"
                     size="lg"
                     className="h-16 px-8 rounded-2xl border-2 border-primary/10 hover:border-secondary hover:bg-secondary/5 text-primary transition-all group shadow-sm md:hidden"
-                    onClick={() => {
+                    onClick={async () => {
                       if (!product) return;
                       const url = getShareUrl('product', product.id);
                       const cleanName = cleanProductName(product.name);
+                      
                       if (navigator.share) {
-                        navigator.share({
-                          title: cleanName,
-                          text: `شوف المنتج الرائع ده من صناع السعادة: ${cleanName}`,
-                          url: url,
-                        }).catch((err) => {
+                        try {
+                          await navigator.share({
+                            title: cleanName,
+                            text: `شوف المنتج الرائع ده من صناع السعادة: ${cleanName}`,
+                            url: url,
+                          });
+                        } catch (err: any) {
                           if (err.name !== 'AbortError') {
-                            navigator.clipboard.writeText(url);
-                            toast.success("تم نسخ الرابط");
+                            const success = await copyToClipboard(url);
+                            if (success) toast.success("تم نسخ الرابط");
                           }
-                        });
+                        }
                       } else {
-                        navigator.clipboard.writeText(url);
-                        toast.success("تم نسخ رابط المنتج! يمكنك مشاركته الآن.");
+                        const success = await copyToClipboard(url);
+                        if (success) toast.success("تم نسخ رابط المنتج! يمكنك مشاركته الآن.");
                       }
                     }}
                   >
@@ -367,11 +370,11 @@ const ProductDetails = () => {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl border-primary/10 shadow-2xl font-tajawal rtl">
                         <DropdownMenuItem
-                          onClick={() => {
+                          onClick={async () => {
                             if (!product) return;
                             const url = getShareUrl('product', product.id);
-                            navigator.clipboard.writeText(url);
-                            toast.success("تم نسخ رابط المنتج! يمكنك مشاركته الآن.");
+                            const success = await copyToClipboard(url);
+                            if (success) toast.success("تم نسخ رابط المنتج! يمكنك مشاركته الآن.");
                           }}
                           className="rounded-xl gap-2 cursor-pointer focus:bg-primary focus:text-white font-bold py-3"
                         >

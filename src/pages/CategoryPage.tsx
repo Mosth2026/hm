@@ -8,7 +8,7 @@ import { Helmet } from "react-helmet-async";
 import { useProducts } from "@/hooks/use-products";
 import { Loader2, Sparkles, Filter, Share2, MessageCircle, Copy } from "lucide-react";
 import { toast } from "sonner";
-import { cleanImageUrl } from "@/lib/utils";
+import { cleanImageUrl, copyToClipboard } from "@/lib/utils";
 import { SITE_CONFIG } from "@/lib/constants";
 import {
   DropdownMenu,
@@ -71,7 +71,7 @@ const CategoryPage = () => {
         <main className="flex-grow pt-32 md:pt-40">
 
           {/* Page Header */}
-          <div className="relative py-20 bg-primary/5 overflow-hidden">
+          <div className="relative py-10 md:py-14 bg-primary/5 overflow-hidden">
             <div className="absolute top-0 right-0 w-1/3 h-full bg-secondary/5 -skew-x-12 translate-x-1/2 pointer-events-none" />
             <div className="container mx-auto px-4 md:px-8 relative z-10">
               <div className="max-w-3xl space-y-4">
@@ -89,7 +89,7 @@ const CategoryPage = () => {
             </div>
           </div>
 
-          <section className="py-20">
+          <section className="py-12 md:py-16">
             <div className="container mx-auto px-4 md:px-8">
               {/* Toolbar */}
               <div className="flex items-center justify-between mb-12 py-4 border-b border-primary/5">
@@ -107,17 +107,24 @@ const CategoryPage = () => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl border-primary/10 shadow-2xl font-tajawal rtl">
                       <DropdownMenuItem
-                        onClick={() => {
+                        onClick={async () => {
                           const url = window.location.href;
                           if (navigator.share) {
-                            navigator.share({
-                              title: categoryName,
-                              text: `استكشف تشكيلة ${categoryName} الرائعة من صناع السعادة!`,
-                              url: url,
-                            }).catch(console.error);
+                            try {
+                              await navigator.share({
+                                title: categoryName,
+                                text: `استكشف تشكيلة ${categoryName} الرائعة من صناع السعادة!`,
+                                url: url,
+                              });
+                            } catch (err: any) {
+                              if (err.name !== 'AbortError') {
+                                const success = await copyToClipboard(url);
+                                if (success) toast.success("تم نسخ رابط القسم! يمكنك مشاركته الآن.");
+                              }
+                            }
                           } else {
-                            navigator.clipboard.writeText(url);
-                            toast.success("تم نسخ رابط القسم! يمكنك مشاركته الآن.");
+                            const success = await copyToClipboard(url);
+                            if (success) toast.success("تم نسخ رابط القسم! يمكنك مشاركته الآن.");
                           }
                         }}
                         className="rounded-xl gap-2 cursor-pointer focus:bg-primary focus:text-white font-bold py-3"
@@ -151,7 +158,7 @@ const CategoryPage = () => {
                   <p className="text-xl font-black text-destructive">عذراً، حدث خطأ أثناء تحميل المنتجات.</p>
                 </div>
               ) : products && products.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
                   {products.map((product, idx) => (
                     <div
                       key={product.id}

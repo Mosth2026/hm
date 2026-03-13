@@ -41,7 +41,7 @@ const Newsletter = () => {
   };
 
   return (
-    <section className="py-24 relative overflow-hidden font-tajawal rtl bg-stone-50/50">
+    <section className="py-12 md:py-16 relative overflow-hidden font-tajawal rtl bg-stone-50/50">
       <div className="container mx-auto px-4 md:px-8">
         <div className="max-w-5xl mx-auto">
           <div className="relative bg-primary rounded-[3rem] p-8 md:p-16 overflow-hidden shadow-2xl hover:shadow-[0_40px_80px_-20px_rgba(34,35,25,0.4)] transition-all duration-700">

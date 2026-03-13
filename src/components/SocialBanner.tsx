@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 
 const SocialBanner = () => {
   return (
-    <section className="py-20 relative overflow-hidden font-tajawal rtl bg-primary">
+    <section className="py-12 md:py-16 relative overflow-hidden font-tajawal rtl bg-primary">
       {/* Decorative BG */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-1/2 left-1/4 w-96 h-96 bg-secondary rounded-full blur-[150px]" />

@@ -87,12 +87,12 @@ const ThemeToggle = () => {
             <Button
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    "h-16 w-16 rounded-full shadow-2xl shadow-primary/20 transition-all duration-500 group relative overflow-hidden",
+                    "h-12 w-12 md:h-16 md:w-16 rounded-full shadow-2xl shadow-primary/20 transition-all duration-500 group relative overflow-hidden",
                     isOpen ? "bg-secondary text-primary rotate-90" : "bg-primary text-secondary"
                 )}
             >
                 <div className="absolute inset-0 bg-white/20 scale-0 group-hover:scale-150 transition-transform duration-700 rounded-full" />
-                <Sparkles className={cn("h-8 w-8 relative z-10 transition-transform", isOpen ? "rotate-45" : "")} />
+                <Sparkles className={cn("h-6 w-6 md:h-8 md:w-8 relative z-10 transition-transform", isOpen ? "rotate-45" : "")} />
             </Button>
         </div>
     );

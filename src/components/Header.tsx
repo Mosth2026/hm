@@ -99,9 +99,9 @@ const Header = () => {
           : "bg-white/80 backdrop-blur-md"
       )}>
         <div className="border-b border-primary/5">
-          <div className="container mx-auto px-4 md:px-8 h-20 flex items-center justify-between gap-4 md:gap-12">
-            <Link to="/" className="group flex items-center gap-3 shrink-0 relative transition-transform hover:scale-[1.02]">
-              <div className="relative h-11 w-11 md:h-13 md:w-13 bg-white rounded-2xl flex items-center justify-center shadow-[0_10px_20px_rgba(0,0,0,0.1)] group-hover:shadow-secondary/20 group-hover:rotate-6 transition-all duration-500 overflow-hidden border border-primary/5">
+          <div className="container mx-auto px-4 md:px-8 h-14 md:h-20 flex items-center justify-between gap-4 md:gap-12">
+            <Link to="/" className="group flex items-center gap-2 md:gap-3 shrink-0 relative transition-transform hover:scale-[1.02]">
+              <div className="relative h-9 w-9 md:h-13 md:w-13 bg-white rounded-xl md:rounded-2xl flex items-center justify-center shadow-[0_10px_20px_rgba(0,0,0,0.1)] group-hover:shadow-secondary/20 group-hover:rotate-6 transition-all duration-500 overflow-hidden border border-primary/5">
                 <img
                   src="/assets/logo.png"
                   alt="Logo"
@@ -109,12 +109,12 @@ const Header = () => {
                 />
               </div>
               <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <span className="text-xl md:text-2xl font-black leading-tight tracking-tight text-primary flex items-center gap-1">
+                <div className="flex items-center gap-1">
+                  <span className="text-[17px] md:text-2xl font-black leading-tight tracking-tight text-primary flex items-center gap-1">
                     صنا<span className="text-[#f31b3e] drop-shadow-[0_0_12px_rgba(243,27,62,0.4)]">ع</span> السعادة
                   </span>
                 </div>
-                <span className="text-[10px] uppercase tracking-[0.25em] font-outfit text-secondary font-bold leading-none">Makers of Happiness</span>
+                <span className="text-[8px] md:text-[10px] uppercase tracking-[0.2em] md:tracking-[0.25em] font-outfit text-secondary font-bold leading-none">Makers of Happiness</span>
               </div>
             </Link>
 
@@ -137,9 +137,9 @@ const Header = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 md:gap-4 shrink-0">
+            <div className="flex items-center gap-2 md:gap-4 shrink-0">
               <Link to="/admin" className="hidden sm:block">
-                <Button variant="ghost" size="icon" className="h-11 w-11 text-primary hover:bg-secondary/10 hover:text-secondary rounded-2xl transition-all border border-transparent hover:border-secondary/20">
+                <Button variant="ghost" size="icon" className="h-10 w-10 md:h-11 md:w-11 text-primary hover:bg-secondary/10 hover:text-secondary rounded-2xl transition-all border border-transparent hover:border-secondary/20">
                   <User className="h-5 w-5" />
                 </Button>
               </Link>
@@ -147,12 +147,12 @@ const Header = () => {
               <Sheet onOpenChange={(open) => open && logEvent('cart_view', { items_count: itemCount })}>
                 <SheetTrigger asChild>
                   <Button
-                    className="relative h-12 px-5 md:px-7 bg-primary hover:bg-black text-white rounded-2xl shadow-[0_10px_20px_rgba(0,0,0,0.15)] transition-all hover:scale-105 active:scale-95 group flex items-center gap-3 border-b-4 border-black/20"
+                    className="relative h-10 w-10 md:h-12 md:w-auto md:px-7 bg-primary hover:bg-black text-white rounded-xl md:rounded-2xl shadow-[0_10px_20px_rgba(0,0,0,0.15)] transition-all hover:scale-105 active:scale-95 group flex items-center justify-center md:gap-3 border-b-4 border-black/20 p-0 md:p-auto"
                   >
                     <ShoppingCart className="h-5 w-5 group-hover:rotate-12 transition-transform" />
                     <span className="text-[15px] font-black hidden lg:inline tracking-tight">سلة السعادة</span>
                     {itemCount > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-secondary text-primary text-[11px] font-black rounded-xl px-2 h-6 flex items-center justify-center shadow-lg border-2 border-white animate-bounce-slow">
+                      <span className="absolute -top-1.5 -right-1.5 bg-secondary text-primary text-[10px] font-black rounded-lg px-1.5 h-5 min-w-[20px] flex items-center justify-center shadow-lg border-2 border-white animate-bounce-slow">
                         {itemCount}
                       </span>
                     )}
@@ -401,9 +401,9 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Mobile Category Navigation - RESTORED TOP BAR */}
-        <div className="lg:hidden bg-white/70 backdrop-blur-md border-b border-primary/5 overflow-x-auto shadow-sm" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-          <div className="flex items-center gap-2 px-4 py-3 min-w-max">
+        {/* Mobile Category Navigation - STREAMLINED */}
+        <div className="lg:hidden bg-white/70 backdrop-blur-md border-b border-primary/5 overflow-x-auto shadow-sm no-scrollbar">
+          <div className="flex items-center gap-1.5 px-3 py-1 min-w-max">
             {navLinks.map((link) => {
               const isActive = location.pathname === link.path;
               return (
@@ -411,7 +411,7 @@ const Header = () => {
                   key={link.path}
                   to={link.path}
                   className={cn(
-                    "px-5 py-2.5 text-[13px] font-black uppercase tracking-wider rounded-xl transition-all whitespace-nowrap border-b-2 shadow-sm",
+                    "px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md transition-all whitespace-nowrap border-b-2 shadow-sm",
                     isActive
                       ? "bg-primary text-white border-secondary scale-105 shadow-primary/20"
                       : "bg-white/50 text-primary/70 border-transparent hover:bg-primary/5 hover:text-primary"
@@ -424,10 +424,9 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Desktop Category Navigation - RESTORED TOP BAR */}
         <div className="hidden lg:block bg-white/40 border-b border-primary/5">
-          <div className="container mx-auto px-4 md:px-8">
-            <nav className="flex items-center justify-center gap-2 py-1 flex-wrap">
+          <div className="container mx-auto px-4">
+            <nav className="flex items-center justify-center gap-1 xl:gap-2 py-1">
               {navLinks.map((link) => {
                 const isActive = location.pathname === link.path;
                 return (
@@ -435,14 +434,14 @@ const Header = () => {
                     key={link.path}
                     to={link.path}
                     className={cn(
-                      "relative px-5 py-2 text-[13px] font-black uppercase tracking-[0.05em] transition-all duration-300 group whitespace-nowrap",
+                      "relative px-3 xl:px-5 py-2 text-[12px] xl:text-[13px] font-black uppercase tracking-tight xl:tracking-[0.05em] transition-all duration-300 group whitespace-nowrap",
                       isActive ? "text-secondary" : "text-primary/60 hover:text-primary"
                     )}
                   >
                     {link.name}
                     <span className={cn(
-                      "absolute bottom-0 left-1/2 -translate-x-1/2 h-1.5 bg-secondary rounded-t-full transition-all duration-500",
-                      isActive ? "w-10 opacity-100" : "w-0 opacity-0 group-hover:w-8 group-hover:opacity-100"
+                      "absolute bottom-0 left-1/2 -translate-x-1/2 h-1 bg-secondary rounded-t-full transition-all duration-500",
+                      isActive ? "w-8 opacity-100" : "w-0 opacity-0 group-hover:w-6 group-hover:opacity-100"
                     )} />
                   </Link>
                 );

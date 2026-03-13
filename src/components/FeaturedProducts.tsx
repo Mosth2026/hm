@@ -26,7 +26,7 @@ const FeaturedProducts = () => {
   }
 
   return (
-    <section className="py-24 relative overflow-hidden font-tajawal rtl bg-background">
+    <section className="py-12 md:py-16 relative overflow-hidden font-tajawal rtl bg-background">
       {/* Background Texture */}
       <div className="absolute top-0 right-0 w-full h-full opacity-[0.02] pointer-events-none"
         style={{ backgroundImage: 'radial-gradient(#222319 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
@@ -45,7 +45,7 @@ const FeaturedProducts = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
           {products && products.length > 0 ? (
             products.map((product, idx) => (
               <div

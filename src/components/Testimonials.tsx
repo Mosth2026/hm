@@ -32,7 +32,7 @@ const testimonials = [
 
 const Testimonials = () => {
   return (
-    <section className="py-24 bg-primary text-white font-tajawal rtl relative overflow-hidden">
+    <section className="py-12 md:py-16 bg-primary text-white font-tajawal rtl relative overflow-hidden">
       {/* Background Texture */}
       <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none"
         style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/carbon-fibre.png")' }} />

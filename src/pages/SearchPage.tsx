@@ -92,8 +92,8 @@ const SearchPage = () => {
             </Helmet>
             <div className="min-h-screen flex flex-col">
                 <Header />
-                <main className="flex-grow bg-gray-50 font-tajawal rtl">
-                    <div className="container mx-auto px-4 pt-16 md:pt-20 pb-12">
+                <main className="flex-grow bg-gray-50 font-tajawal rtl pt-28 md:pt-40">
+                    <div className="container mx-auto px-4 pb-12">
                         <div className="flex items-center gap-3 mb-8">
                             <div className="bg-saada-red/10 p-3 rounded-xl">
                                 <Search className="h-6 w-6 text-saada-red" />
@@ -109,7 +109,7 @@ const SearchPage = () => {
                                 <Loader2 className="h-10 w-10 animate-spin text-saada-red" />
                             </div>
                         ) : products && products.length > 0 ? (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                                 {products.map((product: any) => (
                                     <ProductCard
                                         key={product.id}

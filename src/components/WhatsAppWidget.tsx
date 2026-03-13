@@ -27,8 +27,8 @@ const WhatsAppWidget = () => {
                     {/* Ring Animation */}
                     <div className="absolute inset-0 bg-[#25D366] rounded-full animate-ping opacity-20" />
 
-                    <div className="relative w-14 h-14 md:w-16 md:h-16 bg-[#25D366] rounded-full flex items-center justify-center shadow-2xl shadow-[#25D366]/40 group-hover:shadow-[#25D366]/60 group-hover:scale-110 active:scale-95 transition-all duration-500">
-                        <MessageCircle className="w-7 h-7 md:w-8 md:h-8 text-white fill-white/10" />
+                    <div className="relative w-12 h-12 md:w-16 md:h-16 bg-[#25D366] rounded-full flex items-center justify-center shadow-2xl shadow-[#25D366]/40 group-hover:shadow-[#25D366]/60 group-hover:scale-110 active:scale-95 transition-all duration-500">
+                        <MessageCircle className="w-6 h-6 md:w-8 md:h-8 text-white fill-white/10" />
 
                         {/* Notification Dot */}
                         <div className="absolute -top-1 -right-1 flex h-4 w-4">

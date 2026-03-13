@@ -15,21 +15,45 @@ const Index = () => {
   return (
     <>
       <Helmet>
-        <title>صناع السعادة | أكبر تشكيلة منتجات عالمية في مصر</title>
-        <meta name="description" content="صناع السعادة (Sana'a Al-Saada) وجهتك الأولى لأفخر أنواع الشوكولاتة، الكاندي، القهوة، والسناكس المستوردة. فروعنا في القاهرة والإسكندرية تخدمكم بأفضل الماركات العالمية." />
+        <title>صناع السعادة | تشكيلة سويس فرو (SWISS FRU) في مصر</title>
+        <meta name="description" content="صناع السعادة (Makers of Happiness) الوجهة الأولى لمنتجات سويس فرو (SWISS FRU) في مصر. نفخر بتوفير جميع أصناف سويس فرو وبكميات جملة وتجزئة في جميع فروعنا." />
+        <meta name="keywords" content="سويس فرو، SWISS FRU، Swiss Fro، جملة سويس فرو، ايس كريم سويس فرو، شوكولاتة سويس فرو، مستوردين مصر، صناع السعادة، SWISS FRU Wholesale Egypt" />
 
         {/* Open Graph Tags */}
-        <meta property="og:title" content="صناع السعادة | أكبر تشكيلة منتجات عالمية في مصر" />
-        <meta property="og:description" content="وجهتك الأولى لأفخر أنواع الشوكولاتة، الكاندي، القهوة، والسناكس المستوردة." />
+        <meta property="og:title" content="صناع السعادة | جميع أصناف سويس فرو (SWISS FRU) متوفرة الآن" />
+        <meta property="og:description" content="اكتشف التشكيلة الكاملة من منتجات سويس فرو (SWISS FRU). جملة وتجزئة بأفضل الأسعار في مصر والإسكندرية." />
         <meta property="og:image" content="https://happinessmakers.online/assets/logo.png" />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://happinessmakers.online" />
 
         {/* Twitter Card Tags */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="صناع السعادة | أكبر تشكيلة منتجات عالمية في مصر" />
-        <meta name="twitter:description" content="وجهتك الأولى لأفخر أنواع الشوكولاتة، الكاندي، القهوة، والسناكس المستوردة." />
+        <meta name="twitter:title" content="Makers of Happiness | Home of SWISS FRU in Egypt" />
+        <meta name="twitter:description" content="The largest collection of SWISS FRU products in Egypt. Wholesale and retail experts." />
         <meta name="twitter:image" content="https://happinessmakers.online/assets/logo.png" />
+
+        {/* Structured Data for SEO/GEO Enrichment */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "صناع السعادة - Makers of Happiness",
+            "url": "https://happinessmakers.online",
+            "logo": "https://happinessmakers.online/assets/logo.png",
+            "description": "We are proud to provide all varieties of SWISS FRU products in Egypt and the Middle East.",
+            "brand": [
+              {
+                "@type": "Brand",
+                "name": "SWISS FRU",
+                "alternateName": ["سويس فرو", "Swiss Fro"]
+              }
+            ],
+            "areaServed": {
+              "@type": "AdministrativeArea",
+              "name": "Egypt"
+            }
+          })}
+        </script>
       </Helmet>
 
 

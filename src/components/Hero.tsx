@@ -53,7 +53,7 @@ const Hero = () => {
   const currentProduct = featuredProducts[currentIndex];
 
   return (
-    <section className="relative min-h-[70vh] flex flex-col pt-32 md:pt-40 overflow-hidden font-tajawal rtl">
+    <section className="relative min-h-[60vh] flex flex-col pt-36 md:pt-44 overflow-hidden font-tajawal rtl bg-background">
       {/* Background Decorative Elements */}
       <div className="absolute top-0 right-0 w-1/3 h-full bg-primary/5 -skew-x-12 translate-x-1/2 pointer-events-none" />
       <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-secondary/10 rounded-full blur-3xl pointer-events-none" />
@@ -75,7 +75,7 @@ const Hero = () => {
                 <span className="text-secondary italic">أصل المستورد</span>
               </h1>
               <p className="text-base md:text-xl text-muted-foreground max-w-xl leading-relaxed font-medium">
-                أكبر تشكيلة في مصر من الشوكولاتة، الكاندي، القهوة، والاسناكس العالمية الفاخرة. ننتقي لكم أجود الماركات التي تحبونها بأفضل العروض والأسعار، في 7 فروع تخدمكم بالقاهرة والإسكندرية.
+                أكبر تشكيلة في مصر من الشوكولاتة، الكاندي، القهوة، والاسناكس العالمية الفاخرة، ونفخر بتوفير جميع أصناف سويس فرو (SWISS FRU) وبكميات في جميع فروعنا. اطلب من أي فرع جملة أو تجزئة بأفضل الأسعار.
               </p>
             </div>
 

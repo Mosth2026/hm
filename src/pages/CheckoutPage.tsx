@@ -337,7 +337,7 @@ const CheckoutPage = () => {
                                             <Button
                                                 type="submit"
                                                 disabled={isSubmitting}
-                                                className="w-full bg-saada-red hover:bg-saada-brown text-white py-8 text-xl rounded-xl shadow-lg transition-all hover:scale-[1.01]"
+                                                className="w-full bg-saada-red hover:bg-saada-brown text-white py-6 md:py-8 text-lg md:text-xl rounded-xl shadow-lg transition-all hover:scale-[1.01]"
                                             >
                                                 {isSubmitting ? (
                                                     <>
@@ -358,7 +358,7 @@ const CheckoutPage = () => {
                                                 type="button"
                                                 onClick={handleWhatsAppSubmit}
                                                 disabled={isSubmitting}
-                                                className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white py-8 text-xl rounded-xl shadow-lg transition-all hover:scale-[1.01] flex items-center justify-center gap-2"
+                                                className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white py-6 md:py-8 text-lg md:text-xl rounded-xl shadow-lg transition-all hover:scale-[1.01] flex items-center justify-center gap-2"
                                             >
                                                 <MessageCircle className="h-6 w-6" />
                                                 أكمل الطلب عبر واتساب
