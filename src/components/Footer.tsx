@@ -10,10 +10,10 @@ const Footer = () => {
       <div className="absolute top-0 right-0 w-1/2 h-full bg-secondary/5 -skew-x-12 translate-x-1/2 pointer-events-none" />
 
       <div className="container mx-auto px-4 md:px-8 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 md:gap-16 mb-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 md:gap-16 mb-20">
 
           {/* Brand Section */}
-          <div className="space-y-6 md:space-y-8 text-center md:text-right lg:col-span-4">
+          <div className="space-y-6 md:space-y-8 text-center md:text-right">
             <Link to="/" className="inline-block transition-transform hover:scale-105 duration-500">
               <img
                 src="/assets/logo.png"
@@ -45,7 +45,7 @@ const Footer = () => {
           </div>
 
           {/* Quick Links */}
-          <div className="space-y-6 md:space-y-8 text-center md:text-right lg:col-span-2">
+          <div className="space-y-6 md:space-y-8 text-center md:text-right">
             <h3 className="text-xl md:text-2xl font-black text-secondary uppercase tracking-widest font-outfit">Sitemap</h3>
             <ul className="space-y-3 md:space-y-4">
               {['الرئيسية', 'المنتجات', 'من نحن', 'اتصل بنا', 'لوحة التحكم'].map((item, idx) => (
@@ -63,7 +63,7 @@ const Footer = () => {
           </div>
 
           {/* Categories */}
-          <div className="space-y-6 md:space-y-8 text-center md:text-right lg:col-span-3">
+          <div className="space-y-6 md:space-y-8 text-center md:text-right">
             <h3 className="text-xl md:text-2xl font-black text-secondary uppercase tracking-widest font-outfit">Luxuries</h3>
             <ul className="space-y-3 md:space-y-4">
               {['الشوكولاتة', 'القهوة', 'المشروبات', 'الكوكيز والبسكويت', 'الكاندي', 'الاسناكس', 'مستحضرات التجميل'].map((item, idx) => (
@@ -81,7 +81,7 @@ const Footer = () => {
           </div>
 
           {/* Contact Info */}
-          <div className="space-y-6 md:space-y-8 text-center md:text-right lg:col-span-3">
+          <div className="space-y-6 md:space-y-8 text-center md:text-right">
             <h3 className="text-xl md:text-2xl font-black text-secondary uppercase tracking-widest font-outfit">Contact</h3>
             <div className="space-y-6">
               <div className="flex flex-col md:flex-row items-center md:items-start gap-4">
@@ -119,7 +119,7 @@ const Footer = () => {
         {/* Branches Section - FULL WIDTH on Desktop for balance */}
         <div className="pt-16 border-t border-white/5 mb-20 text-center md:text-right">
           <h3 className="text-xl md:text-2xl font-black text-secondary uppercase tracking-widest font-outfit mb-8">Our Branches</h3>
-          <div className="flex flex-wrap justify-center md:justify-start lg:justify-center gap-6 lg:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8 lg:gap-16">
             {[
               { name: "فرع الرحاب", info: "السوق القديم بجانب مكتبة الأوائل", phone: "01050005701", map: "https://maps.app.goo.gl/atDFtjPyawmjVF2f7" },
               { name: "فرع المهندسين", info: "تقاطع شارع شهاب مع شارع سوريا", phone: "01050663537", map: "https://maps.app.goo.gl/n8ZGWeHtxUBbdA497" },
@@ -129,7 +129,7 @@ const Footer = () => {
               { name: "فرع مصر الجديدة", info: "24 شارع الميرغني امام النادي", phone: "01050006946", map: "https://maps.app.goo.gl/52u6nSZCBhzigG2v5" },
               { name: "فرع اسكندرية", info: "سان ستيفانو ممر عمارة الاوقاف", phone: "01050663539", map: "https://maps.app.goo.gl/GzcPvygy4inj9dbj7" },
             ].map((branch, idx) => (
-              <div key={idx} className="w-full sm:w-[calc(50%-0.75rem)] md:w-[calc(33.3333%-1rem)] lg:w-[calc(25%-1.5rem)] space-y-1 bg-white/5 p-4 rounded-2xl md:bg-transparent md:p-0">
+              <div key={idx} className="space-y-1 bg-white/5 p-4 rounded-2xl md:bg-transparent md:p-0">
                 <div className="flex items-center justify-center md:justify-start gap-2 text-secondary">
                   <MapPin className="h-4 w-4" />
                   <span className="font-bold">{branch.name}</span>
