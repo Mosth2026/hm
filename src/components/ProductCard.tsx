@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart, Heart, Plus, Star, Share2, MessageCircle, Copy } from "lucide-react";
 import { useCart } from "@/hooks/use-cart";
 import { toast } from "sonner";
-import { cn, cleanProductName, getShareUrl, copyToClipboard } from "@/lib/utils";
+import { cn, cleanProductName, getShareUrl, copyToClipboard, formatPrice } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,

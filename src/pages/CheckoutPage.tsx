@@ -11,6 +11,7 @@ import { Loader2, CheckCircle2, ChevronRight, MapPin, Phone, User, CreditCard, M
 import { Helmet } from "react-helmet-async";
 import { SITE_CONFIG } from "@/lib/constants";
 import { saveOrderToDb } from "@/lib/orders";
+import { formatPrice } from "@/lib/utils";
 import { useAnalytics } from "@/hooks/use-analytics";
 import { useEffect as useReactEffect } from "react";
 
