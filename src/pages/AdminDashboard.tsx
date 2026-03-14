@@ -2573,8 +2573,12 @@ const AdminDashboard = () => {
                                                     <TableCell className="py-4 font-bold">#{order.id}</TableCell>
                                                     <TableCell className="py-4">
                                                         <div className="flex flex-col">
-                                                            <span className="font-bold text-saada-brown">{order.customer_name}</span>
-                                                            <span className="text-xs text-gray-500" dir="ltr">{order.customer_phone}</span>
+                                                            <span className="font-bold text-saada-brown">
+                                                                {["طلب واتساب مباشر", "عميل واتساب (استفسار منتج)", "عميل واتساب سريع (سلة)"].includes(order.customer_name) ? "عميل عبر الواتساب" : order.customer_name}
+                                                            </span>
+                                                            <span className="text-xs text-gray-500" dir="ltr">
+                                                                {["201050663539", "01000000000", "01050663539"].includes(order.customer_phone) ? "يُرجى مراجعة رسالة الواتس اب" : order.customer_phone}
+                                                            </span>
                                                             {order.coupon_code && (
                                                                 <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full mt-1 w-fit font-bold">
                                                                     🎟️ {order.coupon_code}
@@ -2597,7 +2601,7 @@ const AdminDashboard = () => {
                                                             <Button
                                                                 variant="outline"
                                                                 size="sm"
-                                                                onClick={() => window.open(`/order-preview/${order.id}`, '_blank')}
+                                                                onClick={() => window.open(`/order-preview/${order.tracking_code || order.id}`, '_blank')}
                                                                 className="h-9 gap-1 border-saada-brown text-saada-brown hover:bg-saada-brown hover:text-white"
                                                             >
                                                                 <ExternalLink className="h-4 w-4" />

@@ -88,15 +88,13 @@ const OrderTracking = () => {
         }
 
         try {
-            // First attempt to fetch by numeric ID or tracking code
-            let query = supabase.from("orders").select("*");
-            if (!isNaN(Number(orderId))) {
-                query = query.eq("id", orderId);
-            } else {
-                query = query.eq("tracking_code", orderId);
-            }
+            const numericId = !isNaN(Number(orderId)) ? Number(orderId) : -1;
+            const { data: orderData, error: orderErr } = await supabase
+                .from("orders")
+                .select("*")
+                .or(`id.eq.${numericId},tracking_code.eq."${orderId}"`)
+                .single();
 
-            const { data: orderData, error: orderErr } = await query.single();
             if (orderErr) throw orderErr;
             setOrder(orderData);
 
@@ -143,8 +141,10 @@ const OrderTracking = () => {
     // Pre-calculated values for safe render
     const displayTotal = safeFormatPrice(order.total_price);
     const displayDate = safeFormatDate(order.created_at);
-    const customerName = order.customer_name || "عميل صناع السعادة";
-    const customerPhone = order.customer_phone || "المتابعة عبر واتساب";
+    const isBotName = order.customer_name === "طلب واتساب مباشر" || order.customer_name === "عميل واتساب (استفسار منتج)" || order.customer_name === "عميل واتساب سريع (سلة)";
+    const customerName = isBotName ? "عميل عبر الواتساب" : (order.customer_name || "عميل عبر الواتساب");
+    const isStoreNumber = order.customer_phone === "201050663539" || order.customer_phone === "01000000000" || order.customer_phone === "01050663539";
+    const customerPhone = isStoreNumber ? "يُرجى مراجعة رسالة الواتس اب" : (order.customer_phone || "يُرجى مراجعة رسالة الواتس اب");
     const customerAddress = order.customer_address || "عنوان العميل بالرسالة";
 
     return (

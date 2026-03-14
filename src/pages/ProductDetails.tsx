@@ -286,7 +286,7 @@ const ProductDetails = () => {
                       }];
 
                       const result = await saveOrderToDb(
-                        { name: "عميل واتساب (استفسار منتج)", phone: "01000000000" },
+                        { name: user?.username || "عميل عبر الواتساب", phone: "يُرجى مراجعة رسالة الواتس اب" },
                         orderItems,
                         roundedPrice,
                         "pending",
@@ -301,9 +301,10 @@ const ProductDetails = () => {
                       }
 
                       const finalOrderId = result.success ? result.orderId : `DRAFT${Date.now()}`;
+                      const trackingId = result.success ? (result.trackingCode || result.orderId) : finalOrderId;
                       const orderNum = `(رقم #${finalOrderId})`;
 
-                      let invoiceUrl = `${window.location.origin}/order-preview/${finalOrderId}`;
+                      let invoiceUrl = `${window.location.origin}/order-preview/${trackingId}`;
                       if (!result.success) {
                         const itemsParam = `${product.id}-1`;
                         invoiceUrl += `?t=${roundedPrice}&i=${itemsParam}`;

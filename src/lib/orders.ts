@@ -42,7 +42,7 @@ export const saveOrderToDb = async (
         const { data: orders, error: orderError } = await supabase
             .from("orders")
             .insert([orderData])
-            .select();
+            .select("*, tracking_code");
 
         if (orderError) {
             console.error("Supabase Order Insert Error:", orderError);

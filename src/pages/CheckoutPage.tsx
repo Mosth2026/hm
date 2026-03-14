@@ -13,6 +13,7 @@ import { SITE_CONFIG } from "@/lib/constants";
 import { saveOrderToDb } from "@/lib/orders";
 import { formatPrice } from "@/lib/utils";
 import { useAnalytics } from "@/hooks/use-analytics";
+import { useAuth } from "@/hooks/use-auth";
 import { useEffect as useReactEffect } from "react";
 
 const CheckoutPage = () => {
@@ -21,6 +22,7 @@ const CheckoutPage = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
     const { logEvent } = useAnalytics();
+    const { user } = useAuth();
     const [formData, setFormData] = useState({
         name: "",
         phone: "",
@@ -71,6 +73,7 @@ const CheckoutPage = () => {
 
         try {
             let orderId: string | number = `DRAFT${Date.now()}`;
+            let trackingId: string | number = orderId;
             let success = false;
 
             try {
@@ -99,6 +102,7 @@ const CheckoutPage = () => {
 
                 if (result.success) {
                     orderId = result.orderId!;
+                    trackingId = result.trackingCode || result.orderId!;
                     success = true;
                 } else {
                     console.error("Order Save Failed:", result.error);
@@ -118,7 +122,7 @@ const CheckoutPage = () => {
                 return `• *${item.name}*\n  العدد: ${item.quantity}\n  السعر: ${formatPrice(itemTotal)}`;
             }).join('\n\n');
 
-            let invoiceUrl = `${window.location.origin}/order-preview/${orderId}`;
+            let invoiceUrl = `${window.location.origin}/order-preview/${trackingId}`;
             if (!success) {
                 const itemsParam = items.map(i => `${i.id}-${i.quantity}`).join('_');
                 invoiceUrl += `?t=${discountedTotal}&i=${itemsParam}`;

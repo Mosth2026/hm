@@ -177,8 +177,8 @@ const CartPage = () => {
 
                                                     const result = await saveOrderToDb(
                                                         { 
-                                                            name: "عميل واتساب سريع (سلة)", 
-                                                            phone: "01000000000",
+                                                            name: user?.username || "عميل عبر الواتساب", 
+                                                            phone: "يُرجى مراجعة رسالة الواتس اب",
                                                             notes: "تم الطلب مباشرة من صفحة السلة"
                                                         },
                                                         orderItems,
@@ -195,9 +195,10 @@ const CartPage = () => {
                                                     }
 
                                                     const finalOrderId = result.success ? result.orderId : `DRAFT${Date.now()}`;
+                                                    const trackingId = result.success ? (result.trackingCode || result.orderId) : finalOrderId;
                                                     const orderNum = `(رقم #${finalOrderId})`;
 
-                                                    let invoiceUrl = `${window.location.origin}/order-preview/${finalOrderId}`;
+                                                    let invoiceUrl = `${window.location.origin}/order-preview/${trackingId}`;
                                                     if (!result.success) {
                                                         const itemsParam = orderItems.map(i => `${i.id}-${i.quantity}`).join('_');
                                                         invoiceUrl += `?t=${roundedTotal}&i=${itemsParam}`;

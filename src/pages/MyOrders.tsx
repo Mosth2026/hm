@@ -89,7 +89,7 @@ const MyOrders = () => {
                             {orders.map((order) => (
                                 <Link 
                                     key={order.id} 
-                                    to={`/order-tracking/${order.id}`}
+                                    to={`/order-tracking/${order.tracking_code || order.id}`}
                                     className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:border-saada-red/30 transition-all hover:shadow-xl group"
                                 >
                                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

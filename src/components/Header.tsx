@@ -341,7 +341,7 @@ const Header = () => {
                               }));
 
                               const result = await saveOrderToDb(
-                                { name: "طلب واتساب مباشر", phone: SITE_CONFIG.whatsappNumber },
+                                { name: user?.username || "عميل عبر الواتساب", phone: "يُرجى مراجعة رسالة الواتس اب" },
                                 orderItems,
                                 roundedTotal,
                                 "pending",
@@ -351,9 +351,10 @@ const Header = () => {
                               );
 
                               const finalOrderId = result.success ? result.orderId : `DRAFT${Date.now()}`;
+                              const trackingId = result.success ? (result.trackingCode || result.orderId) : finalOrderId;
                               const orderNum = `(رقم #${finalOrderId})`;
 
-                              let invoiceUrl = `${window.location.origin}/order-preview/${finalOrderId}`;
+                              let invoiceUrl = `${window.location.origin}/order-preview/${trackingId}`;
                               if (!result.success) {
                                 const itemsParam = orderItems.map(i => `${i.id}-${i.quantity}`).join('_');
                                 invoiceUrl += `?t=${roundedTotal}&i=${itemsParam}`;
