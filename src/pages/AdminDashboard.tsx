@@ -1971,70 +1971,68 @@ const AdminDashboard = () => {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-saada-brown flex items-center gap-2">
-                            <BarChart className="h-8 w-8 text-saada-red" />
+                        <h1 className="text-2xl md:text-3xl font-bold text-saada-brown flex items-center gap-2">
+                            <BarChart className="h-6 w-6 md:h-8 md:h-8 text-saada-red" />
                             لوحة تحكم صناع السعادة ({username === 'fikry' ? 'مرحبا هشام' : (isAdmin ? 'المدير' : (username.includes('mostafa') ? 'الموظف مصطفى' : (username.includes('hesham') ? 'الموظف هشام' : `الموظف ${user?.username || ''}`)))})
                         </h1>
                         <p className="text-gray-500 mt-1">
                             {isRestrictedStaff ? 'تحديث المخزون، الصور، والأسماء' : (isAdmin ? 'إدارة كاملة للمتجر والمنتجات' : 'صلاحية محدودة لتعديل الصور والأسماء')}
                         </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-row gap-2 md:gap-3 w-full md:w-auto">
                         {isAdmin && (
                             <>
-                                <div className="flex flex-col gap-2">
-                                    <Button
-                                        onClick={() => document.getElementById('excel-import')?.click()}
-                                        className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-12 px-6 text-lg rounded-xl shadow-lg shadow-emerald-200 transition-all font-bold"
-                                    >
-                                        <FileSpreadsheet className="h-5 w-5" />
-                                        رفع طلبية (المخزون والسعر)
-                                    </Button>
-                                    <input
-                                        id="excel-import"
-                                        type="file"
-                                        accept=".xlsx, .xls, .csv"
-                                        className="hidden"
-                                        onChange={handleExcelImport}
-                                    />
-                                    <Button
-                                        onClick={handleCleanupDuplicates}
-                                        variant="outline"
-                                        className="h-10 border-red-200 text-red-600 hover:bg-red-50 rounded-xl font-bold flex gap-2 transition-all active:scale-95"
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                        حل التعارضات (للمدير)
-                                    </Button>
-                                </div>
+                                <Button
+                                    onClick={() => document.getElementById('excel-import')?.click()}
+                                    className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-10 md:h-12 px-4 md:px-6 text-base md:text-lg rounded-xl shadow-lg shadow-emerald-200 transition-all font-bold w-full"
+                                >
+                                    <FileSpreadsheet className="h-4 w-4 md:h-5 md:w-5" />
+                                    رفع طلبية
+                                </Button>
+                                <input
+                                    id="excel-import"
+                                    type="file"
+                                    accept=".xlsx, .xls, .csv"
+                                    className="hidden"
+                                    onChange={handleExcelImport}
+                                />
+                                <Button
+                                    onClick={handleCleanupDuplicates}
+                                    variant="outline"
+                                    className="h-10 md:h-12 border-red-200 text-red-600 hover:bg-red-50 rounded-xl font-bold flex gap-2 transition-all active:scale-95 w-full order-3 sm:order-none"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                    حل التعارضات
+                                </Button>
                             </>
                         )}
-                        {isSpecial && (
-                            <Button onClick={handleAddNew} className="bg-saada-red hover:bg-red-700 text-white gap-2 h-12 px-6 text-lg rounded-xl shadow-lg shadow-red-200 transition-all">
-                                <Plus className="h-5 w-5" />
-                                إضافة منتج جديد
+                            {isSpecial && (
+                            <Button onClick={handleAddNew} className="bg-saada-red hover:bg-red-700 text-white gap-2 h-10 md:h-12 px-4 md:px-6 text-base md:text-lg rounded-xl shadow-lg shadow-red-200 transition-all font-bold w-full">
+                                <Plus className="h-4 w-4 md:h-5 md:w-5" />
+                                إضافة صنف
                             </Button>
                         )}
                         <Button
                             variant="outline"
                             onClick={logout}
-                            className="h-12 border-saada-brown text-saada-brown hover:bg-saada-brown hover:text-white rounded-xl font-bold"
+                            className="h-10 md:h-12 border-saada-brown text-saada-brown hover:bg-saada-brown hover:text-white rounded-xl font-bold w-full"
                         >
                             تسجيل الخروج
                         </Button>
                     </div>
                 </div>
 
-                <div className="flex gap-4 border-b border-gray-200">
+                <div className="flex gap-2 md:gap-4 border-b border-gray-200 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 md:mx-0 md:px-0">
                     <button
                         onClick={() => setActiveTab("products")}
-                        className={`pb-4 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "products" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
+                        className={`pb-4 px-3 md:px-4 font-bold text-base md:text-lg transition-all border-b-2 whitespace-nowrap ${activeTab === "products" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
                     >
                         إدارة المنتجات
                     </button>
                     {(isAdmin || isRestrictedStaff) && (
                         <button
                             onClick={() => setActiveTab("orders")}
-                            className={`pb-4 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "orders" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
+                            className={`pb-4 px-3 md:px-4 font-bold text-base md:text-lg transition-all border-b-2 whitespace-nowrap ${activeTab === "orders" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
                         >
                             إدارة الطلبات
                         </button>
@@ -2042,7 +2040,7 @@ const AdminDashboard = () => {
                     {(isAdmin || isRestrictedStaff) && (
                         <button
                             onClick={() => setActiveTab("analytics")}
-                            className={`pb-4 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "analytics" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
+                            className={`pb-4 px-3 md:px-4 font-bold text-base md:text-lg transition-all border-b-2 whitespace-nowrap ${activeTab === "analytics" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
                         >
                             التقارير والإحصائيات
                         </button>
@@ -2050,7 +2048,7 @@ const AdminDashboard = () => {
                     {isAdmin && (
                         <button
                             onClick={() => setActiveTab("coupons")}
-                            className={`pb-4 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "coupons" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
+                            className={`pb-4 px-3 md:px-4 font-bold text-base md:text-lg transition-all border-b-2 whitespace-nowrap ${activeTab === "coupons" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
                         >
                             أكواد الخصم
                         </button>
@@ -2058,7 +2056,7 @@ const AdminDashboard = () => {
                     {isSuperAdmin && (
                         <button
                             onClick={() => setActiveTab("logs")}
-                            className={`pb-4 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "logs" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
+                            className={`pb-4 px-3 md:px-4 font-bold text-base md:text-lg transition-all border-b-2 whitespace-nowrap ${activeTab === "logs" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
                         >
                             سجل التعديلات
                         </button>
@@ -2066,7 +2064,7 @@ const AdminDashboard = () => {
                     {isSuperAdmin && (
                         <button
                             onClick={() => setActiveTab("subscribers")}
-                            className={`pb-4 px-4 font-bold text-lg transition-all border-b-2 ${activeTab === "subscribers" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
+                            className={`pb-4 px-3 md:px-4 font-bold text-base md:text-lg transition-all border-b-2 whitespace-nowrap ${activeTab === "subscribers" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
                         >
                             قائمة المشتركين
                         </button>
@@ -2223,14 +2221,14 @@ const AdminDashboard = () => {
                                     onClick={() => setActiveFilter("ready")}
                                     className={`border-none shadow-lg overflow-hidden cursor-pointer transition-all hover:scale-[1.01] ${activeFilter === "ready" ? "ring-2 ring-saada-red" : "bg-gradient-to-r from-emerald-600 to-teal-700 text-white"} `}
                                 >
-                                    <CardContent className="p-6 flex items-center justify-between">
-                                        <div className="flex items-center gap-6">
-                                            <div className="h-16 w-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
-                                                <Camera className="h-8 w-8 text-white" />
+                                    <CardContent className="p-4 md:p-6 flex flex-col md:flex-row items-center md:items-center justify-between gap-4">
+                                        <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 text-center md:text-right">
+                                            <div className="h-12 w-12 md:h-16 md:w-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                                                <Camera className="h-6 w-6 md:h-8 md:w-8 text-white" />
                                             </div>
                                             <div>
-                                                <h3 className={`text-xl font-black ${activeFilter === "ready" ? "text-saada-brown" : "text-white"}`}>أصناف متوفرة (ليها رصيد) وبانتظار التصوير</h3>
-                                                <p className={`${activeFilter === "ready" ? "text-gray-500" : "text-white/80"} font-medium mt-1`}>يوجد {stats.readyToShot} صنف متاح للبيع حالياً ولكنهم مخفيين عن العملاء لعدم وجود صور.</p>
+                                                <h3 className={`text-lg md:text-xl font-black ${activeFilter === "ready" ? "text-saada-brown" : "text-white"}`}>أصناف متوفرة وبانتظار التصوير</h3>
+                                                <p className={`${activeFilter === "ready" ? "text-gray-500" : "text-white/80"} text-sm md:text-base font-medium mt-1`}>يوجد {stats.readyToShot} صنف متاح للبيع حالياً ولكنهم مخفيين لعدم وجود صور.</p>
                                             </div>
                                         </div>
                                         <div className="text-right flex flex-col items-end gap-2">
@@ -2279,23 +2277,23 @@ const AdminDashboard = () => {
                                     onClick={() => setIsConflictResolverOpen(true)}
                                     className="border-none shadow-lg overflow-hidden cursor-pointer transition-all hover:scale-[1.01] bg-gradient-to-r from-amber-500 to-orange-600 text-white"
                                 >
-                                    <CardContent className="p-6 flex items-center justify-between">
-                                        <div className="flex items-center gap-6">
-                                            <div className="h-16 w-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
-                                                <AlertCircle className="h-8 w-8 text-white" />
+                                    <CardContent className="p-4 md:p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+                                        <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 text-center md:text-right">
+                                            <div className="h-12 w-12 md:h-16 md:w-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
+                                                <AlertCircle className="h-6 w-6 md:h-8 md:w-8 text-white" />
                                             </div>
                                             <div>
-                                                <h3 className="text-xl font-black text-white">تحذير: يوجد أصناف مكررة (نفس الباركود أو الاسم)</h3>
-                                                <p className="text-white/80 font-medium mt-1">وجدنا {conflictProducts.length} مجموعة من المنتجات المكررة التي تحتاج للدمج لضمان دقة الرصيد.</p>
+                                                <h3 className="text-lg md:text-xl font-black text-white">يوجد أصناف مكررة (نفس الباركود)</h3>
+                                                <p className="text-white/80 text-sm md:text-base font-medium mt-1">وجدنا {conflictProducts.length} مجموعة مكررة تحتاج للدمج.</p>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <div className="flex items-center gap-3">
-                                                <span className="text-4xl font-black text-white">{conflictProducts.length}</span>
+                                        <div className="text-center md:text-right w-full md:w-auto">
+                                            <div className="flex flex-col md:flex-row items-center gap-3 justify-center md:justify-end">
+                                                <span className="text-3xl md:text-4xl font-black text-white">{conflictProducts.length}</span>
                                                 <Button
                                                     size="sm"
                                                     variant="secondary"
-                                                    className="h-10 bg-white text-orange-600 hover:bg-orange-50 font-bold px-6 rounded-xl shadow-lg"
+                                                    className="h-10 bg-white text-orange-600 hover:bg-orange-50 font-bold px-6 rounded-xl shadow-lg w-full md:w-auto"
                                                 >
                                                     حل التعارضات الآن
                                                 </Button>
