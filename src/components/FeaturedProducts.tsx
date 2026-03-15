@@ -32,13 +32,13 @@ const FeaturedProducts = () => {
         style={{ backgroundImage: 'radial-gradient(#222319 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
 
       <div className="container mx-auto px-4 relative z-10">
-        <div className="flex flex-col md:flex-row items-end justify-between mb-16 gap-8">
-          <div className="text-right space-y-4 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 text-secondary text-xs font-black uppercase tracking-widest">
+        <div className="flex flex-col items-center justify-center text-center mb-16 gap-6">
+          <div className="space-y-4">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 text-secondary text-xs font-black uppercase tracking-widest mx-auto">
               <Sparkles className="h-3 w-3" />
               Elite Collection
             </div>
-            <h2 className="text-4xl md:text-5xl font-black text-primary leading-tight">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-primary leading-tight">
               مختارات <span className="text-secondary italic">حصرية</span> <br />
               تتناسب مع ذوقك الرفيع
             </h2>

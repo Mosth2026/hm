@@ -123,20 +123,6 @@ const Hero = () => {
               </Button>
             </div>
 
-            <div className="grid grid-cols-3 gap-4 md:gap-8 pt-8 border-t border-primary/5">
-              <div>
-                <h4 className="text-2xl md:text-3xl font-black text-primary">+150</h4>
-                <p className="text-[10px] md:text-sm text-muted-foreground font-bold">علامة تجارية</p>
-              </div>
-              <div>
-                <h4 className="text-2xl md:text-3xl font-black text-primary">100%</h4>
-                <p className="text-[10px] md:text-sm text-muted-foreground font-bold">أصالة وجودة</p>
-              </div>
-              <div>
-                <h4 className="text-2xl md:text-3xl font-black text-primary">+15</h4>
-                <p className="text-[10px] md:text-sm text-muted-foreground font-bold">عام من الخبرة</p>
-              </div>
-            </div>
           </div>
 
           {/* Image Section / Carousel */}
@@ -170,44 +156,64 @@ const Hero = () => {
                 </div>
 
                 <div 
-                  className="absolute -left-4 md:-left-12 bottom-10 md:bottom-1/4 z-30 bg-primary/90 text-white p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-2xl border border-white/10 animate-float cursor-pointer hover:scale-110 hover:bg-secondary transition-all group/cart"
-                  onClick={(e) => handleQuickAdd(e, currentProduct)}
-                >
-                  <div className="flex items-center gap-2 md:gap-4">
-                    <div className="h-8 w-8 md:h-12 md:w-12 bg-white/10 rounded-xl flex items-center justify-center">
-                      <ShoppingCart className="h-4 w-4 md:h-6 md:w-6" />
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between gap-2 md:gap-4">
-                        <p className="text-[9px] md:text-xs text-white/60 font-bold">الأكثر طلباً</p>
-                        <p className="text-secondary font-black bg-white/10 px-1.5 py-0.5 rounded-lg text-xs">{formatPrice(currentProduct.price)}</p>
-                      </div>
-                      <p className="text-white font-black text-xs md:text-base truncate max-w-[120px] md:max-w-none">{cleanProductName(currentProduct.name)}</p>
-                    </div>
-                  </div>
-                </div>
+                   className="absolute -left-4 md:-left-12 bottom-10 md:bottom-1/4 z-30 bg-primary/90 text-white p-3 md:p-6 rounded-2xl md:rounded-3xl shadow-2xl border border-white/10 animate-float cursor-pointer hover:scale-110 hover:bg-secondary transition-all group/cart"
+                   onClick={(e) => handleQuickAdd(e, currentProduct)}
+                 >
+                   <div className="flex items-center gap-2 md:gap-4">
+                     <div className="h-8 w-8 md:h-12 md:w-12 bg-white/10 rounded-xl flex items-center justify-center">
+                       <ShoppingCart className="h-4 w-4 md:h-6 md:w-6" />
+                     </div>
+                     <div>
+                       <div className="flex items-center justify-between gap-2 md:gap-4">
+                         <p className="text-[9px] md:text-xs text-white/60 font-bold">الأكثر طلباً</p>
+                         <p className="text-secondary font-black bg-white/10 px-1.5 py-0.5 rounded-lg text-xs">{formatPrice(currentProduct.price)}</p>
+                       </div>
+                       <p className="text-white font-black text-xs md:text-base truncate max-w-[120px] md:max-w-none">{cleanProductName(currentProduct.name)}</p>
+                     </div>
+                   </div>
+                 </div>
 
-                {/* Dots Indicator */}
-                {featuredProducts.length <= 15 && (
-                  <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 z-40 flex gap-2">
-                    {featuredProducts.map((_, i) => (
-                      <button
-                        key={i}
-                        onClick={() => setCurrentIndex(i)}
-                        className={cn(
-                          "h-1.5 md:h-2 rounded-full transition-all duration-500",
-                          i === currentIndex ? "w-6 md:w-8 bg-secondary" : "w-1.5 md:w-2 bg-primary/20"
-                        )}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="h-[300px] md:h-[550px] w-full bg-primary/5 rounded-[2.5rem] md:rounded-[3rem] flex items-center justify-center">
-                <Loader2 className="h-12 w-12 animate-spin text-secondary" />
-              </div>
-            )}
+                 {/* Dots Indicator */}
+                 {featuredProducts.length <= 15 && (
+                   <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 z-40 flex gap-2">
+                     {featuredProducts.map((_, i) => (
+                       <button
+                         key={i}
+                         onClick={() => setCurrentIndex(i)}
+                         className={cn(
+                           "h-1.5 md:h-2 rounded-full transition-all duration-500",
+                           i === currentIndex ? "w-6 md:w-8 bg-secondary" : "w-1.5 md:w-2 bg-primary/20"
+                         )}
+                       />
+                     ))}
+                   </div>
+                 )}
+               </div>
+             ) : (
+               <div className="h-[300px] md:h-[550px] w-full bg-primary/5 rounded-[2.5rem] md:rounded-[3rem] flex items-center justify-center">
+                 <Loader2 className="h-12 w-12 animate-spin text-secondary" />
+               </div>
+             )}
+           </div>
+         </div>
+
+        {/* Stats Section - Moved out of grid for better full-width balance */}
+        <div className="mt-16 md:mt-24 pt-12 border-t border-primary/5">
+          <div className="grid grid-cols-3 md:flex md:justify-center items-center gap-6 md:gap-24">
+            <div className="text-center space-y-1">
+              <h4 className="text-2xl md:text-5xl font-black text-primary tracking-tighter">150+</h4>
+              <p className="text-[9px] md:text-sm text-muted-foreground font-black uppercase tracking-[0.2em]">علامة تجارية</p>
+            </div>
+            <div className="h-12 w-px bg-primary/10 hidden md:block" />
+            <div className="text-center space-y-1">
+              <h4 className="text-2xl md:text-5xl font-black text-primary tracking-tighter">100%</h4>
+              <p className="text-[9px] md:text-sm text-muted-foreground font-black uppercase tracking-[0.2em]">أصالة وجودة</p>
+            </div>
+            <div className="h-12 w-px bg-primary/10 hidden md:block" />
+            <div className="text-center space-y-1">
+              <h4 className="text-2xl md:text-5xl font-black text-primary tracking-tighter">15+</h4>
+              <p className="text-[9px] md:text-sm text-muted-foreground font-black uppercase tracking-[0.2em]">عام من الخبرة</p>
+            </div>
           </div>
         </div>
       </div>
