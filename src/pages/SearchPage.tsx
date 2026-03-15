@@ -93,16 +93,26 @@ const SearchPage = () => {
             <div className="min-h-screen flex flex-col">
                 <Header />
                 <main className="flex-grow bg-gray-50 font-tajawal rtl pt-28 md:pt-40">
-                    <div className="container mx-auto px-4 pb-12">
-                        <div className="flex items-center gap-3 mb-8">
-                            <div className="bg-saada-red/10 p-3 rounded-xl">
-                                <Search className="h-6 w-6 text-saada-red" />
-                            </div>
-                            <div>
-                                <h1 className="text-2xl font-bold text-saada-brown">نتائج البحث</h1>
-                                <p className="text-gray-500 text-sm">تبحث عن: "{query}"</p>
+                    {/* Page Header */}
+                    <div className="relative py-12 md:py-20 bg-primary/5 overflow-hidden mb-8">
+                        <div className="absolute top-0 right-0 w-1/3 h-full bg-secondary/5 -skew-x-12 translate-x-1/2 pointer-events-none" />
+                        <div className="container mx-auto px-4 md:px-8 relative z-10">
+                            <div className="max-w-4xl mx-auto text-center space-y-4 md:space-y-6">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 text-secondary text-[10px] font-black uppercase tracking-widest mx-auto">
+                                    <Search className="h-3 w-3" />
+                                    مساعد البحث الذكي
+                                </div>
+                                <h1 className="text-4xl md:text-6xl font-black text-primary leading-tight">
+                                    نتائج البحث
+                                </h1>
+                                <p className="text-muted-foreground text-lg md:text-xl font-medium max-w-2xl mx-auto leading-relaxed">
+                                    تبحث عن: <span className="text-secondary italic">"{query}"</span>
+                                </p>
                             </div>
                         </div>
+                    </div>
+
+                    <div className="container mx-auto px-4 pb-12">
 
                         {isLoading ? (
                             <div className="flex justify-center py-20">

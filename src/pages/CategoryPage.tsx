@@ -71,18 +71,18 @@ const CategoryPage = () => {
         <main className="flex-grow pt-32 md:pt-40">
 
           {/* Page Header */}
-          <div className="relative py-10 md:py-14 bg-primary/5 overflow-hidden">
+          <div className="relative py-12 md:py-20 bg-primary/5 overflow-hidden">
             <div className="absolute top-0 right-0 w-1/3 h-full bg-secondary/5 -skew-x-12 translate-x-1/2 pointer-events-none" />
             <div className="container mx-auto px-4 md:px-8 relative z-10">
-              <div className="max-w-3xl space-y-4">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 text-secondary text-[10px] font-black uppercase tracking-widest">
+              <div className="max-w-4xl mx-auto text-center space-y-4 md:space-y-6">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 text-secondary text-[10px] font-black uppercase tracking-widest mx-auto">
                   <Sparkles className="h-3 w-3" />
                   Elite Collection
                 </div>
-                <h1 className="text-4xl md:text-6xl font-black text-primary leading-tight">
+                <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-primary leading-tight">
                   {categoryName}
                 </h1>
-                <p className="text-muted-foreground text-lg md:text-xl font-medium max-w-2xl leading-relaxed">
+                <p className="text-muted-foreground text-lg md:text-xl font-medium max-w-3xl mx-auto leading-relaxed">
                   استكشف عالم الجودة والمذاق الاستثنائي مع تشكيلتنا المختارة بعناية من {categoryName}.
                 </p>
               </div>
