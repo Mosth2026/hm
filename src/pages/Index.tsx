@@ -7,7 +7,7 @@ import Features from "@/components/Features";
 import Testimonials from "@/components/Testimonials";
 import Newsletter from "@/components/Newsletter";
 import LuxuryExperience from "@/components/LuxuryExperience";
-import TrustBanner from "@/components/TrustBanner";
+
 import SocialBanner from "@/components/SocialBanner";
 import { Helmet } from "react-helmet-async";
 
@@ -61,7 +61,7 @@ const Index = () => {
         <Header />
         <main className="flex-grow">
           <Hero />
-          <TrustBanner />
+
           <FeaturedProducts />
           <Features />
           <SocialBanner />
