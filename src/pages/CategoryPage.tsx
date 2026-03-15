@@ -1,4 +1,4 @@
-
+import { useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -31,6 +31,21 @@ const categoryNames: Record<string, string> = {
 const CategoryPage = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
   const { data: products, isLoading, error } = useProducts(categoryId);
+  const [sortBy, setSortBy] = useState<string>("newest");
+
+  const sortedProducts = useMemo(() => {
+    if (!products) return [];
+    let result = [...products];
+    if (sortBy === "price-asc") {
+      result.sort((a, b) => a.price - b.price);
+    } else if (sortBy === "price-desc") {
+      result.sort((a, b) => b.price - a.price);
+    } else {
+      // Default: newest (assuming ID or created_at corresponds to newest)
+      result.sort((a, b) => b.id - a.id);
+    }
+    return result;
+  }, [products, sortBy]);
 
   const categoryName = categoryId ? categoryNames[categoryId] || categoryId : "";
 
@@ -146,10 +161,25 @@ const CategoryPage = () => {
                     </DropdownMenuContent>
                   </DropdownMenu>
 
-                  <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/5 hover:bg-primary/10 transition-colors text-sm font-black text-primary h-10">
-                    <Filter className="h-4 w-4" />
-                    تصفية النتائج
-                  </button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/5 hover:bg-primary/10 transition-colors text-sm font-black text-primary h-10">
+                        <Filter className="h-4 w-4" />
+                        {sortBy === "newest" ? "الأحدث" : sortBy === "price-asc" ? "الأقل سعراً" : "الأعلى سعراً"}
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl border-primary/10 shadow-2xl font-tajawal rtl">
+                      <DropdownMenuItem onClick={() => setSortBy("newest")} className="rounded-xl gap-2 cursor-pointer focus:bg-primary focus:text-white font-bold py-3">
+                        ترتيب حسب: الأحدث
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSortBy("price-asc")} className="rounded-xl gap-2 cursor-pointer focus:bg-primary focus:text-white font-bold py-3">
+                        السعر: من الأقل للأعلى
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setSortBy("price-desc")} className="rounded-xl gap-2 cursor-pointer focus:bg-primary focus:text-white font-bold py-3">
+                        السعر: من الأعلى للأقل
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
 
@@ -157,9 +187,9 @@ const CategoryPage = () => {
                 <div className="text-center py-24 bg-destructive/5 rounded-[3rem] border border-destructive/10">
                   <p className="text-xl font-black text-destructive">عذراً، حدث خطأ أثناء تحميل المنتجات.</p>
                 </div>
-              ) : products && products.length > 0 ? (
+              ) : sortedProducts && sortedProducts.length > 0 ? (
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
-                  {products.map((product, idx) => (
+                  {sortedProducts.map((product, idx) => (
                     <div
                       key={product.id}
                       className="animate-in fade-in slide-in-from-bottom-8 duration-500 fill-mode-both"

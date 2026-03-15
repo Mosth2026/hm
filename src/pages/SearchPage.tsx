@@ -1,12 +1,18 @@
-
+import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ProductCard from "@/components/ProductCard";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, Filter } from "lucide-react";
 import { Helmet } from "react-helmet-async";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 import { useAuth } from "@/hooks/use-auth";
 import { SITE_CONFIG } from "@/lib/constants";
@@ -16,6 +22,7 @@ const SearchPage = () => {
     const query = searchParams.get("q") || "";
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin' || user?.role === 'editor';
+    const [sortBy, setSortBy] = useState<string>("newest");
 
     const { data: products, isLoading } = useQuery({
         queryKey: ["search", query, isAdmin],
@@ -113,6 +120,29 @@ const SearchPage = () => {
                     </div>
 
                     <div className="container mx-auto px-4 pb-12">
+                        {/* Toolbar */}
+                        <div className="flex items-center justify-between mb-8 py-4 border-b border-primary/5">
+                            <p className="text-sm font-bold text-muted-foreground italic">نتائج البحث: {products?.length || 0} منتج</p>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/5 hover:bg-primary/10 transition-colors text-sm font-black text-primary h-10">
+                                        <Filter className="h-4 w-4" />
+                                        {sortBy === "newest" ? "الأحدث" : sortBy === "price-asc" ? "الأقل سعراً" : "الأعلى سعراً"}
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl border-primary/10 shadow-2xl font-tajawal rtl">
+                                    <DropdownMenuItem onClick={() => setSortBy("newest")} className="rounded-xl gap-2 cursor-pointer focus:bg-primary focus:text-white font-bold py-3">
+                                        ترتيب حسب: الأحدث
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setSortBy("price-asc")} className="rounded-xl gap-2 cursor-pointer focus:bg-primary focus:text-white font-bold py-3">
+                                        السعر: من الأقل للأعلى
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setSortBy("price-desc")} className="rounded-xl gap-2 cursor-pointer focus:bg-primary focus:text-white font-bold py-3">
+                                        السعر: من الأعلى للأقل
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
 
                         {isLoading ? (
                             <div className="flex justify-center py-20">
@@ -120,7 +150,11 @@ const SearchPage = () => {
                             </div>
                         ) : products && products.length > 0 ? (
                             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-                                {products.map((product: any) => (
+                                {[...products].sort((a, b) => {
+                                    if (sortBy === "price-asc") return a.price - b.price;
+                                    if (sortBy === "price-desc") return b.price - a.price;
+                                    return b.id - a.id;
+                                }).map((product: any) => (
                                     <ProductCard
                                         key={product.id}
                                         {...product}
