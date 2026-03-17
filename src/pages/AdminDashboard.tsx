@@ -1488,8 +1488,8 @@ const AdminDashboard = () => {
                         const currentPrice = dbProduct?.price || 0;
                         const currentDesc = dbProduct?.description || '';
 
-                        // 1. تحديث الرصيد (فقط إذا اختلف)
-                        if (stockValue !== null && stockValue !== currentStock) {
+                        // 1. تحديث الرصيد (فقط إذا اختلف) - يتم تجاهله في شيت البدون ضريبة
+                        if (!isExemptImport && stockValue !== null && stockValue !== currentStock) {
                             updateData.stock = stockValue;
                             hasChanges = true;
 
@@ -1499,8 +1499,8 @@ const AdminDashboard = () => {
                             }
                         }
 
-                        // 2. تحديث السعر (المنطق المحاسبي الذكي لمنع الضريبة المزدوجة)
-                        if (priceValue !== null && user?.username !== 'mostafa') {
+                        // 2. تحديث السعر - يتم تجاهله في شيت البدون ضريبة
+                        if (!isExemptImport && priceValue !== null && user?.username !== 'mostafa') {
                             let excelPrice = parseFloat(String(priceValue).replace(/[^0-9.]/g, ''));
                             if (!isNaN(excelPrice) && excelPrice > 0) {
                                 let finalCalculatedPrice = excelPrice;
@@ -1566,7 +1566,7 @@ const AdminDashboard = () => {
                                         product_id: productId,
                                         old_stock: currentStock,
                                         new_stock: updateData.stock,
-                                        change: updateData.stock - currentStock
+                                        change: (updateData.stock || 0) - currentStock
                                     }
                                 });
 
