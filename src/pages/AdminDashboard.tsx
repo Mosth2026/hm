@@ -793,6 +793,7 @@ const AdminDashboard = () => {
         { id: "snacks", label: "الاسناكس" },
         { id: "cosmetics", label: "مستحضرات التجميل" },
         { id: "gifts", label: "صناديق الهدايا" },
+        { id: "no-tax", label: "بدون ضريبة" },
     ];
 
     useEffect(() => {
@@ -803,6 +804,14 @@ const AdminDashboard = () => {
     }, [searchQuery, activeFilter, selectedCategoryLabel]);
 
     const fetchProducts = async () => {
+        // Silent category check to prevent FK errors
+        try {
+            const { data: catCheck } = await supabase.from('categories').select('id').eq('id', 'no-tax').single();
+            if (!catCheck) {
+                await supabase.from('categories').insert([{ id: 'no-tax', label: 'بدون ضريبة' }]);
+            }
+        } catch (e) { }
+
         setLoading(true);
         let query = supabase.from("products").select("*");
 
@@ -1254,6 +1263,16 @@ const AdminDashboard = () => {
                 const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
                 if (data.length === 0) return toast.error("المحتوى فارغ");
 
+                // Ensure 'no-tax' exists before processing
+                if (isExemptImport) {
+                    try {
+                        const { data: catCheck } = await supabase.from('categories').select('id').eq('id', 'no-tax').single();
+                        if (!catCheck) {
+                            await supabase.from('categories').insert([{ id: 'no-tax', label: 'بدون ضريبة' }]);
+                        }
+                    } catch (e) { }
+                }
+
                 const fetchAllDbProducts = async () => {
                     let allData: any[] = [];
                     let from = 0;
@@ -1604,7 +1623,7 @@ const AdminDashboard = () => {
                             toInsert.push({
                                 name: excelName.trim(),
                                 price: finalItemPrice,
-                                stock: finalItemStock,
+                                stock: isExemptImport ? 0 : finalItemStock,
                                 category_id: newCatId,
                                 category_name: catObj ? catObj.label : (newCatId === 'no-tax' ? 'بدون ضريبة' : 'الاسناكس'),
                                 description: description,
@@ -1613,6 +1632,10 @@ const AdminDashboard = () => {
                                 is_new: true
                             });
                         }
+                    } else if (isExemptImport && excelName) {
+                        // Special case for tax-exempt import: if product not found and no price, 
+                        // we can't create it properly, so we just log or ignore.
+                        // But if it has a barcode, we might want to create it with 0 price/stock as a placeholder.
                     }
                 }
 
