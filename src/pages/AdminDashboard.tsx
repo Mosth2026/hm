@@ -840,7 +840,7 @@ const AdminDashboard = () => {
         } else if (activeFilter === "categories" && selectedCategoryLabel) {
             query = query.eq('category_name', selectedCategoryLabel);
         } else if (activeFilter === "no-tax") {
-            query = query.ilike('description', '%[TAX_EXEMPT]%');
+            query = query.or('description.ilike.%[TAX_EXEMPT]%,category_id.eq.no-tax');
         } else if (activeFilter === "ready") {
             query = query.gte("stock", 1).or('image.is.null,image.eq.,image.ilike.%unsplash%');
         }
@@ -869,16 +869,8 @@ const AdminDashboard = () => {
                     noTax = true;
                 }
 
-                // Strip technical tags for a cleaner dashboard view
-                name = name.replace(/\[TAX_EXEMPT\]/g, '').trim();
-                description = description.replace(/\[TAX_EXEMPT\]/g, '').trim();
-                category_name = category_name.replace(/\[TAX_EXEMPT\]/g, '').trim();
-
                 return {
                     ...p,
-                    name,
-                    description,
-                    category_name,
                     no_tax: noTax,
                     expiry_date: p.expiry_date || null
                 };
@@ -909,7 +901,7 @@ const AdminDashboard = () => {
                 supabase.from('products').select('*', { count: 'exact', head: true }).eq('stock', 0).not('image', 'ilike', '%unsplash.com%').not('image', 'is', null).neq('image', '').neq('image', PLACEHOLDER_IMAGE).not('description', 'ilike', '%[DRAFT]%'),
                 supabase.from('products').select('*', { count: 'exact', head: true }).eq('stock', 0).or('image.is.null,image.eq.,image.ilike.%unsplash%').not('description', 'ilike', '%[DRAFT]%'),
                 supabase.from('products').select('*', { count: 'exact', head: true }).gte('stock', 1).gt('price', 0).not('image', 'ilike', '%unsplash.com%').not('image', 'is', null).neq('image', '').neq('image', PLACEHOLDER_IMAGE).not('description', 'ilike', '%[DRAFT]%'),
-                supabase.from('products').select('*', { count: 'exact', head: true }).ilike('description', '%[TAX_EXEMPT]%'),
+                supabase.from('products').select('*', { count: 'exact', head: true }).or('description.ilike.%[TAX_EXEMPT]%,category_id.eq.no-tax'),
                 supabase.from('products').select('*', { count: 'exact', head: true }).gte('stock', 1).or('image.is.null,image.eq.,image.ilike.%unsplash%').not('description', 'ilike', '%[DRAFT]%'),
                 supabase.from('products').select('*', { count: 'exact', head: true }).ilike('description', '%[DRAFT]%'),
                 supabase.from('products').select('price, stock, updated_at'),
@@ -1824,6 +1816,40 @@ const AdminDashboard = () => {
         );
     }
 
+    const handleRepairTaxTags = async () => {
+        const toastId = toast.loading("جاري فحص وإصلاح أرصدة الضرائب...");
+        try {
+            const { data, error } = await supabase
+                .from('products')
+                .select('id, name, description, category_id')
+                .eq('category_id', 'no-tax');
+            
+            if (error) throw error;
+            
+            let repairedCount = 0;
+            const updates = (data || []).map(p => {
+                const desc = p.description || '';
+                if (!desc.includes('[TAX_EXEMPT]')) {
+                    repairedCount++;
+                    return { id: p.id, description: `${desc} [TAX_EXEMPT]`.trim() };
+                }
+                return null;
+            }).filter(u => u !== null);
+            
+            if (updates.length > 0) {
+                for (const up of updates) {
+                    await supabase.from('products').update({ description: up!.description }).eq('id', up!.id);
+                }
+                toast.success(`تم إصلاح ${repairedCount} صنف وإعادتهم لقائمة "بدون ضريبة"`, { id: toastId });
+                fetchProducts();
+            } else {
+                toast.info("جميع الأصناف في هذه الفئة سليمة ولها العلامة البرمجية", { id: toastId });
+            }
+        } catch (err: any) {
+            toast.error("فشل الإصلاح التلقائي", { description: err.message, id: toastId });
+        }
+    };
+
     const handleCleanupDuplicates = async () => {
         if (!confirm("هل أنت متأكد من حذف المنتجات المكررة؟ سيتم استخدام نظام 'المطابقة الذكية' الذي يكتشف المكررات حتى لو اختلف ترتيب الكلمات أو أضيفت أوزان وأحجام مختلفة.")) return;
 
@@ -2003,6 +2029,14 @@ const AdminDashboard = () => {
                                 >
                                     <Trash2 className="h-4 w-4" />
                                     حل التعارضات
+                                </Button>
+                                <Button
+                                    onClick={handleRepairTaxTags}
+                                    variant="outline"
+                                    className="h-10 md:h-12 border-orange-200 text-orange-600 hover:bg-orange-50 rounded-xl font-bold flex gap-2 transition-all active:scale-95 w-full order-3 sm:order-none"
+                                >
+                                    <Percent className="h-4 w-4" />
+                                    إصلاح الضرائب
                                 </Button>
                             </>
                         )}
@@ -2451,7 +2485,7 @@ const AdminDashboard = () => {
                                                                 </div>
                                                                 <div className="flex flex-col">
                                                                     <span className="font-medium text-gray-900 group-hover:text-saada-red transition-colors flex items-center gap-2">
-                                                                        {p.name}
+                                                                        {p.name.replace(/\[TAX_EXEMPT\]/g, '').replace(/\[DRAFT\]/g, '').trim()}
                                                                         {updatedSessionIds.includes(p.id) && (
                                                                             <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.5 rounded font-bold">مُلحق</span>
                                                                         )}
@@ -2467,7 +2501,7 @@ const AdminDashboard = () => {
                                                         </TableCell>
                                                         <TableCell className="py-4">
                                                             <span className="text-xs font-mono text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-100">
-                                                                {p.description?.includes('باركود:') ? p.description.split('باركود:')[1].trim() : '-'}
+                                                                {p.description?.includes('باركود:') ? p.description.split('باركود:')[1].replace('[TAX_EXEMPT]', '').replace('[DRAFT]', '').trim() : '-'}
                                                             </span>
                                                         </TableCell>
                                                         <TableCell className="py-4">
