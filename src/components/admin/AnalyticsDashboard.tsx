@@ -25,9 +25,20 @@ import {
     ArrowUpRight,
     ArrowDownRight,
     Clock,
-    MessageCircle
+    MessageCircle,
+    Calendar,
+    Search,
+    ChevronLeft,
+    ChevronRight,
+    MapPin
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase";
 
 const COLORS = ['#8b1538', '#f31b3e', '#222319', '#fbbf24', '#10b981', '#3b82f6'];
@@ -46,6 +57,9 @@ const AnalyticsDashboard = () => {
     const [abandonedCarts, setAbandonedCarts] = useState<any[]>([]);
     const [recentOrders, setRecentOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isVisitorModalOpen, setIsVisitorModalOpen] = useState(false);
+    const [visitorLogs, setVisitorLogs] = useState<any[]>([]);
+    const [todayCount, setTodayCount] = useState(0);
 
     useEffect(() => {
         fetchAnalytics();
@@ -87,9 +101,29 @@ const AnalyticsDashboard = () => {
                     .select('*')
                     .order('created_at', { ascending: false });
 
-                if (events) {
-                    const sessions = new Set(events.filter(e => e.event_type === 'session_start').map(e => e.session_id)).size;
+                    const sessionEvents = events.filter(e => e.event_type === 'session_start');
+                    const sessionIds = new Set(sessionEvents.map(e => e.session_id));
+                    const sessionsCount = sessionIds.size;
                     const carts = events.filter(e => e.event_type === 'add_to_cart').length;
+
+                    // Calculate Today's Visitors
+                    const startOfToday = new Date();
+                    startOfToday.setHours(0, 0, 0, 0);
+                    
+                    const todaySessions = new Set(
+                        sessionEvents
+                            .filter(e => new Date(e.created_at).getTime() >= startOfToday.getTime())
+                            .map(e => e.session_id)
+                    ).size;
+
+                    // Process unique sessions for the logs (taking the earliest event per session)
+                    const uniqueSessionsMap = new Map();
+                    sessionEvents.forEach(e => {
+                        if (!uniqueSessionsMap.has(e.session_id)) {
+                            uniqueSessionsMap.set(e.session_id, e);
+                        }
+                    });
+                    const processedVisitorLogs = Array.from(uniqueSessionsMap.values());
 
                     // Abandoned Carts Recovery
                     const completedSessions = new Set(events.filter(e => e.event_type === 'order_complete' || e.event_type === 'whatsapp_checkout_complete').map(e => e.session_id));
@@ -107,11 +141,13 @@ const AnalyticsDashboard = () => {
                         totalSales: total,
                         ordersCount: count,
                         customersCount: uniquePhones,
-                        visitorsCount: sessions,
+                        visitorsCount: sessionsCount,
                         cartsCount: carts,
-                        conversionRate: sessions ? ((count / sessions) * 100).toFixed(1) : 0
+                        conversionRate: sessionsCount ? ((count / sessionsCount) * 100).toFixed(1) : 0
                     });
 
+                    setTodayCount(todaySessions);
+                    setVisitorLogs(processedVisitorLogs);
                     setAbandonedCarts(abandoned);
                 }
 
@@ -152,15 +188,27 @@ const AnalyticsDashboard = () => {
                     </CardContent>
                 </Card>
 
-                <Card className="bg-white border-none shadow-sm hover:shadow-md transition-shadow group overflow-hidden relative">
+                <Card 
+                    className="bg-white border-none shadow-sm hover:shadow-lg transition-all group overflow-hidden relative cursor-pointer active:scale-95"
+                    onClick={() => setIsVisitorModalOpen(true)}
+                >
                     <div className="absolute top-0 right-0 w-2 h-full bg-blue-500" />
                     <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                             <div className="space-y-1">
                                 <p className="text-sm text-gray-400 font-bold">زوار الموقع</p>
-                                <h3 className="text-3xl font-black text-saada-brown tracking-tight">{stats.visitorsCount}</h3>
+                                <div className="flex items-baseline gap-2">
+                                    <h3 className="text-3xl font-black text-saada-brown tracking-tight">{stats.visitorsCount}</h3>
+                                    <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-bold">
+                                        اليوم: {todayCount}
+                                    </span>
+                                </div>
+                                <p className="text-[10px] text-blue-400 font-bold flex items-center gap-1 mt-1">
+                                    <Clock className="h-3 w-3" />
+                                    اضغط للتفاصيل بالوقت والتاريخ
+                                </p>
                             </div>
-                            <div className="h-14 w-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+                            <div className="h-14 w-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm">
                                 <Users className="h-7 w-7" />
                             </div>
                         </div>
@@ -317,6 +365,83 @@ const AnalyticsDashboard = () => {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Visitor Details Modal */}
+            <Dialog open={isVisitorModalOpen} onOpenChange={setIsVisitorModalOpen}>
+                <DialogContent className="max-w-2xl bg-white rounded-3xl p-0 overflow-hidden font-tajawal rtl max-h-[85vh] flex flex-col" dir="rtl">
+                    <DialogHeader className="p-6 bg-blue-600 text-white">
+                        <div className="flex items-center justify-between">
+                            <DialogTitle className="text-2xl font-black flex items-center gap-3">
+                                <Users className="h-7 w-7" />
+                                سجل زوار الموقع
+                            </DialogTitle>
+                            <div className="flex gap-2">
+                                <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-bold">إجمالي: {stats.visitorsCount}</span>
+                                <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-bold">اليوم: {todayCount}</span>
+                            </div>
+                        </div>
+                    </DialogHeader>
+
+                    <div className="p-0 overflow-y-auto flex-grow bg-gray-50/50">
+                        <table className="w-full text-right">
+                            <thead className="sticky top-0 bg-white shadow-sm z-10">
+                                <tr className="text-[10px] text-gray-400 font-black uppercase tracking-widest border-b border-gray-100">
+                                    <th className="p-4 font-black">التوقيت</th>
+                                    <th className="p-4 font-black">التاريخ</th>
+                                    <th className="p-4 font-black">رقم الجلسة</th>
+                                    <th className="p-4 font-black">الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {visitorLogs.map((log, idx) => {
+                                    const date = new Date(log.created_at);
+                                    const isToday = date.toDateString() === new Date().toDateString();
+                                    return (
+                                        <tr key={idx} className={`hover:bg-blue-50/30 transition-colors ${isToday ? 'bg-blue-50/10' : ''}`}>
+                                            <td className="p-4">
+                                                <span className="text-sm font-black text-saada-brown">
+                                                    {date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                                                </span>
+                                            </td>
+                                            <td className="p-4">
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-bold text-gray-600">
+                                                        {date.toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                                    </span>
+                                                    {isToday && <span className="text-[9px] text-blue-600 font-black">اليوم</span>}
+                                                </div>
+                                            </td>
+                                            <td className="p-4">
+                                                <span className="text-[10px] font-mono text-gray-400 bg-gray-100 px-2 py-1 rounded">
+                                                    {log.session_id?.substring(0, 12)}...
+                                                </span>
+                                            </td>
+                                            <td className="p-4">
+                                                <div className="flex items-center gap-2">
+                                                    <div className={`h-1.5 w-1.5 rounded-full ${isToday ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'}`} />
+                                                    <span className="text-[10px] font-bold text-gray-500">نشط</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                        {visitorLogs.length === 0 && (
+                            <div className="p-20 text-center opacity-30">
+                                <Activity className="h-10 w-10 mx-auto mb-2" />
+                                <p className="font-bold">لا توجد بيانات مسجلة</p>
+                            </div>
+                        )}
+                    </div>
+                    
+                    <div className="p-4 bg-gray-50 border-t border-gray-100 text-center">
+                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter italic">
+                            يتم احتساب الزوار بناءً على الجلسات الفريدة (Unique Sessions) المسجلة في قاعدة البيانات
+                        </p>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
