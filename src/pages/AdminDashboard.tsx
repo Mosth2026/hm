@@ -1358,12 +1358,11 @@ const AdminDashboard = () => {
                     const rowKeys = Object.keys(row);
 
                     const findKey = (keywords: string[]) => {
-                        for (const kw of keywords) {
-                            const nKw = normalize(kw);
-                            const match = rowKeys.find(k => normalize(k) === nKw);
-                            if (match) return match;
-                        }
-                        return null;
+                        const normalizedKeywords = keywords.map(kw => normalize(kw).replace(/^ال/, ''));
+                        return rowKeys.find(k => {
+                            const nK = normalize(k).replace(/^ال/, '');
+                            return normalizedKeywords.includes(nK);
+                        }) || null;
                     };
 
                     const idKey = findKey(['id', 'ID', 'م', 'مسلسل']);
@@ -1691,7 +1690,7 @@ const AdminDashboard = () => {
                 // --- PHASE 3: THE TOTAL PURGE (Master Sync) ---
                 let toZeroStockIds: number[] = [];
                 let toDeleteIds: number[] = [];
-                const isFullSync = confirm("هل تود تصفير مخزون أي صنف غير موجود في ملف الإكسيل؟ (مزامنة كاملة للمتجر)\n\nاختر 'إلغاء' إذا كنت ترفع طلبية جديدة فقط ولا تريد التأثير على باقي الأصناف الموجودة.");
+                const isFullSync = isExemptImport ? false : confirm("هل تود تصفير مخزون أي صنف غير موجود في ملف الإكسيل؟ (مزامنة كاملة للمتجر)\n\nاختر 'إلغاء' إذا كنت ترفع طلبية جديدة فقط ولا تريد التأثير على باقي الأصناف الموجودة.");
 
                 if (isFullSync) {
                     const untouchedProducts = dbProducts.filter(p => !importedIds.has(p.id));
