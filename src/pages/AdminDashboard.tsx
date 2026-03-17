@@ -236,21 +236,25 @@ const AdminDashboard = () => {
         if (selectedProductIds.length === 0 || !bulkCategoryId) return;
         const toastId = toast.loading("جاري تحديث الأقسام...");
         try {
-            const cat = categories.find(c => c.id === bulkCategoryId);
+            const catIds = bulkCategoryId.split(',').filter(Boolean);
+            const catLabels = catIds.map(id => categories.find(c => c.id === id)?.label).filter(Boolean).join(', ');
+            const searchableCategoryName = `${catLabels} [IDS:${catIds.join(',')}]`;
+
             const { error } = await supabase
                 .from('products')
                 .update({
-                    category_id: bulkCategoryId,
-                    category_name: cat ? cat.label : bulkCategoryId
+                    category_id: catIds[0] || null,
+                    category_name: searchableCategoryName
                 })
                 .in('id', selectedProductIds);
 
             if (error) throw error;
             toast.success(`تم تحديث القسم لـ ${selectedProductIds.length} صنف`, { id: toastId });
-            logAction('bulk_edit_category', { count: selectedProductIds.length, new_category: bulkCategoryId });
+            logAction('bulk_edit_category', { count: selectedProductIds.length, new_categories: bulkCategoryId });
             setSelectedProductIds([]);
             fetchProducts();
             setIsBulkCategoryOpen(false);
+            setBulkCategoryId("");
         } catch (err: any) {
             toast.error("فشل التحديث الجماعي", { description: err.message, id: toastId });
         }
@@ -830,11 +834,20 @@ const AdminDashboard = () => {
     }, [searchQuery, activeFilter, selectedCategoryLabel]);
 
     const fetchProducts = async () => {
-        // Silent category check to prevent FK errors
+        // Silent category check to prevent FK errors for all hardcoded categories
         try {
-            const { data: catCheck } = await supabase.from('categories').select('id').eq('id', 'no-tax').single();
-            if (!catCheck) {
-                await supabase.from('categories').insert([{ id: 'no-tax', label: 'بدون ضريبة' }]);
+            const missingCats = [];
+            for (const cat of categories) {
+                missingCats.push({ id: cat.id, label: cat.label });
+            }
+            // Include no-tax as well
+            missingCats.push({ id: 'no-tax', label: 'بدون ضريبة' });
+
+            for (const cat of missingCats) {
+                const { data: exists } = await supabase.from('categories').select('id').eq('id', cat.id).single();
+                if (!exists) {
+                    await supabase.from('categories').insert([cat]);
+                }
             }
         } catch (e) { }
 
@@ -905,8 +918,20 @@ const AdminDashboard = () => {
                     noTax = true;
                 }
 
+                // Extract multi-category IDs if stored in searchable category_name
+                let actualCatId = p.category_id || '';
+                const idMatch = category_name.match(/\[IDS:(.*?)\]/);
+                if (idMatch && idMatch[1]) {
+                    actualCatId = idMatch[1];
+                }
+
+                // Clean display label (remove [IDS:...])
+                const displayCatName = category_name.replace(/\s*\[IDS:.*?\]/, '');
+
                 return {
                     ...p,
+                    category_id: actualCatId,
+                    category_name: displayCatName,
                     no_tax: noTax,
                     expiry_date: p.expiry_date || null
                 };
@@ -1243,12 +1268,16 @@ const AdminDashboard = () => {
         }
 
         const { no_tax, ...cleanUpdateFields } = updateFields;
+        
+        // Use a searchable format that includes labels and hidden IDs to bypass FK constraint while allowing multi-category filtering
+        const searchableCategoryName = `${catLabels} [IDS:${catIds.join(',')}]`;
+        
         const productData = {
             ...cleanUpdateFields,
             description: finalDescription,
             price: Number(Number(updateFields.price).toFixed(2)),
-            category_id: currentProduct.category_id, // This now contains comma-separated IDs
-            category_name: catLabels || (currentProduct.category_name || '')
+            category_id: catIds[0] || null, // Only store the first ID to satisfy the FK constraint
+            category_name: searchableCategoryName
         };
         let error;
         if (isNew) {
@@ -3086,7 +3115,7 @@ const AdminDashboard = () => {
                                 <Label className="text-saada-brown font-bold">تعدد الأقسام (يمكنك اختيار أكثر من قسم)</Label>
                                 <div className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded-2xl border border-gray-100">
                                     {categories.map(cat => {
-                                        const isSelected = (currentProduct.category_id || '').split(',').includes(cat.id);
+                                        const isSelected = (currentProduct.category_id || '').split(',').map(s => s.trim()).filter(Boolean).includes(cat.id);
                                         return (
                                             <Button
                                                 key={cat.id}
@@ -3094,7 +3123,7 @@ const AdminDashboard = () => {
                                                 variant={isSelected ? "default" : "outline"}
                                                 size="sm"
                                                 onClick={() => {
-                                                    let ids = (currentProduct.category_id || '').split(',').filter(Boolean);
+                                                    let ids = (currentProduct.category_id || '').split(',').map(s => s.trim()).filter(Boolean);
                                                     if (isSelected) {
                                                         ids = ids.filter(id => id !== cat.id);
                                                     } else {
@@ -3474,18 +3503,30 @@ const AdminDashboard = () => {
                         </p>
                     </DialogHeader>
                     <div className="py-6 space-y-4" dir="rtl">
-                        <Label className="font-bold block text-right">اختر القسم الجديد</Label>
-                        <div className="grid grid-cols-2 gap-2">
-                            {categories.map(cat => (
-                                <Button
-                                    key={cat.id}
-                                    variant={bulkCategoryId === cat.id ? "default" : "outline"}
-                                    onClick={() => setBulkCategoryId(cat.id)}
-                                    className={`h-12 rounded-xl text-sm font-bold transition-all ${bulkCategoryId === cat.id ? 'bg-indigo-600 text-white shadow-lg' : ''}`}
-                                >
-                                    {cat.label}
-                                </Button>
-                            ))}
+                        <Label className="font-bold block text-right">اختر الأقسام الجديدة (يمكنك اختيار أكثر من واحد)</Label>
+                        <div className="flex flex-wrap gap-2 justify-end">
+                            {categories.map(cat => {
+                                const isSelected = (bulkCategoryId || '').split(',').map(s => s.trim()).filter(Boolean).includes(cat.id);
+                                return (
+                                    <Button
+                                        key={cat.id}
+                                        variant={isSelected ? "default" : "outline"}
+                                        onClick={() => {
+                                            let ids = (bulkCategoryId || '').split(',').map(s => s.trim()).filter(Boolean);
+                                            if (isSelected) {
+                                                ids = ids.filter(id => id !== cat.id);
+                                            } else {
+                                                ids.push(cat.id);
+                                            }
+                                            setBulkCategoryId(ids.join(','));
+                                        }}
+                                        className={`h-10 rounded-xl px-4 text-xs font-bold transition-all ${isSelected ? 'bg-indigo-600 text-white shadow-md' : 'bg-white hover:bg-indigo-50'}`}
+                                    >
+                                        {isSelected && <Check className="h-3 w-3 ml-1" />}
+                                        {cat.label}
+                                    </Button>
+                                );
+                            })}
                         </div>
                     </div>
                     <DialogFooter className="gap-2 sm:gap-0 flex-row-reverse">

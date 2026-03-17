@@ -29,35 +29,33 @@ const processProduct = (p: any, isAdmin: boolean): Product => {
     let name = p.name || '';
     let category_name = p.category_name || '';
 
-    if (description.includes('[TAX_EXEMPT]') || name.includes('[TAX_EXEMPT]') || category_name.includes('[TAX_EXEMPT]')) {
-        noTax = true;
+    // Extract multi-category IDs if stored in searchable category_name
+    const idMatch = category_name.match(/\[IDS:(.*?)\]/);
+    let actualCatId = p.category_id || '';
+    if (idMatch && idMatch[1]) {
+        actualCatId = idMatch[1];
     }
-
-    // Always strip it out for everyone from all visible fields
+    
+    // Clean display name (remove [IDS:...])
+    category_name = category_name.replace(/\s*\[IDS:.*?\]/g, '').replace(/\[TAX_EXEMPT\]/g, '').trim();
     description = description.replace(/\[TAX_EXEMPT\]/g, '').trim();
     name = name.replace(/\[TAX_EXEMPT\]/g, '').trim();
-    category_name = category_name.replace(/\[TAX_EXEMPT\]/g, '').trim();
 
     if (!isAdmin) {
         description = description.replace(/باركود\s*:\s*\d+/g, '').trim();
     }
 
     let expiryDate = p.expiry_date || null;
-
-    // Rule: Mention expiry only if it's valid, has stock, and is current (for customers)
     if (!isAdmin && expiryDate) {
         const now = new Date();
         const expiry = new Date(expiryDate);
-        const isPast = expiry.getTime() < now.getTime();
-        const hasNoStock = (p.stock || 0) <= 0;
-
-        if (isPast || hasNoStock) {
+        if (expiry.getTime() < now.getTime() || (p.stock || 0) <= 0) {
             expiryDate = null;
         }
     }
 
     // For customers, completely hide the category if it reflects internal accounting state like "no-tax"
-    if (!isAdmin && (category_name === 'بدون ضريبة' || p.category_id === 'no-tax')) {
+    if (!isAdmin && (category_name === 'بدون ضريبة' || p.category_id === 'no-tax' || actualCatId.includes('no-tax'))) {
         category_name = '';
     }
 
@@ -66,6 +64,7 @@ const processProduct = (p: any, isAdmin: boolean): Product => {
         name,
         description,
         category_name,
+        category_id: actualCatId,
         no_tax: noTax,
         expiry_date: expiryDate
     };
