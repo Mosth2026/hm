@@ -136,6 +136,7 @@ const AdminDashboard = () => {
     const [lifecycleProduct, setLifecycleProduct] = useState<Product | null>(null);
     const [lifecycleData, setLifecycleData] = useState<any[]>([]);
     const [lifecycleLoading, setLifecycleLoading] = useState(false);
+    const [isExemptImport, setIsExemptImport] = useState(false);
 
     const logAction = async (action: string, details: any = {}, productId?: number) => {
         try {
@@ -1477,7 +1478,7 @@ const AdminDashboard = () => {
 
                         // For tax calculation on existing products, use Excel category if provided, otherwise stick to DB category
                         const currentCatId = excelCatId || dbProduct.category_id;
-                        const isExempt = (currentCatId === 'no-tax') ||
+                        const isExempt = isExemptImport || (currentCatId === 'no-tax') ||
                             dbProduct.description?.includes('[TAX_EXEMPT]') ||
                             (excelCatId === 'no-tax');
 
@@ -1515,6 +1516,19 @@ const AdminDashboard = () => {
                                     updateData.price = finalCalculatedPrice;
                                     hasChanges = true;
                                 }
+                            }
+                        }
+
+                        if (isExemptImport) {
+                            const desc = updateData.description !== undefined ? updateData.description : currentDesc;
+                            if (!desc.includes('[TAX_EXEMPT]')) {
+                                updateData.description = `${desc} [TAX_EXEMPT]`.trim();
+                                hasChanges = true;
+                            }
+                            if (!updateData.category_id && dbProduct.category_id !== 'no-tax') {
+                                updateData.category_id = 'no-tax';
+                                updateData.category_name = 'بدون ضريبة';
+                                hasChanges = true;
                             }
                         }
 
@@ -1571,9 +1585,9 @@ const AdminDashboard = () => {
                         }
                     } else if (excelName && (excelCode || (priceValue !== null && parseFloat(String(priceValue)) > 0))) {
                         let price = priceValue ? parseFloat(String(priceValue).replace(/[^0-9.]/g, '')) : 0;
-                        const newCatId = finalCatId || 'snacks';
+                        const newCatId = isExemptImport ? 'no-tax' : (finalCatId || 'snacks');
                         if (price > 0) {
-                            const isExempt = (newCatId === 'no-tax');
+                            const isExempt = isExemptImport || (newCatId === 'no-tax');
                             if (!isExempt) {
                                 price = price * 1.14;
                             }
@@ -1583,13 +1597,18 @@ const AdminDashboard = () => {
                             const finalItemPrice = Number(price.toFixed(2));
                             const finalItemStock = stockValue || 0;
 
+                            let description = excelCode ? (isDraft ? `باركود: ${excelCode} [DRAFT]` : `باركود: ${excelCode}`) : (isDraft ? '[DRAFT]' : '');
+                            if (isExempt && !description.includes('[TAX_EXEMPT]')) {
+                                description = `${description} [TAX_EXEMPT]`.trim();
+                            }
+
                             toInsert.push({
                                 name: excelName.trim(),
                                 price: finalItemPrice,
                                 stock: finalItemStock,
                                 category_id: newCatId,
-                                category_name: catObj ? catObj.label : 'الاسناكس',
-                                description: excelCode ? (isDraft ? `باركود: ${excelCode} [DRAFT]` : `باركود: ${excelCode}`) : (isDraft ? '[DRAFT]' : ''),
+                                category_name: catObj ? catObj.label : (newCatId === 'no-tax' ? 'بدون ضريبة' : 'الاسناكس'),
+                                description: description,
                                 image: PLACEHOLDER_IMAGE,
                                 is_featured: false,
                                 is_new: true
@@ -1748,6 +1767,7 @@ const AdminDashboard = () => {
                         duration: 15000
                     });
                 }
+                setIsExemptImport(false);
                 fetchProducts();
             } catch (err: any) {
                 console.error("Excel Import Error:", err);
@@ -2009,11 +2029,18 @@ const AdminDashboard = () => {
                         {isAdmin && (
                             <>
                                 <Button
-                                    onClick={() => document.getElementById('excel-import')?.click()}
+                                    onClick={() => { setIsExemptImport(false); document.getElementById('excel-import')?.click(); }}
                                     className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-10 md:h-12 px-4 md:px-6 text-base md:text-lg rounded-xl shadow-lg shadow-emerald-200 transition-all font-bold w-full"
                                 >
                                     <FileSpreadsheet className="h-4 w-4 md:h-5 md:w-5" />
                                     رفع طلبية
+                                </Button>
+                                <Button
+                                    onClick={() => { setIsExemptImport(true); document.getElementById('excel-import')?.click(); }}
+                                    className="bg-amber-600 hover:bg-amber-700 text-white gap-2 h-10 md:h-12 px-4 md:px-6 text-base md:text-lg rounded-xl shadow-lg shadow-amber-200 transition-all font-bold w-full"
+                                >
+                                    <Percent className="h-4 w-4 md:h-5 md:w-5" />
+                                    رفع شيت (بدون ضريبة)
                                 </Button>
                                 <input
                                     id="excel-import"
