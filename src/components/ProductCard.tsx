@@ -212,11 +212,21 @@ const ProductCard = ({
       {/* Content Container */}
       <div className="p-2 md:p-4 flex-grow flex flex-col space-y-1.5 md:space-y-2">
         <div className="flex items-center justify-between">
-          <Link to={`/categories/${categoryId}`}>
-            <span className="text-[10px] uppercase tracking-wider font-black text-secondary bg-secondary/10 px-2 py-0.5 rounded-md">
-              {category}
-            </span>
-          </Link>
+        {category && (
+          <div className="flex flex-wrap gap-1">
+            {category.split(',').map((catName, idx) => {
+              const ids = categoryId.split(',');
+              const catId = ids[idx] || ids[0];
+              return (
+                <Link key={idx} to={`/categories/${catId.trim()}`}>
+                  <span className="text-[10px] uppercase tracking-wider font-black text-secondary bg-secondary/10 px-2 py-0.5 rounded-md">
+                    {catName.trim()}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        )}
           <div className="flex items-center gap-1">
             <Star className="h-3 w-3 fill-secondary text-secondary" />
             <span className="text-[10px] font-bold text-muted-foreground">4.8</span>

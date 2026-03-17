@@ -56,6 +56,11 @@ const processProduct = (p: any, isAdmin: boolean): Product => {
         }
     }
 
+    // For customers, completely hide the category if it reflects internal accounting state like "no-tax"
+    if (!isAdmin && (category_name === 'بدون ضريبة' || p.category_id === 'no-tax')) {
+        category_name = '';
+    }
+
     return {
         ...p,
         name,
@@ -87,7 +92,7 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean) => {
             }
 
             if (categoryId && categoryId !== 'all') {
-                query = query.or(`category_id.eq.${categoryId},category_name.eq.${categoryId}`);
+                query = query.or(`category_id.ilike.%${categoryId}%,category_name.ilike.%${categoryId}%`);
             }
 
             if (isFeatured) {

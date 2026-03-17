@@ -136,6 +136,8 @@ const AdminDashboard = () => {
     const [lifecycleProduct, setLifecycleProduct] = useState<Product | null>(null);
     const [lifecycleData, setLifecycleData] = useState<any[]>([]);
     const [lifecycleLoading, setLifecycleLoading] = useState(false);
+    const [isBulkCategoryOpen, setIsBulkCategoryOpen] = useState(false);
+    const [bulkCategoryId, setBulkCategoryId] = useState("");
     const [isExemptImport, setIsExemptImport] = useState(false);
 
     const logAction = async (action: string, details: any = {}, productId?: number) => {
@@ -186,16 +188,17 @@ const AdminDashboard = () => {
                 "الباركود": p.description?.includes('باركود:') ? p.description.split('باركود:')[1].trim().replace('[TAX_EXEMPT]', '').replace('[DRAFT]', '').trim() : "",
                 "القسم": p.category_name,
                 "السعر": p.price,
-                "المخزون": p.stock,
+                "المخزون الحالي": p.stock,
+                "تاريخ الصلاحية": p.expiry_date || "-",
             };
 
-            // إضافة عمود المباع فقط إذا كنا في قسم مبيعات الجرد
+            // إضافة أعمدة الجرد والمبيعات في حال كان الفلتر 'daily' نشطاً
             if (activeFilter === "daily") {
-                row["المباع (الفرق)"] = stats.salesQuantities[p.id] || 0;
-                row["إجمالي القيمة"] = (stats.salesQuantities[p.id] || 0) * p.price;
+                row["الفرق (المباع)"] = stats.salesQuantities[p.id] || 0;
+                row["قيمة المبيعات"] = (stats.salesQuantities[p.id] || 0) * p.price;
             }
 
-            row["الحالة"] = p.description?.includes('[DRAFT]') ? 'مسودة' : ((p.stock ?? 0) > 0 ? 'نشط' : 'منتهي');
+            row["الحالة"] = p.description?.includes('[DRAFT]') ? 'مسودة' : ((p.stock ?? 0) > 0 ? 'نشط' : 'منتهي (رصيد صفر)');
             return row;
         });
 
@@ -226,6 +229,30 @@ const AdminDashboard = () => {
             logAction('bulk_delete_products', { count: selectedProductIds.length, ids: [...selectedProductIds] });
             setSelectedProductIds([]);
             fetchProducts();
+        }
+    };
+
+    const handleBulkCategoryUpdate = async () => {
+        if (selectedProductIds.length === 0 || !bulkCategoryId) return;
+        const toastId = toast.loading("جاري تحديث الأقسام...");
+        try {
+            const cat = categories.find(c => c.id === bulkCategoryId);
+            const { error } = await supabase
+                .from('products')
+                .update({
+                    category_id: bulkCategoryId,
+                    category_name: cat ? cat.label : bulkCategoryId
+                })
+                .in('id', selectedProductIds);
+
+            if (error) throw error;
+            toast.success(`تم تحديث القسم لـ ${selectedProductIds.length} صنف`, { id: toastId });
+            logAction('bulk_edit_category', { count: selectedProductIds.length, new_category: bulkCategoryId });
+            setSelectedProductIds([]);
+            fetchProducts();
+            setIsBulkCategoryOpen(false);
+        } catch (err: any) {
+            toast.error("فشل التحديث الجماعي", { description: err.message, id: toastId });
         }
     };
 
@@ -793,7 +820,6 @@ const AdminDashboard = () => {
         { id: "snacks", label: "الاسناكس" },
         { id: "cosmetics", label: "مستحضرات التجميل" },
         { id: "gifts", label: "صناديق الهدايا" },
-        { id: "no-tax", label: "بدون ضريبة" },
     ];
 
     useEffect(() => {
@@ -848,7 +874,7 @@ const AdminDashboard = () => {
         } else if (activeFilter === "value") {
             query = query.gt('price', 100);
         } else if (activeFilter === "categories" && selectedCategoryLabel) {
-            query = query.eq('category_name', selectedCategoryLabel);
+            query = query.ilike('category_name', `%${selectedCategoryLabel}%`);
         } else if (activeFilter === "no-tax") {
             query = query.or('description.ilike.%[TAX_EXEMPT]%,category_id.eq.no-tax');
         } else if (activeFilter === "ready") {
@@ -1045,8 +1071,8 @@ const AdminDashboard = () => {
             name: "",
             price: 0,
             stock: 0,
-            category_id: "snacks",
-            category_name: "الاسناكس",
+            category_id: "",
+            category_name: "",
             image: PLACEHOLDER_IMAGE,
             is_featured: false,
             is_new: false,
@@ -1204,7 +1230,11 @@ const AdminDashboard = () => {
 
     const handleSave = async () => {
         const isNew = !currentProduct.id;
-        const cat = categories.find(c => c.id === currentProduct.category_id);
+        
+        // Handle Multiple Categories Mapping
+        const catIds = (currentProduct.category_id || '').split(',').filter(Boolean);
+        const catLabels = catIds.map(id => categories.find(c => c.id === id)?.label).filter(Boolean).join(', ');
+        
         const { id, created_at, ...updateFields } = currentProduct;
 
         let finalDescription = (updateFields.description || '').replace('[TAX_EXEMPT]', '').trim();
@@ -1217,7 +1247,8 @@ const AdminDashboard = () => {
             ...cleanUpdateFields,
             description: finalDescription,
             price: Number(Number(updateFields.price).toFixed(2)),
-            category_name: cat ? cat.label : (currentProduct.category_name || '')
+            category_id: currentProduct.category_id, // This now contains comma-separated IDs
+            category_name: catLabels || (currentProduct.category_name || '')
         };
         let error;
         if (isNew) {
@@ -1391,6 +1422,7 @@ const AdminDashboard = () => {
                     const catKey = findKey(['category', 'القسم', 'التصنيف', 'نوع', 'Category']);
 
                     const totalStockKey = findKey(['total_quantity', 'total_quan', 'الكمية', 'Quantity', 'المخزون', 'الرصيد', 'الجرد']);
+                    const expiryKey = findKey(['expiry', 'صلاحية', 'تاريخ', 'Expiry']);
                     const branchKeywords = ['صناع السعاده', 'سان ستيفانو'];
                     const foundBranchKeys = branchKeywords.filter(bk => rowKeys.some(rk => normalize(rk) === normalize(bk)));
 
@@ -1536,21 +1568,21 @@ const AdminDashboard = () => {
                                 }
                             }
                         }
-
                         if (isExemptImport) {
                             const desc = updateData.description !== undefined ? updateData.description : currentDesc;
                             if (!desc.includes('[TAX_EXEMPT]')) {
                                 updateData.description = `${desc} [TAX_EXEMPT]`.trim();
                                 hasChanges = true;
                             }
-                            if (!updateData.category_id && dbProduct.category_id !== 'no-tax') {
-                                updateData.category_id = 'no-tax';
-                                updateData.category_name = 'بدون ضريبة';
-                                hasChanges = true;
-                            }
+                        }
+                        // 3. تحديث تاريخ الصلاحية
+                        const excelExpiry = getRowValue(row, expiryKey);
+                        if (excelExpiry && excelExpiry !== dbProduct?.expiry_date) {
+                            updateData.expiry_date = excelExpiry;
+                            hasChanges = true;
                         }
 
-                        // 3. تحديث القسم (فقط إذا اختلف وطلبنا ذلك صراحة في الإكسيل)
+                        // 4. تحديث القسم (فقط إذا اختلف وطلبنا ذلك صراحة في الإكسيل)
                         // الحماية: لا يتم نقل المنتج الموجود مسبقاً بناءً على "التخمين التلقائي" (Guessed) لمنع أخطاء مثل Toybox
                         if (excelCatId && excelCatId !== dbProduct?.category_id) {
                             updateData.category_id = excelCatId;
@@ -1603,7 +1635,7 @@ const AdminDashboard = () => {
                         }
                     } else if (excelName && (excelCode || (priceValue !== null && parseFloat(String(priceValue)) > 0))) {
                         let price = priceValue ? parseFloat(String(priceValue).replace(/[^0-9.]/g, '')) : 0;
-                        const newCatId = isExemptImport ? 'no-tax' : (finalCatId || 'snacks');
+                        const newCatId = (finalCatId || 'snacks');
                         if (price > 0) {
                             const isExempt = isExemptImport || (newCatId === 'no-tax');
                             if (!isExempt) {
@@ -1620,16 +1652,19 @@ const AdminDashboard = () => {
                                 description = `${description} [TAX_EXEMPT]`.trim();
                             }
 
+                            const excelExpiry = getRowValue(row, expiryKey);
+
                             toInsert.push({
                                 name: excelName.trim(),
                                 price: finalItemPrice,
                                 stock: isExemptImport ? 0 : finalItemStock,
                                 category_id: newCatId,
-                                category_name: catObj ? catObj.label : (newCatId === 'no-tax' ? 'بدون ضريبة' : 'الاسناكس'),
+                                category_name: catObj ? catObj.label : 'الاسناكس',
                                 description: description,
                                 image: PLACEHOLDER_IMAGE,
                                 is_featured: false,
-                                is_new: true
+                                is_new: true,
+                                expiry_date: excelExpiry || null
                             });
                         }
                     } else if (isExemptImport && excelName) {
@@ -2434,6 +2469,9 @@ const AdminDashboard = () => {
                                                         استعادة للنشط
                                                     </Button>
                                                 )}
+                                                <Button size="sm" variant="outline" className="h-7 px-3 text-[10px] border-indigo-300 text-indigo-700 bg-indigo-50 hover:bg-indigo-100" onClick={() => setIsBulkCategoryOpen(true)}>
+                                                    تعديل القسم
+                                                </Button>
                                             </div>
                                         )}
                                         {updatedSessionIds.length > 0 && selectedProductIds.length === 0 && (
@@ -2554,9 +2592,13 @@ const AdminDashboard = () => {
                                                             </span>
                                                         </TableCell>
                                                         <TableCell className="py-4">
-                                                            <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
-                                                                {p.category_name}
-                                                            </span>
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {(p.category_name || '').split(',').map((cat, idx) => (
+                                                                    <span key={idx} className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-bold">
+                                                                        {cat.trim()}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
                                                         </TableCell>
                                                         <TableCell className="py-4 font-bold text-gray-900">{formatPrice(p.price)}</TableCell>
                                                         <TableCell className="py-4">
@@ -3040,22 +3082,36 @@ const AdminDashboard = () => {
                                 </div>
                             )}
 
-                            <div className="space-y-2">
-                                <Label htmlFor="category">القسم</Label>
-                                <Select
-                                    value={currentProduct.category_id}
-                                    onValueChange={(val) => setCurrentProduct({ ...currentProduct, category_id: val })}
-                                >
-                                    <SelectTrigger className="h-11 rounded-xl">
-                                        <SelectValue placeholder="اختر القسم" />
-                                    </SelectTrigger>
-                                    <SelectContent className="bg-white">
-                                        {categories.map(cat => (
-                                            <SelectItem key={cat.id} value={cat.id}>{cat.label}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                             <div className="space-y-3">
+                                <Label className="text-saada-brown font-bold">تعدد الأقسام (يمكنك اختيار أكثر من قسم)</Label>
+                                <div className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                    {categories.map(cat => {
+                                        const isSelected = (currentProduct.category_id || '').split(',').includes(cat.id);
+                                        return (
+                                            <Button
+                                                key={cat.id}
+                                                type="button"
+                                                variant={isSelected ? "default" : "outline"}
+                                                size="sm"
+                                                onClick={() => {
+                                                    let ids = (currentProduct.category_id || '').split(',').filter(Boolean);
+                                                    if (isSelected) {
+                                                        ids = ids.filter(id => id !== cat.id);
+                                                    } else {
+                                                        ids.push(cat.id);
+                                                    }
+                                                    setCurrentProduct({ ...currentProduct, category_id: ids.join(',') });
+                                                }}
+                                                className={`h-9 rounded-full px-4 text-xs font-bold transition-all ${isSelected ? 'bg-saada-brown text-white shadow-md' : 'bg-white hover:bg-saada-brown/5'}`}
+                                            >
+                                                {isSelected && <Check className="h-3 w-3 mr-1 -ml-1" />}
+                                                {cat.label}
+                                            </Button>
+                                        );
+                                    })}
+                                </div>
                             </div>
+
 
                             <div
                                 className={`p-5 rounded-[1.5rem] border-2 transition-all cursor-pointer select-none flex items-center justify-between group ${currentProduct.no_tax ? "bg-orange-50/50 border-orange-400/30 shadow-[0_8px_20px_rgba(249,115,22,0.08)]" : "bg-gray-50/50 border-gray-100 hover:border-gray-200"}`}
@@ -3402,6 +3458,40 @@ const AdminDashboard = () => {
                             </div>
                         )}
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Bulk Category Update Dialog */}
+            <Dialog open={isBulkCategoryOpen} onOpenChange={setIsBulkCategoryOpen}>
+                <DialogContent className="sm:max-w-md bg-white rounded-3xl p-6 overflow-hidden">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-bold text-saada-brown flex items-center gap-2 text-right" dir="rtl">
+                            <Merge className="h-6 w-6 text-indigo-600" />
+                            تعديل القسم جماعياً
+                        </DialogTitle>
+                        <p className="text-gray-500 mt-2 text-right">
+                            سيتم نقل ({selectedProductIds.length}) منتجات مختارة إلى القسم الجديد.
+                        </p>
+                    </DialogHeader>
+                    <div className="py-6 space-y-4" dir="rtl">
+                        <Label className="font-bold block text-right">اختر القسم الجديد</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                            {categories.map(cat => (
+                                <Button
+                                    key={cat.id}
+                                    variant={bulkCategoryId === cat.id ? "default" : "outline"}
+                                    onClick={() => setBulkCategoryId(cat.id)}
+                                    className={`h-12 rounded-xl text-sm font-bold transition-all ${bulkCategoryId === cat.id ? 'bg-indigo-600 text-white shadow-lg' : ''}`}
+                                >
+                                    {cat.label}
+                                </Button>
+                            ))}
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-2 sm:gap-0 flex-row-reverse">
+                        <Button variant="outline" onClick={() => setIsBulkCategoryOpen(false)} className="rounded-xl h-12 font-bold flex-1">إلغاء</Button>
+                        <Button onClick={handleBulkCategoryUpdate} disabled={!bulkCategoryId} className="rounded-xl h-12 bg-indigo-600 hover:bg-indigo-700 font-bold flex-1 shadow-lg shadow-indigo-200">تحديث الآن</Button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>
