@@ -90,7 +90,7 @@ const AnalyticsDashboard = () => {
                     productSales[item.product_name] = (productSales[item.product_name] || 0) + (item.quantity * item.price);
                 });
 
-                const topProds = Object.entries(productSales)
+                const topProdsRes = Object.entries(productSales)
                     .map(([name, value]) => ({ name, value }))
                     .sort((a: any, b: any) => b.value - a.value)
                     .slice(0, 5);
@@ -101,6 +101,7 @@ const AnalyticsDashboard = () => {
                     .select('*')
                     .order('created_at', { ascending: false });
 
+                if (events) {
                     const sessionEvents = events.filter(e => e.event_type === 'session_start');
                     const sessionIds = new Set(sessionEvents.map(e => e.session_id));
                     const sessionsCount = sessionIds.size;
@@ -116,7 +117,7 @@ const AnalyticsDashboard = () => {
                             .map(e => e.session_id)
                     ).size;
 
-                    // Process unique sessions for the logs (taking the earliest event per session)
+                    // Process unique sessions for the logs
                     const uniqueSessionsMap = new Map();
                     sessionEvents.forEach(e => {
                         if (!uniqueSessionsMap.has(e.session_id)) {
@@ -151,7 +152,7 @@ const AnalyticsDashboard = () => {
                     setAbandonedCarts(abandoned);
                 }
 
-                setTopProducts(topProds);
+                setTopProducts(topProdsRes);
                 setRecentOrders(orders.slice(-5).reverse());
             }
         } catch (error) {
