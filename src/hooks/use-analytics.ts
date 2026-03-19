@@ -1,11 +1,13 @@
-
 import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 
 // Key for storage
 const SESSION_KEY = 'saada_session_id';
 
 export const useAnalytics = () => {
+    const location = useLocation();
+
     useEffect(() => {
         if (typeof window === 'undefined') return;
 
@@ -20,10 +22,12 @@ export const useAnalytics = () => {
                 sessionId = 'temp-session-' + Date.now();
             }
         }
-
-        // Log page view
-        logEvent('page_view', { path: window.location.pathname });
     }, []);
+
+    // Log page view on navigation
+    useEffect(() => {
+        logEvent('page_view', { path: location.pathname });
+    }, [location.pathname]);
 
     const logEvent = async (eventType: string, eventData: any = {}, customerInfo: any = null) => {
         const sessionId = localStorage.getItem(SESSION_KEY);

@@ -98,12 +98,12 @@ const AnalyticsDashboard = () => {
                 // 4. Site Analytics (Visitors/Funnel)
                 const { data: events } = await supabase
                     .from('site_analytics')
-                    .select('*')
-                    .order('created_at', { ascending: false });
+                    .select('session_id, event_type, created_at, customer_info')
+                    .order('created_at', { ascending: false })
+                    .limit(10000); // Added a safe limit for current scale
 
                 if (events) {
-                    const sessionEvents = events.filter(e => e.event_type === 'session_start');
-                    const sessionIds = new Set(sessionEvents.map(e => e.session_id));
+                    const sessionIds = new Set(events.map(e => e.session_id).filter(Boolean));
                     const sessionsCount = sessionIds.size;
                     const carts = events.filter(e => e.event_type === 'add_to_cart').length;
 
@@ -112,14 +112,16 @@ const AnalyticsDashboard = () => {
                     startOfToday.setHours(0, 0, 0, 0);
                     
                     const todaySessions = new Set(
-                        sessionEvents
+                        events
                             .filter(e => new Date(e.created_at).getTime() >= startOfToday.getTime())
                             .map(e => e.session_id)
+                            .filter(Boolean)
                     ).size;
 
                     // Process unique sessions for the logs
                     const uniqueSessionsMap = new Map();
-                    sessionEvents.forEach(e => {
+                    // Process events in reverse to get first/most recent activity
+                    [...events].reverse().forEach(e => {
                         if (!uniqueSessionsMap.has(e.session_id)) {
                             uniqueSessionsMap.set(e.session_id, e);
                         }

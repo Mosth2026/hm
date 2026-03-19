@@ -143,7 +143,7 @@ const AdminDashboard = () => {
     const logAction = async (action: string, details: any = {}, productId?: number) => {
         try {
             await supabase.from('admin_logs').insert([{
-                username: user?.username || 'unknown',
+                username: user?.username || user?.email?.split('@')[0] || 'unknown',
                 action,
                 details: productId ? { ...details, product_id: productId } : details
             }]);
@@ -540,7 +540,7 @@ const AdminDashboard = () => {
                 .from("admin_logs")
                 .select("*")
                 .order("created_at", { ascending: false })
-                .limit(200);
+                .limit(500);
 
             if (error) throw error;
             setLogs(data || []);
@@ -1567,8 +1567,8 @@ const AdminDashboard = () => {
                         const currentPrice = dbProduct?.price || 0;
                         const currentDesc = dbProduct?.description || '';
 
-                        // 1. تحديث الرصيد (فقط إذا اختلف) - يتم تجاهله في شيت البدون ضريبة
-                        if (!isExemptImport && stockValue !== null && stockValue !== currentStock) {
+                        // 1. تحديث الرصيد (فقط إذا اختلف)
+                        if (stockValue !== null && stockValue !== currentStock) {
                             updateData.stock = stockValue;
                             hasChanges = true;
 
@@ -1578,8 +1578,8 @@ const AdminDashboard = () => {
                             }
                         }
 
-                        // 2. تحديث السعر - يتم تجاهله في شيت البدون ضريبة
-                        if (!isExemptImport && priceValue !== null && user?.username !== 'mostafa') {
+                        // 2. تحديث السعر
+                        if (priceValue !== null && user?.username !== 'mostafa') {
                             let excelPrice = parseFloat(String(priceValue).replace(/[^0-9.]/g, ''));
                             if (!isNaN(excelPrice) && excelPrice > 0) {
                                 let finalCalculatedPrice = excelPrice;
@@ -1817,13 +1817,8 @@ const AdminDashboard = () => {
                         duration: 15000
                     });
 
-                    // Batch log the individual updates
-                    if (toLog.length > 0) {
-                        const CHUNK = 50;
-                        for (let i = 0; i < toLog.length; i += CHUNK) {
-                            await supabase.from('admin_logs').insert(toLog.slice(i, i + CHUNK));
-                        }
-                    }
+                    // Remove individual product logging to prevent flooding the logs (200 limit)
+                    // Summary log is enough for audit purposes
 
                     logAction('excel_sync_summary', {
                         updated: successCount,
@@ -3019,7 +3014,13 @@ const AdminDashboard = () => {
                                                         {new Date(log.created_at).toLocaleString('ar-EG')}
                                                     </TableCell>
                                                     <TableCell className="py-4">
-                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${log.username === 'elhanafy' ? 'bg-saada-red text-white' : 'bg-gray-100 text-gray-600'}`}>
+                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${
+                                                            log.username === 'elhanafy' ? 'bg-saada-red text-white' : 
+                                                            log.username.includes('mostafa') ? 'bg-blue-600 text-white' :
+                                                            log.username.includes('hesham') ? 'bg-emerald-600 text-white' :
+                                                            log.username.includes('fikry') ? 'bg-amber-600 text-white' :
+                                                            'bg-gray-100 text-gray-600'
+                                                        }`}>
                                                             {log.username}
                                                         </span>
                                                     </TableCell>
