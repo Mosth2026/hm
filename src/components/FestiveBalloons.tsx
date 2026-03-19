@@ -25,24 +25,19 @@ const FestiveBalloons = () => {
   const [balloons, setBalloons] = useState<Balloon[]>([]);
 
   useEffect(() => {
-    // Create initial balloons
-    const initialBalloons = Array.from({ length: 15 }).map((_, i) => createBalloon(i));
+    // Create initial balloons - reduced count for a symbolic look
+    const count = 7;
+    const initialBalloons = Array.from({ length: count }).map((_, i) => createBalloon(i));
     setBalloons(initialBalloons);
 
-    // Continuous spawning
-    const interval = setInterval(() => {
-      setBalloons(prev => {
-        // Limit total balloons to 25
-        if (prev.length >= 25) {
-          // Replace one that's finished its animation
-          const oldest = prev[0];
-          return [...prev.slice(1), createBalloon(Date.now())];
-        }
-        return [...prev, createBalloon(Date.now())];
-      });
-    }, 2000);
+    // Removed continuous spawning - balloons only appear once
+    
+    // Cleanup balloons after they finish falling (max delay 5s + max duration 25s)
+    const timer = setTimeout(() => {
+      setBalloons([]);
+    }, 35000);
 
-    return () => clearInterval(interval);
+    return () => clearTimeout(timer);
   }, []);
 
   const createBalloon = (id: number): Balloon => ({
@@ -83,9 +78,10 @@ const FestiveBalloons = () => {
             height: `${balloon.size * 1.2}px`,
             background: balloon.color,
             borderRadius: '50% 50% 50% 50% / 40% 40% 60% 60%',
-            boxShadow: 'inset -5px -5px 15px rgba(0,0,0,0.3), inset 5px 5px 15px rgba(255,255,255,0.4)',
+            boxShadow: 'inset -5px -5px 15px rgba(0,0,0,0.1), inset 5px 5px 15px rgba(255,255,255,0.2)',
+            opacity: 0.35, // Semi-transparent as requested
             animation: !balloon.popped 
-              ? `fall ${balloon.duration}s linear ${balloon.delay}s infinite, sway 4s ease-in-out infinite alternate`
+              ? `fall ${balloon.duration}s linear ${balloon.delay}s forwards, sway 4s ease-in-out infinite alternate`
               : 'none',
           }}
         >
@@ -105,7 +101,7 @@ const FestiveBalloons = () => {
           
           {/* String */}
           <div 
-            className="absolute top-full left-1/2 -translate-x-1/2 w-[1px] h-[60px] bg-white/20 origin-top animate-string-sway"
+            className="absolute top-full left-1/2 -translate-x-1/2 w-[1px] h-[60px] bg-white/10 origin-top animate-string-sway"
           />
 
           {/* Pop Effect */}
