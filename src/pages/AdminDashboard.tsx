@@ -1609,8 +1609,9 @@ const AdminDashboard = () => {
                                     finalCalculatedPrice = Number((excelPrice * 1.14).toFixed(2));
                                 }
 
-                                // الحماية الكبرى: مقارنة السعر الجديد بالسعر الحالي في الداتابيز.
-                                if (Math.abs(finalCalculatedPrice - currentPrice) > 0.01) {
+                                // الحماية الكبرى: المقارنة وتحديث السعر.
+                                // في حال رفع "بدون ضريبة"، يتم فرض التحديث لضمان دقة السعر الجديد.
+                                if (Math.abs(finalCalculatedPrice - currentPrice) > 0.01 || isExemptImport) {
                                     updateData.price = finalCalculatedPrice;
                                     hasChanges = true;
                                 }
@@ -1716,9 +1717,7 @@ const AdminDashboard = () => {
                             });
                         }
                     } else if (isExemptImport && excelName) {
-                        // Special case for tax-exempt import: if product not found and no price, 
-                        // we can't create it properly, so we just log or ignore.
-                        // But if it has a barcode, we might want to create it with 0 price/stock as a placeholder.
+                        // Skip incomplete rows
                     }
                 }
 
@@ -1873,8 +1872,9 @@ const AdminDashboard = () => {
 
                 if (failCount > 0) {
                     const finalError = firstUpdateError || firstInsertError;
-                    toast.error(`تنبيه: فشل مزامنة ${failCount} صنف`, {
-                        description: `السبب: ${finalError?.message || "تعارض في البيانات"}. تم إخفاء هذه الأصناف لضمان نظافة المتجر.`,
+                    console.error("Critical Import Error Details:", finalError);
+                    toast.error(`تنبيه: فشل عمل ${failCount} صنف`, {
+                        description: `خطأ تقني: ${finalError?.message || "تعارض في الصلاحيات (RLS) أو البيانات"}. تم تحديث باقي الأصناف بنجاح. تأكد من أن حسابك لديه صلاحيات "المدير" لإضافة أصناف جديدة.`,
                         duration: 15000
                     });
                 }
