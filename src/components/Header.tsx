@@ -1,18 +1,17 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Menu, User, X, Search, Heart, Trash2, Plus, Minus, ShoppingBag, ArrowLeft, MessageCircle, Moon, RefreshCw } from "lucide-react";
+import { MapPin, ChevronDown, ShoppingCart, Menu, User, X, Search, Heart, Trash2, Plus, Minus, ShoppingBag, ArrowLeft, MessageCircle, Moon, RefreshCw, Tag, Ticket as TicketIcon, CheckCircle2 as CheckCircleIcon } from "lucide-react";
 import LiveVisitors from "./LiveVisitors";
 import { useAnalytics } from "@/hooks/use-analytics";
 import { SITE_CONFIG } from "@/lib/constants";
 import { cn, cleanProductName, formatPrice } from "@/lib/utils";
 import { useCart } from "@/hooks/use-cart";
-import { useNavigate } from "react-router-dom";
 import { saveOrderToDb } from "@/lib/orders";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
-import { Tag, Ticket as TicketIcon, CheckCircle2 as CheckCircleIcon } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
+import { useBranchContext } from "@/context/BranchContext";
 import {
   Sheet,
   SheetContent,
@@ -21,8 +20,15 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Header = () => {
+  const { branches, selectedBranch, selectBranch, detectLocation } = useBranchContext();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -123,6 +129,54 @@ const Header = () => {
                 <span className="text-[8px] md:text-[10px] uppercase tracking-[0.2em] md:tracking-[0.25em] font-outfit text-secondary font-bold leading-none">Makers of Happiness</span>
               </div>
             </Link>
+
+            {/* Branch Selector */}
+            <div className="hidden sm:block">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="h-10 md:h-12 px-3 md:px-4 rounded-2xl flex items-center gap-2 text-primary hover:bg-primary/5 transition-all">
+                    <div className="h-8 w-8 bg-secondary/10 rounded-xl flex items-center justify-center">
+                      <MapPin className="h-4 w-4 text-secondary" />
+                    </div>
+                    <div className="flex flex-col items-start">
+                      <span className="text-[10px] font-bold text-muted-foreground leading-tight">الفرع الأقرب</span>
+                      <span className="text-sm font-black text-primary leading-tight flex items-center gap-1">
+                        {selectedBranch ? selectedBranch.name : "اختر الفرع"}
+                        <ChevronDown className="h-3 w-3 opacity-50" />
+                      </span>
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 bg-white rounded-2xl shadow-2xl border-primary/5 font-tajawal rtl p-2">
+                  <div className="px-3 py-2 text-[10px] font-black text-secondary uppercase tracking-widest border-b border-primary/5 mb-1">
+                    فروعنا في مصر
+                  </div>
+                  {branches.map(branch => (
+                    <DropdownMenuItem 
+                      key={branch.id} 
+                      onClick={() => selectBranch(branch)}
+                      className={cn(
+                        "rounded-xl h-12 px-4 font-bold flex items-center justify-between cursor-pointer transition-all",
+                        selectedBranch?.id === branch.id ? "bg-primary text-white" : "hover:bg-primary/5 text-primary"
+                      )}
+                    >
+                      <span>{branch.name}</span>
+                      {selectedBranch?.id === branch.id && <MapPin className="h-4 w-4" />}
+                    </DropdownMenuItem>
+                  ))}
+                  <div className="mt-2 p-2 pt-1 border-t border-primary/5">
+                    <Button 
+                      variant="ghost" 
+                      onClick={detectLocation}
+                      className="w-full justify-start h-10 px-2 rounded-lg text-xs font-bold text-secondary hover:bg-secondary/10"
+                    >
+                      <RefreshCw className="h-3 w-3 ml-2" />
+                      تحديد أقرب فرع آلياً
+                    </Button>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
             <div className="hidden lg:block">
               <LiveVisitors />
@@ -364,14 +418,15 @@ const Header = () => {
                               }
 
                               const message = encodeURIComponent(
-                                `🛍️ *طلب جديد ${orderNum}* 🛍️\n\n` +
+                                `🛍️ *طلب جديد من ${selectedBranch?.name || "المتجر"} ${orderNum}* 🛍️\n\n` +
                                 `${cartDetails}\n\n` +
                                 (appliedCoupon ? `🎟️ *كود الخصم:* ${appliedCoupon.code} (-${formatPrice(discountAmount)})\n\n` : "") +
                                 `💰 *الإجمالي:* ${formatPrice(roundedTotal)}\n\n` +
                                 `📄 *رابط معاينة الفاتورة:* \n\n${invoiceUrl}\n\n` +
-                                `مرحباً صناع السعادة، أود إتمام هذا الطلب من المتجر.`
+                                `مرحباً فرع ${selectedBranch?.name || "صناع السعادة"}، أود إتمام هذا الطلب من المتجر.`
                               );
-                              window.open(`https://wa.me/${SITE_CONFIG.whatsappNumber}?text=${message}`, '_blank');
+                              const whatsappNumber = selectedBranch?.whatsapp_number || SITE_CONFIG.whatsappNumber;
+                              window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank');
                             } catch (err) {
                               console.error("WhatsApp Error:", err);
                               toast.error("حدث خطأ في الاتصال.");

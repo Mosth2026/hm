@@ -70,19 +70,30 @@ const processProduct = (p: any, isAdmin: boolean): Product => {
     };
 };
 
-export const useProducts = (categoryId?: string, isFeatured?: boolean) => {
+export const useProducts = (categoryId?: string, isFeatured?: boolean, branchId?: number) => {
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin' || user?.role === 'editor';
-    const isSpecial = user && ['admin', 'elhanafy', 'mostafa', 'mostafa_abu_mailla', 'fikry'].includes(user.username.toLowerCase());
 
     return useQuery({
-        queryKey: ['products', categoryId, isFeatured, isAdmin],
+        queryKey: ['products', categoryId, isFeatured, isAdmin, branchId],
         queryFn: async () => {
-            let query = supabase.from('products').select('*');
+            // Using join to fetch product_branch_stock for the specific branch
+            let query = supabase.from('products').select(`
+                *,
+                product_branch_stock!left (
+                    stock,
+                    branch_id
+                )
+            `);
+
+            if (branchId) {
+                // We filter for branch stock or null (to handle products not yet initialized for a branch)
+                // Actually, if we only want items for that branch, we filter by branch_id
+                // But if we want to show ALL items and just show 0 if no record, we use or filter or just handle it in JS.
+            }
 
             if (!isAdmin) {
                 query = query
-                    .filter('stock', 'gte', 1)
                     .filter('price', 'gt', 0)
                     .not('image', 'is', null)
                     .neq('image', '')
@@ -103,11 +114,22 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean) => {
 
             if (error) throw error;
 
-            if (!isAdmin && data) {
+            const processedData = ((data || []) as any[]).map(p => {
+                // If branchId is provided, use the stock for that branch
+                let effectiveStock = p.stock || 0;
+                if (branchId) {
+                    const branchStockRecord = (p.product_branch_stock || []).find((s: any) => s.branch_id === branchId);
+                    effectiveStock = branchStockRecord ? branchStockRecord.stock : 0;
+                }
+                
+                return { ...p, stock: effectiveStock };
+            });
+
+            if (!isAdmin) {
                 // Grouping logic for the store facade
                 const groupedMap = new Map<string, Product>();
 
-                ((data || []) as any[]).forEach(p => {
+                processedData.forEach(p => {
                     const price = Number(p.price);
                     const stock = Number(p.stock);
                     const isDraft = p.description?.includes('[DRAFT]');
@@ -118,7 +140,6 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean) => {
 
                     if (stock >= 1 && price > 0 && hasValidImage && !isDraft) {
                         const processed = processProduct(p, false);
-                        // Group by name for the store to avoid showing same product with different expiries as separate items
                         const key = processed.name.toLowerCase().trim();
 
                         if (groupedMap.has(key)) {
@@ -133,41 +154,68 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean) => {
                 return Array.from(groupedMap.values());
             }
 
-            return ((data || []) as any[]).map(p => processProduct(p, true));
+            return processedData.map(p => processProduct(p, true));
         },
     });
 };
 
-export const useProduct = (id: number) => {
+export const useProduct = (id: number, branchId?: number) => {
     const { user } = useAuth();
     const isAdmin = user?.role === 'admin' || user?.role === 'editor';
 
     return useQuery({
-        queryKey: ['product', id, isAdmin],
+        queryKey: ['product', id, isAdmin, branchId],
         queryFn: async () => {
             const { data: product, error } = await supabase
                 .from('products')
-                .select('*')
+                .select(`
+                    *,
+                    product_branch_stock !left (
+                        stock,
+                        branch_id
+                    )
+                `)
                 .eq('id', id)
                 .single();
 
             if (error) throw error;
             if (!product) return null;
 
+            let effectiveStock = product.stock || 0;
+            if (branchId) {
+                const branchStockRecord = (product.product_branch_stock || []).find((s: any) => s.branch_id === branchId);
+                effectiveStock = branchStockRecord ? branchStockRecord.stock : 0;
+            }
+            const pWithStock = { ...product, stock: effectiveStock };
+
             if (isAdmin) {
-                return processProduct(product, true);
+                return processProduct(pWithStock, true);
             }
 
-            // Customer View: Show aggregate stock for all batches of this name
+            // Customer View: Show aggregate stock for all batches of this name IN THIS BRANCH
             const { data: allBatches } = await supabase
                 .from('products')
-                .select('*')
+                .select(`
+                    *,
+                    product_branch_stock !left (
+                        stock,
+                        branch_id
+                    )
+                `)
                 .eq('name', product.name);
 
-            const totalStock = (allBatches || []).reduce((sum, p) => sum + (p.stock || 0), 0);
+            const filteredBatches = (allBatches || []).map(b => {
+                let bStock = b.stock || 0;
+                if (branchId) {
+                    const bBranchRecord = (b.product_branch_stock || []).find((s: any) => s.branch_id === branchId);
+                    bStock = bBranchRecord ? bBranchRecord.stock : 0;
+                }
+                return { ...b, stock: bStock };
+            });
 
-            const processed = processProduct(product, false);
-            processed.stock = totalStock;
+            const totalBranchStock = filteredBatches.reduce((sum, b) => sum + (b.stock || 0), 0);
+            const processed = processProduct(pWithStock, false);
+            processed.stock = totalBranchStock;
 
             const isDraft = product.description?.includes('[DRAFT]');
             const hasValidImage = product.image &&
@@ -175,7 +223,7 @@ export const useProduct = (id: number) => {
                 !product.image.includes('unsplash.com') &&
                 product.image !== SITE_CONFIG.placeholderImage;
 
-            if (!(totalStock >= 1 && Number(product.price) > 0 && hasValidImage && !isDraft)) {
+            if (!(totalBranchStock >= 1 && Number(product.price) > 0 && hasValidImage && !isDraft)) {
                 return null;
             }
 

@@ -8,6 +8,7 @@ import { ShoppingCart, Heart, ChevronRight, Loader2, ShieldCheck, Truck, RotateC
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 import { useProduct } from "@/hooks/use-products";
+import { useBranchContext } from "@/context/BranchContext";
 import { useCart } from "@/hooks/use-cart";
 import { toast } from "sonner";
 import { cn, cleanImageUrl, cleanProductName, formatPrice, getShareUrl, copyToClipboard } from "@/lib/utils";
@@ -24,7 +25,8 @@ import {
 
 const ProductDetails = () => {
   const { productId } = useParams<{ productId: string }>();
-  const { data: product, isLoading, error } = useProduct(Number(productId));
+  const { selectedBranch } = useBranchContext();
+  const { data: product, isLoading, error } = useProduct(Number(productId), selectedBranch?.id);
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin' || user?.role === 'editor';
 

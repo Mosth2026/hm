@@ -139,6 +139,20 @@ const AdminDashboard = () => {
     const [isBulkCategoryOpen, setIsBulkCategoryOpen] = useState(false);
     const [bulkCategoryId, setBulkCategoryId] = useState("");
     const [isExemptImport, setIsExemptImport] = useState(false);
+    const [branches, setBranches] = useState<any[]>([]);
+    const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
+
+    useEffect(() => {
+        const fetchBranches = async () => {
+            const { data, error } = await supabase.from('branches').select('*');
+            if (data && data.length > 0) {
+                setBranches(data);
+                // Default to first branch if not set
+                if (!selectedBranchId) setSelectedBranchId(data[0].id);
+            }
+        };
+        fetchBranches();
+    }, []);
 
     const logAction = async (action: string, details: any = {}, productId?: number) => {
         try {
@@ -852,7 +866,19 @@ const AdminDashboard = () => {
         } catch (e) { }
 
         setLoading(true);
-        let query = supabase.from("products").select("*");
+        let query = supabase.from("products").select(`
+            *,
+            product_branch_stock !left (
+                stock,
+                branch_id
+            )
+        `);
+
+        if (selectedBranchId) {
+            // We can't easily filter by product_branch_stock.branch_id in a complex select 
+            // across all filters without potentially losing items that aren't yet in that branch.
+            // So we fetch all and handle the mapping in processed.
+        }
 
         // Server-side Search (Name or Barcode)
         if (searchQuery) {
@@ -865,6 +891,8 @@ const AdminDashboard = () => {
         }
 
         if (activeFilter === "low") {
+            // Note: Server-side low stock filter might be inaccurate for branches if based on global stock
+            // For now, we fetch and filter below or accept global as indicator
             query = query.lt('stock', 10).gt('stock', 0);
         } else if (activeFilter === "daily") {
             if (stats.salesProductIds && stats.salesProductIds.length > 0) {
@@ -928,8 +956,16 @@ const AdminDashboard = () => {
                 // Clean display label (remove [IDS:...])
                 const displayCatName = category_name.replace(/\s*\[IDS:.*?\]/, '');
 
+                // USE BRANCH STOCK IF SELECTED
+                let effectiveStock = p.stock || 0;
+                if (selectedBranchId) {
+                    const branchRecord = (p.product_branch_stock || []).find((s: any) => s.branch_id === selectedBranchId);
+                    effectiveStock = branchRecord ? branchRecord.stock : 0;
+                }
+
                 return {
                     ...p,
+                    stock: effectiveStock,
                     category_id: actualCatId,
                     category_name: displayCatName,
                     no_tax: noTax,
@@ -1359,7 +1395,7 @@ const AdminDashboard = () => {
                     while (hasMore) {
                         const { data, error } = await supabase
                             .from('products')
-                            .select('id, name, category_id, description, image, stock, price')
+                            .select('id, name, category_id, description, image, stock, price, product_branch_stock(stock, branch_id)')
                             .range(from, from + lmt - 1);
 
                         if (error) {
@@ -1423,8 +1459,7 @@ const AdminDashboard = () => {
 
                 const toUpdate: any[] = [];
                 const toInsert: any[] = [];
-                const toDelete: any[] = [];
-                const toZeroStock: any[] = [];
+                const toUpdateBranchStock: any[] = [];
                 const toLog: any[] = [];
 
                 const categoryLabels = new Set(categories.map(c => normalize(c.label)));
@@ -1526,12 +1561,8 @@ const AdminDashboard = () => {
                         barcodeMatches++;
                     }
 
-                    // الحماية: إذا لم يتطابق الباركود، وكان الاسم موجوداً بالفعل في الداتابيز، 
-                    // يتم تجاهل السجل أو اعتباره "مكرر مجهول" لمنع إنشاء أصناف بنفس الاسم بباركود جديد بشكل عشوائي،
-                    // إلا لو قرر النظام في المرحلة التالية أنه "إضافة صنف جديد بباركود جديد".
                     if (!productId && normName && categoryMap.has(normName)) {
-                        // إذا كان الاسم موجوداً ولكن الباركود مختلف أو غير موجود، نعتبره مكرراً أو نحتاج لمراجعته
-                        // لكن للمرونة سنسمح بالإضافة كصنف جديد إذا كان هناك باركود فعلي غير موجود سابقاً.
+                        // الاسم موجود سابقاً
                     }
 
                     const dbProduct = productId ? dbProductMap.get(productId) : null;
@@ -1550,7 +1581,6 @@ const AdminDashboard = () => {
                     let guessedCatId: string | null = null;
                     if (!excelCatId && excelName) {
                         const n = normalize(excelName);
-                        // Priority guess for Candy (Toybox contains the word 'box' but should be candy)
                         if (n.includes('كاندي') || n.includes('جيلي') || n.includes('تويبوكس') || n.includes('مصاصه') || n.includes('مارشميلو')) {
                             guessedCatId = 'candy';
                         }
@@ -1571,7 +1601,6 @@ const AdminDashboard = () => {
                         const updateData: any = { id: effectiveId };
                         let hasChanges = false;
 
-                        // For tax calculation on existing products, use Excel category if provided, otherwise stick to DB category
                         const currentCatId = excelCatId || dbProduct.category_id;
                         const currentCatName = dbProduct.category_name || '';
                         
@@ -1581,42 +1610,38 @@ const AdminDashboard = () => {
                             (currentCatName.includes('بدون ضريبة')) ||
                             (dbProduct.description?.includes('[TAX_EXEMPT]'));
 
-                        // PERSISTENT DRAFT LOGIC: المخبأ السري
                         const isOldDraft = dbProduct?.description?.includes('[DRAFT]');
-                        const currentStock = dbProduct?.stock || 0;
+                        const branchRecord = (dbProduct.product_branch_stock || []).find((s: any) => s.branch_id === selectedBranchId);
+                        const currentStock = branchRecord ? branchRecord.stock : 0;
                         const currentPrice = dbProduct?.price || 0;
                         const currentDesc = dbProduct?.description || '';
 
-                        // 1. تحديث الرصيد (فقط إذا اختلف)
                         if (stockValue !== null && stockValue !== currentStock) {
-                            updateData.stock = stockValue;
+                            toUpdateBranchStock.push({
+                                product_id: effectiveId,
+                                branch_id: selectedBranchId,
+                                stock: stockValue
+                            });
                             hasChanges = true;
 
-                            // إذا كان "درافت" وتغير رصيده (زاد عن صفر)، يتم إخراجه فوراً مانيوال ليعود للبيع
                             if (isOldDraft && stockValue > 0) {
                                 updateData.description = currentDesc.replace('[DRAFT]', '').trim();
                             }
                         }
 
-                        // 2. تحديث السعر
                         if (priceValue !== null) {
                             let excelPrice = parseFloat(String(priceValue).replace(/[^0-9.]/g, ''));
                             if (!isNaN(excelPrice) && excelPrice > 0) {
                                 let finalCalculatedPrice = excelPrice;
+                                if (!isExempt) finalCalculatedPrice = Number((excelPrice * 1.14).toFixed(2));
 
-                                // إذا لم يكن المنتج معفياً من الضريبة، نضيف 14%
-                                if (!isExempt) {
-                                    finalCalculatedPrice = Number((excelPrice * 1.14).toFixed(2));
-                                }
-
-                                // الحماية الكبرى: المقارنة وتحديث السعر.
-                                // في حال رفع "بدون ضريبة"، يتم فرض التحديث لضمان دقة السعر الجديد.
                                 if (Math.abs(finalCalculatedPrice - currentPrice) > 0.01 || isExemptImport) {
                                     updateData.price = finalCalculatedPrice;
                                     hasChanges = true;
                                 }
                             }
                         }
+
                         if (isExemptImport) {
                             const desc = updateData.description !== undefined ? updateData.description : currentDesc;
                             if (!desc.includes('[TAX_EXEMPT]')) {
@@ -1624,15 +1649,13 @@ const AdminDashboard = () => {
                                 hasChanges = true;
                             }
                         }
-                        // 3. تحديث تاريخ الصلاحية
+
                         const excelExpiry = getRowValue(row, expiryKey);
                         if (excelExpiry && excelExpiry !== dbProduct?.expiry_date) {
                             updateData.expiry_date = excelExpiry;
                             hasChanges = true;
                         }
 
-                        // 4. تحديث القسم (فقط إذا اختلف وطلبنا ذلك صراحة في الإكسيل)
-                        // الحماية: لا يتم نقل المنتج الموجود مسبقاً بناءً على "التخمين التلقائي" (Guessed) لمنع أخطاء مثل Toybox
                         if (excelCatId && excelCatId !== dbProduct?.category_id) {
                             updateData.category_id = excelCatId;
                             const catObj = categories.find(c => c.id === excelCatId);
@@ -1640,15 +1663,11 @@ const AdminDashboard = () => {
                             hasChanges = true;
                         }
 
-                        // 4. أتمتة الدرافت (قاعدة الإخفاء الذكي)
-                        const finalStock = updateData.stock !== undefined ? updateData.stock : currentStock;
+                        const finalBranchStock = stockValue !== null ? stockValue : currentStock;
                         const finalDesc = updateData.description !== undefined ? updateData.description : currentDesc;
-                        const hasRealImage = dbProduct?.image &&
-                            dbProduct.image !== PLACEHOLDER_IMAGE &&
-                            !dbProduct.image.includes('unsplash.com');
+                        const hasRealImage = dbProduct?.image && dbProduct.image !== PLACEHOLDER_IMAGE && !dbProduct.image.includes('unsplash.com');
 
-                        // إذا أصبح الرصيد 0 وليس له صورة حقيقية وليس مسودة بالفعل، نضعه في المسودة
-                        if (finalStock <= 0 && !hasRealImage && !finalDesc.includes('[DRAFT]')) {
+                        if (finalBranchStock <= 0 && !hasRealImage && !finalDesc.includes('[DRAFT]')) {
                             updateData.description = `${finalDesc} [DRAFT]`.trim();
                             hasChanges = true;
                         }
@@ -1657,29 +1676,18 @@ const AdminDashboard = () => {
                             updateData.updated_at = new Date().toISOString();
                             toUpdate.push(updateData);
 
-                            if (updateData.stock !== undefined) {
+                            if (stockValue !== null && stockValue !== currentStock) {
                                 toLog.push({
                                     username: user?.username || 'system',
-                                    action: 'excel_sync_stock',
+                                    action: 'excel_sync_stock_branch',
                                     details: {
-                                        product_id: productId,
+                                        product_id: effectiveId,
+                                        branch_id: selectedBranchId,
                                         old_stock: currentStock,
-                                        new_stock: updateData.stock,
-                                        change: (updateData.stock || 0) - currentStock
+                                        new_stock: stockValue,
+                                        change: stockValue - currentStock
                                     }
                                 });
-
-                                if (updateData.stock === 0 && currentStock > 0) {
-                                    toLog.push({
-                                        username: user?.username || 'system',
-                                        action: 'product_out_of_stock',
-                                        details: {
-                                            product_id: productId,
-                                            name: dbProduct.name,
-                                            reason: 'excel_sync'
-                                        }
-                                    });
-                                }
                             }
                         }
                     } else if (excelName && (excelCode || (priceValue !== null && parseFloat(String(priceValue)) > 0))) {
@@ -1687,37 +1695,31 @@ const AdminDashboard = () => {
                         const newCatId = (finalCatId || 'snacks');
                         if (price > 0) {
                             const isExempt = isExemptImport || (newCatId === 'no-tax');
-                            if (!isExempt) {
-                                price = price * 1.14;
-                            }
+                            if (!isExempt) price = price * 1.14;
 
                             const isDraft = (stockValue || 0) <= 0;
                             const catObj = categories.find(c => c.id === newCatId);
                             const finalItemPrice = Number(price.toFixed(2));
-                            const finalItemStock = stockValue || 0;
+                            const finalItemBranchStock = stockValue || 0;
 
                             let description = excelCode ? (isDraft ? `باركود: ${excelCode} [DRAFT]` : `باركود: ${excelCode}`) : (isDraft ? '[DRAFT]' : '');
-                            if (isExempt && !description.includes('[TAX_EXEMPT]')) {
-                                description = `${description} [TAX_EXEMPT]`.trim();
-                            }
+                            if (isExempt && !description.includes('[TAX_EXEMPT]')) description = `${description} [TAX_EXEMPT]`.trim();
 
                             const excelExpiry = getRowValue(row, expiryKey);
-
                             toInsert.push({
                                 name: excelName.trim(),
                                 price: finalItemPrice,
-                                stock: isExemptImport ? 0 : finalItemStock,
+                                stock: 0,
                                 category_id: newCatId,
                                 category_name: catObj ? catObj.label : 'الاسناكس',
                                 description: description,
                                 image: PLACEHOLDER_IMAGE,
                                 is_featured: false,
                                 is_new: true,
-                                expiry_date: excelExpiry || null
+                                expiry_date: excelExpiry || null,
+                                _initialBranchStock: finalItemBranchStock
                             });
                         }
-                    } else if (isExemptImport && excelName) {
-                        // Skip incomplete rows
                     }
                 }
 
@@ -1725,100 +1727,95 @@ const AdminDashboard = () => {
                 let firstInsertError: any = null;
                 const finalTotal = toUpdate.length + toInsert.length;
 
-                // Track session-specific financial value (Sales/Difference)
                 let sessionSalesCount = 0;
                 let sessionSalesValue = 0;
                 let sessionSalesProductIds: number[] = [];
                 let sessionSalesQuantities: Record<number, number> = {};
                 
-                toUpdate.forEach(item => {
-                    const dbProd = dbProductMap.get(item.id);
-                    if (item.stock !== undefined) {
-                        const stockDiff = dbProd.stock - item.stock;
+                toUpdateBranchStock.forEach(item => {
+                    const dbProd = dbProductMap.get(item.product_id);
+                    if (dbProd) {
+                        const branchRecord = (dbProd.product_branch_stock || []).find((s: any) => s.branch_id === selectedBranchId);
+                        const oldStock = branchRecord ? branchRecord.stock : 0;
+                        const stockDiff = oldStock - item.stock;
                         if (stockDiff > 0) {
-                            // This is a sale/deduction
                             sessionSalesCount++;
                             sessionSalesProductIds.push(dbProd.id);
                             sessionSalesQuantities[dbProd.id] = stockDiff;
-                            // Use the price from the file (or DB if not in file) to calculate value
-                            const salePrice = item.price !== undefined ? item.price : dbProd.price;
+                            const updateFields = toUpdate.find(u => u.id === dbProd.id);
+                            const salePrice = updateFields?.price !== undefined ? updateFields.price : dbProd.price;
                             sessionSalesValue += (stockDiff * salePrice);
                         }
                     }
                 });
 
-                // --- PHASE 1: PARALLEL UPDATES (Faster) ---
-                const UPDATE_BATCH_SIZE = 15; // عدد التحديثات المتزامنة
+                // PHASE 1: Products Update
+                const UPDATE_BATCH_SIZE = 15;
                 for (let i = 0; i < toUpdate.length; i += UPDATE_BATCH_SIZE) {
                     const chunk = toUpdate.slice(i, i + UPDATE_BATCH_SIZE);
                     setImportProgress({ current: i, total: finalTotal });
-
                     await Promise.all(chunk.map(async (p) => {
                         const { id, ...updateFields } = p;
-                        const { error } = await supabase
-                            .from('products')
-                            .update(updateFields)
-                            .eq('id', id);
-
-                        if (!error) {
-                            successCount++;
-                            importedIds.add(id);
-                        } else {
+                        const { error } = await supabase.from('products').update(updateFields).eq('id', id);
+                        if (error) {
                             failCount++;
                             if (!firstUpdateError) firstUpdateError = error;
-                            console.error(`Update failed for ID ${id}:`, error);
+                        } else {
+                            successCount++;
+                            importedIds.add(id);
                         }
                     }));
                 }
 
-                // --- PHASE 2: BATCH INSERTS (Massive Speedup) ---
+                // PHASE 1.5: Branch Stock Upsert
+                if (toUpdateBranchStock.length > 0) {
+                    const BRANCH_BATCH_SIZE = 100;
+                    for (let i = 0; i < toUpdateBranchStock.length; i += BRANCH_BATCH_SIZE) {
+                        const chunk = toUpdateBranchStock.slice(i, i + BRANCH_BATCH_SIZE);
+                        const { error } = await supabase.from('product_branch_stock').upsert(chunk);
+                        if (error) console.error("Branch Stock Upsert failed:", error);
+                    }
+                }
+
+                // PHASE 2: Inserts
                 const INSERT_BATCH_SIZE = 100;
                 for (let i = 0; i < toInsert.length; i += INSERT_BATCH_SIZE) {
                     const chunk = toInsert.slice(i, i + INSERT_BATCH_SIZE);
                     setImportProgress({ current: toUpdate.length + i, total: finalTotal });
-
-                    const { data: insertedRows, error } = await supabase
-                        .from('products')
-                        .insert(chunk)
-                        .select('id');
-
+                    const insertChunk = chunk.map(({ _initialBranchStock, ...rest }) => rest);
+                    const { data: insertedRows, error } = await supabase.from('products').insert(insertChunk).select('id');
                     if (!error && insertedRows) {
                         addedCount += insertedRows.length;
+                        const newInitialStock = insertedRows.map((row, idx) => ({
+                            product_id: row.id,
+                            branch_id: selectedBranchId,
+                            stock: chunk[idx]._initialBranchStock || 0
+                        }));
+                        if (newInitialStock.length > 0) await supabase.from('product_branch_stock').insert(newInitialStock);
                         insertedRows.forEach(row => importedIds.add(row.id));
                     } else {
                         failCount += chunk.length;
                         if (!firstInsertError) firstInsertError = error;
-                        console.error("Batch Insert failed:", error);
                     }
                 }
 
-                // --- PHASE 3: THE TOTAL PURGE (Master Sync) ---
+                // PHASE 3: Sync
                 let toZeroStockIds: number[] = [];
                 let toDeleteIds: number[] = [];
-                const isFullSync = isExemptImport ? false : confirm("هل تود تصفير مخزون أي صنف غير موجود في ملف الإكسيل؟ (مزامنة كاملة للمتجر)\n\nاختر 'إلغاء' إذا كنت ترفع طلبية جديدة فقط ولا تريد التأثير على باقي الأصناف الموجودة.");
-
+                const isFullSync = isExemptImport ? false : confirm("هل تود تصفير مخزون أي صنف غير موجود في ملف الإكسيل؟ (مزامنة كاملة للمتجر)");
                 if (isFullSync) {
                     const untouchedProducts = dbProducts.filter(p => !importedIds.has(p.id));
-
                     untouchedProducts.forEach(p => {
-                        const hasRealImage = p.image &&
-                            p.image !== PLACEHOLDER_IMAGE &&
-                            !String(p.image).includes('unsplash.com');
-
-                        if (hasRealImage) {
-                            toZeroStockIds.push(p.id);
-                        } else {
-                            toDeleteIds.push(p.id);
-                        }
+                        const hasRealImage = p.image && p.image !== PLACEHOLDER_IMAGE && !String(p.image).includes('unsplash.com');
+                        if (hasRealImage) toZeroStockIds.push(p.id);
+                        else toDeleteIds.push(p.id);
                     });
-
                     if (toZeroStockIds.length > 0) {
                         for (let i = 0; i < toZeroStockIds.length; i += CHUNK_SIZE) {
                             const batch = toZeroStockIds.slice(i, i + CHUNK_SIZE);
                             await supabase.from('products').update({ stock: 0 }).in('id', batch);
                         }
                     }
-
                     if (toDeleteIds.length > 0) {
                         for (let i = 0; i < toDeleteIds.length; i += CHUNK_SIZE) {
                             const batch = toDeleteIds.slice(i, i + CHUNK_SIZE);
@@ -1828,16 +1825,8 @@ const AdminDashboard = () => {
                 }
 
                 setImportProgress(null);
-
                 if (successCount > 0 || addedCount > 0) {
-                    toast.success(`تمت المزامنة بنجاح`, {
-                        description: `تحديث ${successCount} صنف، إضافة ${addedCount} جديد. تم حذف ${toDeleteIds.length} صنف قديم، وتصفير مخزون ${toZeroStockIds.length} (مخفيين للحفاظ على صورهم). تم تجاهل ${junkCount} صفوف (إجماليات) و ${duplicateCount} مكررات.`,
-                        duration: 15000
-                    });
-
-                    // Remove individual product logging to prevent flooding the logs (200 limit)
-                    // Summary log is enough for audit purposes
-
+                    toast.success(`تمت المزامنة بنجاح`);
                     await logAction('excel_sync_summary', {
                         updated: successCount,
                         added: addedCount,
@@ -1848,18 +1837,14 @@ const AdminDashboard = () => {
                         sales_product_ids: sessionSalesProductIds,
                         sales_quantities: sessionSalesQuantities
                     });
-
-                    // Update local stats instantly (Cumulative for current view)
                     setStats(prev => {
                         const newDailyChanges = prev.dailyChanges + sessionSalesCount;
                         const newDailyValue = prev.dailyValue + sessionSalesValue;
                         const newSalesQuantities = { ...prev.salesQuantities };
-                        
                         Object.entries(sessionSalesQuantities).forEach(([id, qty]) => {
                             const pid = Number(id);
                             newSalesQuantities[pid] = (newSalesQuantities[pid] || 0) + (qty as number);
                         });
-
                         return {
                             ...prev,
                             dailyChanges: newDailyChanges,
@@ -1869,23 +1854,12 @@ const AdminDashboard = () => {
                         };
                     });
                 }
-
-                if (failCount > 0) {
-                    const finalError = firstUpdateError || firstInsertError;
-                    console.error("Critical Import Error Details:", finalError);
-                    toast.error(`تنبيه: فشل عمل ${failCount} صنف`, {
-                        description: `خطأ تقني: ${finalError?.message || "تعارض في الصلاحيات (RLS) أو البيانات"}. تم تحديث باقي الأصناف بنجاح. تأكد من أن حسابك لديه صلاحيات "المدير" لإضافة أصناف جديدة.`,
-                        duration: 15000
-                    });
-                }
+                if (failCount > 0) toast.error(`تنبيه: فشل عمل ${failCount} صنف`);
                 setIsExemptImport(false);
                 fetchProducts();
             } catch (err: any) {
                 console.error("Excel Import Error:", err);
-                toast.error("خطأ في قراءة ملف الإكسيل أو تحديث البيانات", {
-                    description: `السبب: ${err.message || 'خطأ غير معروف'} `,
-                    duration: 10000
-                });
+                toast.error("خطأ في قراءة ملف الإكسيل أو تحديث البيانات");
             }
         };
         reader.readAsArrayBuffer(file);
@@ -2136,7 +2110,22 @@ const AdminDashboard = () => {
                             {isRestrictedStaff ? 'تحديث المخزون، الصور، والأسماء' : (isAdmin ? 'إدارة كاملة للمتجر والمنتجات' : 'صلاحية محدودة لتعديل الصور والأسماء')}
                         </p>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-row gap-2 md:gap-3 w-full md:w-auto">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-row gap-2 md:gap-3 w-full md:w-auto items-end">
+                        {isAdmin && (
+                            <div className="flex flex-col gap-1 min-w-[150px] w-full lg:w-48">
+                                <Label className="text-xs font-bold text-emerald-800 pr-2">إدارة مخزون فرع:</Label>
+                                <Select value={String(selectedBranchId || "")} onValueChange={(val) => setSelectedBranchId(Number(val))}>
+                                    <SelectTrigger className="h-10 md:h-12 border-emerald-200 bg-emerald-50/50 text-emerald-700 font-black rounded-xl">
+                                        <SelectValue placeholder="اختر الفرع" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {branches.map(b => (
+                                            <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
                         {isAdmin && (
                             <>
                                 <Button

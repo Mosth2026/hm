@@ -15,6 +15,7 @@ import { formatPrice } from "@/lib/utils";
 import { useAnalytics } from "@/hooks/use-analytics";
 import { useAuth } from "@/hooks/use-auth";
 import { useEffect as useReactEffect } from "react";
+import { useBranchContext } from "@/context/BranchContext";
 
 const CheckoutPage = () => {
     const { items, getTotalPrice, getDiscountedTotal, appliedCoupon, clearCart } = useCart();
@@ -23,6 +24,7 @@ const CheckoutPage = () => {
     const [isSuccess, setIsSuccess] = useState(false);
     const { logEvent } = useAnalytics();
     const { user } = useAuth();
+    const { selectedBranch } = useBranchContext();
     const [formData, setFormData] = useState({
         name: "",
         phone: "",
@@ -132,6 +134,7 @@ const CheckoutPage = () => {
             }
 
             const message = encodeURIComponent(
+                `مرحباً فرع ${selectedBranch?.name || "صناع السعادة"}، أود إتمام هذا الطلب:\n\n` +
                 `🛒 *طلب جديد (رقم #${orderId})* 🛒\n\n` +
                 `👤 *العميل:* ${formData.name}\n` +
                 `📞 *رقم الهاتف:* ${formData.phone}\n` +
@@ -139,12 +142,12 @@ const CheckoutPage = () => {
                 (appliedCoupon ? `🎟️ *كود الخصم:* ${appliedCoupon.code} (-${discountAmount} ج.م)\n\n` : "") +
                 `📦 *المنتجات:*\n${cartDetails}\n\n` +
                 `💰 *الإجمالي الكلي:* ${formatPrice(discountedTotal)}\n\n` +
-                `📄 *رابط الفاتورة الرقمية:* ${invoiceUrl}\n\n` +
-                `مرحباً صناع السعادة، أود إتمام هذا الطلب الذي سجلته على الموقع.`
+                `📄 *رابط الفاتورة الرقمية:* ${invoiceUrl}`
             );
 
-            // 4. فتح واتساب
-            window.open(`https://wa.me/${SITE_CONFIG.whatsappNumber}?text=${message}`, '_blank');
+            // 4. فتح واتساب - استخدام رقم الفرع المختار أو الرقم الافتراضي
+            const waNumber = selectedBranch?.whatsapp_number || SITE_CONFIG.whatsappNumber;
+            window.open(`https://wa.me/${waNumber}?text=${message}`, '_blank');
             logEvent('whatsapp_checkout_complete', { order_id: orderId }, formData);
 
             setIsSuccess(true);

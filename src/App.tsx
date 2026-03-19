@@ -104,39 +104,43 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
   }
 }
 
+import { BranchProvider } from "./context/BranchContext";
+
 const App = () => {
   return (
     <ErrorBoundary>
-      <HelmetProvider>
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner position="bottom-right" richColors />
-            <BrowserRouter>
-              <div className="relative min-h-screen bg-background">
-                <LuxuryExperience />
-                <ThemeToggle />
-                <WhatsAppWidget />
-                <AnalyticsTracker />
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/admin" element={<AdminDashboard />} />
-                  <Route path="/categories/:categoryId" element={<CategoryPage />} />
-                  <Route path="/products/:productId" element={<ProductDetails />} />
-                  <Route path="/search" element={<SearchPage />} />
-                  <Route path="/cart" element={<CartPage />} />
-                  <Route path="/checkout" element={<CheckoutPage />} />
-                  <Route path="/my-orders" element={<MyOrders />} />
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route path="/order-preview/:orderId" element={<OrderTracking />} />
-                  <Route path="/order-tracking/:orderId" element={<OrderTracking />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </div>
-            </BrowserRouter>
-          </TooltipProvider>
-        </QueryClientProvider>
-      </HelmetProvider>
+      <BranchProvider>
+        <HelmetProvider>
+          <QueryClientProvider client={queryClient}>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner position="bottom-right" richColors />
+              <BrowserRouter>
+                <div className="relative min-h-screen bg-background">
+                  <LuxuryExperience />
+                  <ThemeToggle />
+                  <WhatsAppWidget />
+                  <AnalyticsTracker />
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/admin" element={<AdminDashboard />} />
+                    <Route path="/categories/:categoryId" element={<CategoryPage />} />
+                    <Route path="/products/:productId" element={<ProductDetails />} />
+                    <Route path="/search" element={<SearchPage />} />
+                    <Route path="/cart" element={<CartPage />} />
+                    <Route path="/checkout" element={<CheckoutPage />} />
+                    <Route path="/my-orders" element={<MyOrders />} />
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/order-preview/:orderId" element={<OrderTracking />} />
+                    <Route path="/order-tracking/:orderId" element={<OrderTracking />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </div>
+              </BrowserRouter>
+            </TooltipProvider>
+          </QueryClientProvider>
+        </HelmetProvider>
+      </BranchProvider>
     </ErrorBoundary>
   );
 };

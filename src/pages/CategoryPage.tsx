@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import ProductCard from "@/components/ProductCard";
 import { Helmet } from "react-helmet-async";
 import { useProducts } from "@/hooks/use-products";
+import { useBranchContext } from "@/context/BranchContext";
 import { Loader2, Sparkles, Filter, Share2, MessageCircle, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { cleanImageUrl, copyToClipboard } from "@/lib/utils";
@@ -30,7 +31,8 @@ const categoryNames: Record<string, string> = {
 
 const CategoryPage = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
-  const { data: products, isLoading, error } = useProducts(categoryId);
+  const { selectedBranch } = useBranchContext();
+  const { data: products, isLoading, error } = useProducts(categoryId, false, selectedBranch?.id);
   const [sortBy, setSortBy] = useState<string>("newest");
 
   const sortedProducts = useMemo(() => {

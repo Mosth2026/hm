@@ -3,8 +3,11 @@ import { Loader2, Sparkles } from "lucide-react";
 import { useProducts } from "@/hooks/use-products";
 import ProductCard from "./ProductCard";
 
+import { useBranchContext } from "@/context/BranchContext";
+
 const FeaturedProducts = () => {
-  const { data: products, isLoading, error } = useProducts(undefined, true);
+  const { selectedBranch } = useBranchContext();
+  const { data: products, isLoading, error } = useProducts(undefined, true, selectedBranch?.id);
 
   if (isLoading) {
     return (
