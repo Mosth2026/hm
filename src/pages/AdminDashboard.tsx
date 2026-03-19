@@ -954,8 +954,7 @@ const AdminDashboard = () => {
                 { count: noTaxCount },
                 { count: readyToShotCount },
                 { count: trashCount },
-                { data: allProducts },
-                { data: lastSyncLog }
+                { data: allProducts }
             ] = await Promise.all([
                 supabase.from('products').select('*', { count: 'exact', head: true }).not('description', 'ilike', '%[DRAFT]%'),
                 supabase.from('products').select('*', { count: 'exact', head: true }).lt('stock', 10).gte('stock', 1).not('description', 'ilike', '%[DRAFT]%'),
@@ -966,7 +965,6 @@ const AdminDashboard = () => {
                 supabase.from('products').select('*', { count: 'exact', head: true }).gte('stock', 1).or('image.is.null,image.eq.,image.ilike.%unsplash%').not('description', 'ilike', '%[DRAFT]%'),
                 supabase.from('products').select('*', { count: 'exact', head: true }).ilike('description', '%[DRAFT]%'),
                 supabase.from('products').select('price, stock, updated_at'),
-                supabase.from('admin_logs').select('details, created_at').eq('action', 'excel_sync_summary').order('created_at', { ascending: false }).limit(1)
             ]);
 
             const total = totalCount || 0;
@@ -979,17 +977,36 @@ const AdminDashboard = () => {
 
             const value = (allProducts || []).reduce((acc, p) => acc + (p.price * (p.stock ?? 0)), 0);
 
-            // Get session stats from last log (Sales tracking)
+            // Get session stats from logs today (Sales tracking)
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+
             let dailyChanges = 0;
             let dailyValue = 0;
             let salesProductIds: number[] = [];
             let salesQuantities: Record<number, number> = {};
-            if (lastSyncLog && lastSyncLog.length > 0) {
-                const details = lastSyncLog[0].details;
-                dailyChanges = details.sales_count || 0;
-                dailyValue = details.sales_value || 0;
-                salesProductIds = details.sales_product_ids || [];
-                salesQuantities = details.sales_quantities || {};
+
+            const { data: todayLogs } = await supabase
+                .from('admin_logs')
+                .select('details')
+                .eq('action', 'excel_sync_summary')
+                .gte('created_at', startOfToday.toISOString());
+
+            if (todayLogs && todayLogs.length > 0) {
+                todayLogs.forEach(entry => {
+                    const details = entry.details;
+                    dailyChanges += (details.sales_count || 0);
+                    dailyValue += (details.sales_value || 0);
+                    if (details.sales_product_ids) {
+                        salesProductIds = [...new Set([...salesProductIds, ...details.sales_product_ids])];
+                    }
+                    if (details.sales_quantities) {
+                        Object.entries(details.sales_quantities).forEach(([id, qty]) => {
+                            const pid = Number(id);
+                            salesQuantities[pid] = (salesQuantities[pid] || 0) + (qty as number);
+                        });
+                    }
+                });
             }
 
             setStats({
