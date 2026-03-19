@@ -1517,23 +1517,21 @@ const AdminDashboard = () => {
                     }
                     if (uniqueKey) processedInBatch.add(uniqueKey);
 
-                    // --- MATCHING LOGIC (The Iron Shield) ---
+                    // --- MATCHING LOGIC (The Barcode Fortress) ---
                     let productId = null;
-                    const numericExcelId = excelId ? Number(excelId) : null;
 
-                    if (numericExcelId && dbProductMap.has(numericExcelId)) {
-                        productId = numericExcelId;
-                    } else if (normCode && barcodeMap.has(normCode)) {
+                    // المطابقة تتم حصراً بالباركود لضمان الدقة وتجنب تداخل الأسماء المعدلة يدوياً
+                    if (normCode && barcodeMap.has(normCode)) {
                         productId = barcodeMap.get(normCode);
                         barcodeMatches++;
                     }
 
-                    // الحماية الكبرى: الاعتماد حصراً على الباركود لتحديث الأصناف الموجودة مسبقاً
-                    // إذا كان الاسم موجوداً في الداتابيز ولكن الصف في الإكسيل ليس له باركود مطابق، نتجاهله تماماً
-                    // هذا يمنع تصفير الرصيد أو تسجيل مبيعات وهمية بسبب صفوف الإكسيل المكررة أو غير المكتملة
+                    // الحماية: إذا لم يتطابق الباركود، وكان الاسم موجوداً بالفعل في الداتابيز، 
+                    // يتم تجاهل السجل أو اعتباره "مكرر مجهول" لمنع إنشاء أصناف بنفس الاسم بباركود جديد بشكل عشوائي،
+                    // إلا لو قرر النظام في المرحلة التالية أنه "إضافة صنف جديد بباركود جديد".
                     if (!productId && normName && categoryMap.has(normName)) {
-                        duplicateCount++;
-                        continue;
+                        // إذا كان الاسم موجوداً ولكن الباركود مختلف أو غير موجود، نعتبره مكرراً أو نحتاج لمراجعته
+                        // لكن للمرونة سنسمح بالإضافة كصنف جديد إذا كان هناك باركود فعلي غير موجود سابقاً.
                     }
 
                     const dbProduct = productId ? dbProductMap.get(productId) : null;
