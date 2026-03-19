@@ -1385,10 +1385,10 @@ const AdminDashboard = () => {
                     const normName = normalize(p.name);
                     let pureBarcode = "";
 
-                    // استخراج الباركود بشكل ذكي باستخدام Regex
-                    if (p.description && p.description.includes('باركود:')) {
-                        const match = p.description.match(/باركود:\s*(\d+)/);
-                        if (match) pureBarcode = normalizeBarcode(match[1]);
+                    // استخراج الباركود بشكل ذكي باستخدام Regex (أرقام فقط)
+                    if (p.description) {
+                        const codeMatch = p.description.match(/باركود:\s*([A-Za-z0-9-]+)/i) || p.description.match(/(\d{6,15})/);
+                        if (codeMatch) pureBarcode = normalizeBarcode(codeMatch[1]);
                     }
 
                     const hasImage = p.image && p.image !== PLACEHOLDER_IMAGE && !p.image.includes('unsplash.com');
@@ -1573,9 +1573,13 @@ const AdminDashboard = () => {
 
                         // For tax calculation on existing products, use Excel category if provided, otherwise stick to DB category
                         const currentCatId = excelCatId || dbProduct.category_id;
-                        const isExempt = isExemptImport || (currentCatId === 'no-tax') ||
-                            dbProduct.description?.includes('[TAX_EXEMPT]') ||
-                            (excelCatId === 'no-tax');
+                        const currentCatName = dbProduct.category_name || '';
+                        
+                        const isExempt = isExemptImport || 
+                            (currentCatId === 'no-tax') ||
+                            (excelCatId === 'no-tax') ||
+                            (currentCatName.includes('بدون ضريبة')) ||
+                            (dbProduct.description?.includes('[TAX_EXEMPT]'));
 
                         // PERSISTENT DRAFT LOGIC: المخبأ السري
                         const isOldDraft = dbProduct?.description?.includes('[DRAFT]');
@@ -1605,9 +1609,8 @@ const AdminDashboard = () => {
                                     finalCalculatedPrice = Number((excelPrice * 1.14).toFixed(2));
                                 }
 
-                                // الحماية الكبرى: إذا كان السعر المحسوب مطابقاً للسعر الحالي في الداتابيز، لا نعتبره تغييراً.
-                                // هذا يمنع إعادة حساب الضريبة على سعر تم حسابه مسبقاً.
-                                if (finalCalculatedPrice !== currentPrice && Math.abs(finalCalculatedPrice - currentPrice) > 0.005) {
+                                // الحماية الكبرى: مقارنة السعر الجديد بالسعر الحالي في الداتابيز.
+                                if (Math.abs(finalCalculatedPrice - currentPrice) > 0.01) {
                                     updateData.price = finalCalculatedPrice;
                                     hasChanges = true;
                                 }
