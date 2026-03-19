@@ -84,15 +84,14 @@ export const useBranches = () => {
     }
   };
 
-  // Initialize from localStorage or detect
+  // Initialize from localStorage ONLY if saved, otherwise keep as null
   useEffect(() => {
     if (branches.length > 0) {
       const saved = localStorage.getItem('selected_branch');
       if (saved) {
         setSelectedBranch(JSON.parse(saved));
-      } else {
-        detectLocation();
       }
+      // Automatic detection removed to keep branches in background as requested
     }
   }, [branches]);
 
