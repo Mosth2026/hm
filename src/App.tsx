@@ -106,6 +106,8 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 
 import { BranchProvider } from "./context/BranchContext";
 
+import FestiveBalloons from "./components/FestiveBalloons";
+
 const App = () => {
   return (
     <ErrorBoundary>
@@ -116,7 +118,8 @@ const App = () => {
               <Toaster />
               <Sonner position="bottom-right" richColors />
               <BrowserRouter>
-                <div className="relative min-h-screen bg-background">
+                <div className="relative min-h-screen bg-background overflow-x-hidden">
+                  <FestiveBalloons />
                   <LuxuryExperience />
                   <ThemeToggle />
                   <WhatsAppWidget />
