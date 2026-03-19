@@ -142,18 +142,6 @@ const AdminDashboard = () => {
     const [branches, setBranches] = useState<any[]>([]);
     const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
 
-    useEffect(() => {
-        const fetchBranches = async () => {
-            const { data, error } = await supabase.from('branches').select('*');
-            if (data && data.length > 0) {
-                setBranches(data);
-                // Default to first branch if not set
-                if (!selectedBranchId) setSelectedBranchId(data[0].id);
-            }
-        };
-        fetchBranches();
-    }, []);
-
     const logAction = async (action: string, details: any = {}, productId?: number) => {
         try {
             await supabase.from('admin_logs').insert([{
@@ -173,6 +161,28 @@ const AdminDashboard = () => {
     const isAdmin = (user?.role === 'admin' || isSuperAdmin) && !isRestrictedStaff;
     const canDelete = isAdmin;
     const canEditPrice = isAdmin;
+
+    useEffect(() => {
+        const fetchBranches = async () => {
+            const { data, error } = await supabase.from('branches').select('*');
+            if (data && data.length > 0) {
+                setBranches(data);
+                if (!selectedBranchId) {
+                    if (isRestrictedStaff) {
+                        const alexBranch = data.find(b => b.name.includes('اسكندرية'));
+                        if (alexBranch) {
+                            setSelectedBranchId(alexBranch.id);
+                        } else {
+                            setSelectedBranchId(data[0].id);
+                        }
+                    } else {
+                        setSelectedBranchId(data[0].id);
+                    }
+                }
+            }
+        };
+        fetchBranches();
+    }, [isRestrictedStaff, selectedBranchId]);
 
     // Define filteredProducts near the top but as a derived value
 
@@ -2104,10 +2114,10 @@ const AdminDashboard = () => {
                     <div>
                         <h1 className="text-2xl md:text-3xl font-bold text-saada-brown flex items-center gap-2">
                             <BarChart className="h-6 w-6 md:h-8 md:h-8 text-saada-red" />
-                            لوحة تحكم صناع السعادة ({username === 'fikry' ? 'مرحبا هشام' : (isAdmin ? 'المدير' : (username.includes('mostafa') ? 'الموظف مصطفى' : (username.includes('hesham') ? 'الموظف هشام' : `الموظف ${user?.username || ''}`)))})
+                            لوحة تحكم صناع السعادة ({username === 'fikry' ? 'الموظف فكري' : (isAdmin ? 'المدير' : (username.includes('mostafa') ? 'الموظف مصطفى' : (username.includes('hesham') ? 'الموظف هشام' : `الموظف ${user?.username || ''}`)))})
                         </h1>
-                        <p className="text-gray-500 mt-1">
-                            {isRestrictedStaff ? 'تحديث المخزون، الصور، والأسماء' : (isAdmin ? 'إدارة كاملة للمتجر والمنتجات' : 'صلاحية محدودة لتعديل الصور والأسماء')}
+                        <p className="text-gray-500 mt-1 flex items-center gap-1.5 font-bold">
+                            {isRestrictedStaff ? `إدارة مخزون فرع: ${branches.find(b => b.id === selectedBranchId)?.name || '...'}` : (isAdmin ? 'إدارة كاملة للمتجر والمنتجات' : 'صلاحية محدودة لتعديل الصور والأسماء')}
                         </p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-row gap-2 md:gap-3 w-full md:w-auto items-end">
