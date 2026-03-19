@@ -1579,7 +1579,7 @@ const AdminDashboard = () => {
                         }
 
                         // 2. تحديث السعر
-                        if (priceValue !== null && user?.username !== 'mostafa') {
+                        if (priceValue !== null) {
                             let excelPrice = parseFloat(String(priceValue).replace(/[^0-9.]/g, ''));
                             if (!isNaN(excelPrice) && excelPrice > 0) {
                                 let finalCalculatedPrice = excelPrice;
@@ -1820,7 +1820,7 @@ const AdminDashboard = () => {
                     // Remove individual product logging to prevent flooding the logs (200 limit)
                     // Summary log is enough for audit purposes
 
-                    logAction('excel_sync_summary', {
+                    await logAction('excel_sync_summary', {
                         updated: successCount,
                         added: addedCount,
                         deleted: toDeleteIds.length,
