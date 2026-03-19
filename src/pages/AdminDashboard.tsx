@@ -1566,10 +1566,11 @@ const AdminDashboard = () => {
                     }
 
                     const finalCatId = excelCatId || guessedCatId;
+                    const effectiveId = productId || dbProduct?.id;
 
-                    if (productId && dbProduct) {
-                        importedIds.add(productId);
-                        const updateData: any = { id: productId };
+                    if (dbProduct && effectiveId) {
+                        importedIds.add(effectiveId);
+                        const updateData: any = { id: effectiveId };
                         let hasChanges = false;
 
                         // For tax calculation on existing products, use Excel category if provided, otherwise stick to DB category
@@ -1848,14 +1849,25 @@ const AdminDashboard = () => {
                         sales_quantities: sessionSalesQuantities
                     });
 
-                    // Update local stats instantly
-                    setStats(prev => ({
-                        ...prev,
-                        dailyChanges: sessionSalesCount,
-                        dailyValue: sessionSalesValue,
-                        salesProductIds: sessionSalesProductIds,
-                        salesQuantities: sessionSalesQuantities
-                    }));
+                    // Update local stats instantly (Cumulative for current view)
+                    setStats(prev => {
+                        const newDailyChanges = prev.dailyChanges + sessionSalesCount;
+                        const newDailyValue = prev.dailyValue + sessionSalesValue;
+                        const newSalesQuantities = { ...prev.salesQuantities };
+                        
+                        Object.entries(sessionSalesQuantities).forEach(([id, qty]) => {
+                            const pid = Number(id);
+                            newSalesQuantities[pid] = (newSalesQuantities[pid] || 0) + (qty as number);
+                        });
+
+                        return {
+                            ...prev,
+                            dailyChanges: newDailyChanges,
+                            dailyValue: newDailyValue,
+                            salesProductIds: [...new Set([...prev.salesProductIds, ...sessionSalesProductIds])],
+                            salesQuantities: newSalesQuantities
+                        };
+                    });
                 }
 
                 if (failCount > 0) {
