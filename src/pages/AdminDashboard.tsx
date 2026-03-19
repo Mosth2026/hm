@@ -1313,7 +1313,7 @@ const AdminDashboard = () => {
         const catIds = (currentProduct.category_id || '').split(',').filter(Boolean);
         const catLabels = catIds.map(id => categories.find(c => c.id === id)?.label).filter(Boolean).join(', ');
         
-        const { id, created_at, ...updateFields } = currentProduct;
+        const { id, created_at, product_branch_stock, ...updateFields } = currentProduct as any;
 
         let finalDescription = (updateFields.description || '').replace('[TAX_EXEMPT]', '').trim();
         if (currentProduct.no_tax) {

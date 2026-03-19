@@ -65,7 +65,7 @@ const FestiveBalloons = () => {
   };
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-[100] overflow-hidden select-none">
+    <div className="fixed inset-0 pointer-events-none z-[9999] overflow-hidden select-none">
       {balloons.map((balloon) => (
         <div
           key={balloon.id}

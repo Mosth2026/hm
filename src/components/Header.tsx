@@ -530,7 +530,52 @@ const Header = () => {
         </div>
 
         <ScrollArea className="flex-grow px-8 py-4">
-          <div className="flex flex-col gap-10">
+          <div className="flex flex-col gap-10">            <div className="flex flex-col gap-4">
+              <span className="text-[10px] font-black text-secondary uppercase tracking-[0.3em]">الفرع المختار</span>
+              <div className="p-4 bg-primary/5 rounded-3xl border border-primary/10 flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                    <MapPin className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-primary">{selectedBranch?.name || 'جاري التحديد...'}</h4>
+                    <p className="text-[10px] text-primary/40 font-medium">{selectedBranch?.address || 'سيتم اختيار الأقرب تلقائياً'}</p>
+                  </div>
+                </div>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-full h-12 rounded-2xl border-primary/10 bg-white hover:bg-primary/5 text-primary font-bold flex items-center justify-between px-4">
+                      <span>تغيير الفرع</span>
+                      <ChevronDown className="h-4 w-4 opacity-50" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-[calc(100vw-80px)] rounded-2xl p-2 border-primary/10">
+                    {branches.map((branch) => (
+                      <DropdownMenuItem
+                        key={branch.id}
+                        onClick={() => selectBranch(branch)}
+                        className={cn(
+                          "rounded-xl h-12 px-4 font-bold transition-all",
+                          selectedBranch?.id === branch.id ? "bg-primary text-white" : "hover:bg-primary/5 text-primary"
+                        )}
+                      >
+                        {branch.name}
+                      </DropdownMenuItem>
+                    ))}
+                    <div className="h-px bg-primary/5 my-2" />
+                    <DropdownMenuItem
+                      onClick={detectLocation}
+                      className="rounded-xl h-12 px-4 font-bold text-saada-red hover:bg-saada-red/5 flex items-center gap-2"
+                    >
+                      <MapPin className="h-4 w-4" />
+                      تحديد أقرب فرع تلقائياً
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+
             <div className="flex flex-col gap-4">
               <span className="text-[10px] font-black text-secondary uppercase tracking-[0.3em]">Sections</span>
               <div className="grid grid-cols-1 gap-3">
