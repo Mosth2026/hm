@@ -1027,32 +1027,28 @@ const AdminDashboard = () => {
             const startOfToday = new Date();
             startOfToday.setHours(0, 0, 0, 0);
 
+            const { data: latestLogs } = await supabase
+                .from('admin_logs')
+                .select('details, created_at')
+                .eq('action', 'excel_sync_summary')
+                .order('created_at', { ascending: false })
+                .limit(1);
+
             let dailyChanges = 0;
             let dailyValue = 0;
             let salesProductIds: number[] = [];
             let salesQuantities: Record<number, number> = {};
 
-            const { data: todayLogs } = await supabase
-                .from('admin_logs')
-                .select('details')
-                .eq('action', 'excel_sync_summary')
-                .gte('created_at', startOfToday.toISOString());
-
-            if (todayLogs && todayLogs.length > 0) {
-                todayLogs.forEach(entry => {
-                    const details = entry.details;
-                    dailyChanges += (details.sales_count || 0);
-                    dailyValue += (details.sales_value || 0);
-                    if (details.sales_product_ids) {
-                        salesProductIds = [...new Set([...salesProductIds, ...details.sales_product_ids])];
-                    }
-                    if (details.sales_quantities) {
-                        Object.entries(details.sales_quantities).forEach(([id, qty]) => {
-                            const pid = Number(id);
-                            salesQuantities[pid] = (salesQuantities[pid] || 0) + (qty as number);
-                        });
-                    }
-                });
+            if (latestLogs && latestLogs.length > 0) {
+                const details = latestLogs[0].details;
+                dailyChanges = (details.sales_count || 0);
+                dailyValue = (details.sales_value || 0);
+                if (details.sales_product_ids) {
+                    salesProductIds = details.sales_product_ids;
+                }
+                if (details.sales_quantities) {
+                    salesQuantities = details.sales_quantities;
+                }
             }
 
             setStats({
@@ -2288,7 +2284,7 @@ const AdminDashboard = () => {
                                     <CardContent className="p-4">
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <p className="text-xs font-medium text-gray-500">أصناف مبيعات الجرد</p>
+                                                <p className="text-xs font-medium text-gray-500">أصناف مبيعات (آخر جرد)</p>
                                                 <h3 className="text-2xl font-bold mt-1 text-indigo-600">{stats.dailyChanges}</h3>
                                             </div>
                                             <div className="h-10 w-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform">
@@ -2305,7 +2301,7 @@ const AdminDashboard = () => {
                                     <CardContent className="p-4">
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <p className="text-xs font-medium text-gray-500">قيمة مبيعات الجرد</p>
+                                                <p className="text-xs font-medium text-gray-500">قيمة مبيعات (آخر جرد)</p>
                                                 <h3 className="text-2xl font-bold mt-1 text-violet-600">{Number(stats.dailyValue).toLocaleString()} ج.م</h3>
                                             </div>
                                             <div className="h-10 w-10 bg-violet-50 rounded-xl flex items-center justify-center text-violet-500 group-hover:scale-110 transition-transform">
