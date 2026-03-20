@@ -125,8 +125,9 @@ const ProductDetails = () => {
   return (
     <>
       <Helmet>
-        <title>{cleanProductName(product.name)} | صناع السعادة</title>
-        <meta name="description" content={product.description} />
+        <title>{cleanProductName(product.name)} | صناع السعادة (Makers of Happiness)</title>
+        <meta name="description" content={`${product.description} | متوفر الآن في متجر صناع السعادة (Happiness Makers) - الوجهة الأولى لمنتجات سويس فرو (SWISS FRU) والحلويات المستوردة في مصر.`} />
+        <meta name="keywords" content={`${cleanProductName(product.name)}، شوكولاتة، شيكولاتة، شيكولاته، سويس فرو، سوس فرو، Swiss Fro، Swiss Fru، Swiss Fruit، صناع السعادة، صانع السعادة، صانع السعاده، متجر حلويات مستوردة`} />
 
         {/* Open Graph Meta Tags */}
         <meta property="og:title" content={`${cleanProductName(product.name)} | صناع السعادة`} />

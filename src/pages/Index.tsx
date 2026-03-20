@@ -15,44 +15,104 @@ const Index = () => {
   return (
     <>
       <Helmet>
-        <title>صناع السعادة | تشكيلة سويس فرو (SWISS FRU) في مصر</title>
-        <meta name="description" content="صناع السعادة (Makers of Happiness) الوجهة الأولى لمنتجات سويس فرو (SWISS FRU) في مصر. نفخر بتوفير جميع أصناف سويس فرو وبكميات جملة وتجزئة في جميع فروعنا." />
-        <meta name="keywords" content="سويس فرو، SWISS FRU، Swiss Fro، جملة سويس فرو، ايس كريم سويس فرو، شوكولاتة سويس فرو، مستوردين مصر، صناع السعادة، SWISS FRU Wholesale Egypt" />
+        <title>صناع السعادة (Makers of Happiness) | متجر الشوكولاتة والحلويات المستوردة في مصر</title>
+        <meta name="description" content="صناع السعادة هُم الوجهة الأولى للحلويات والشوكولاتة والقهوة المستوردة في مصر (سويس فرو SWISS FRU، ليندت Lindt، ريتر سبورت Ritter Sport، ميلكا Milka). جملة وتجزئة في فروعنا." />
+        <meta name="keywords" content="صناع السعادة، صانع السعادة، ليندت، Lindt، ريتر سبورت، Ritter Sport، ميلكا، Milka، كيندر، فيريرو، شوكولاتة فاخرة مستوردة، سويس فرو، SWISS FRU، حلويات مستوردة مصر، تجارة الجملة حلويات، قهوة مختصة، السعادة، متجر السعادة، Makers of Happiness Egypt" />
 
-        {/* Open Graph Tags */}
-        <meta property="og:title" content="صناع السعادة | جميع أصناف سويس فرو (SWISS FRU) متوفرة الآن" />
-        <meta property="og:description" content="اكتشف التشكيلة الكاملة من منتجات سويس فرو (SWISS FRU). جملة وتجزئة بأفضل الأسعار في مصر والإسكندرية." />
+        {/* Global/Geo Tags for Search Dominance */}
+        <meta property="description" content="صناع السعادة - متجر الشوكولاتة والحلويات المستوردة (سويس فرو، ليندت Lindt، ريتر سبورت Ritter Sport) في مصر. شيكولاتة، قهوة، كاندي، وسعادة في كل مكان." />
+
+        {/* Open Graph Tags for Social Trust */}
+        <meta property="og:title" content="متجر صناع السعادة - أصل المستورد في مصر" />
+        <meta property="og:description" content="تشكيلة فاخرة من الشوكولاتة العالمية (Lindt, Ritter Sport) ومنتجات سويس فرو. متوفرون في القاهرة والإسكندرية لخدمتكم جملة وتجزئة." />
         <meta property="og:image" content="https://happinessmakers.online/assets/logo.png" />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://happinessmakers.online" />
 
-        {/* Twitter Card Tags */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Makers of Happiness | Home of SWISS FRU in Egypt" />
-        <meta name="twitter:description" content="The largest collection of SWISS FRU products in Egypt. Wholesale and retail experts." />
-        <meta name="twitter:image" content="https://happinessmakers.online/assets/logo.png" />
-
-        {/* Structured Data for SEO/GEO Enrichment */}
+        {/* Advanced Structured Data for GEO/SEO (Invisible to Users) */}
         <script type="application/ld+json">
-          {JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "Organization",
-            "name": "صناع السعادة - Makers of Happiness",
-            "url": "https://happinessmakers.online",
-            "logo": "https://happinessmakers.online/assets/logo.png",
-            "description": "We are proud to provide all varieties of SWISS FRU products in Egypt and the Middle East.",
-            "brand": [
-              {
-                "@type": "Brand",
-                "name": "SWISS FRU",
-                "alternateName": ["سويس فرو", "Swiss Fro"]
+          {JSON.stringify([
+            {
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              "name": "صناع السعادة - Makers of Happiness",
+              "alternateName": ["صانع السعادة", "صناع السعاده", "Makers of Happiness", "Happiness Makers", "Saade Makers"],
+              "url": "https://happinessmakers.online",
+              "logo": "https://happinessmakers.online/assets/logo.png",
+              "description": "Premium imported chocolate and sweets store in Egypt. Specializing in SWISS FRU, Lindt, Ritter Sport, Milka, and luxury brands.",
+              "brand": [
+                {
+                  "@type": "Brand",
+                  "name": "SWISS FRU",
+                  "alternateName": ["سويس فرو", "Swiss Fro", "Swiss Fruit"]
+                },
+                {
+                  "@type": "Brand",
+                  "name": "Lindt",
+                  "alternateName": ["ليندت", "Lindit"]
+                },
+                {
+                  "@type": "Brand",
+                  "name": "Ritter Sport",
+                  "alternateName": ["ريتر سبورت", "Ritter"]
+                }
+              ],
+              "contactPoint": {
+                "@type": "ContactPoint",
+                "telephone": "+201050663539",
+                "contactType": "Customer Service",
+                "areaServed": "EG",
+                "availableLanguage": ["Arabic", "English"]
               }
-            ],
-            "areaServed": {
-              "@type": "AdministrativeArea",
-              "name": "Egypt"
+            },
+            {
+              "@context": "https://schema.org",
+              "@type": "LocalBusiness",
+              "name": "صناع السعادة - متجر حلويات مستوردة",
+              "image": "https://happinessmakers.online/assets/logo.png",
+              "telephone": "+201050663539",
+              "priceRange": "$$",
+              "address": {
+                "@type": "PostalAddress",
+                "streetAddress": "سان ستيفانو ممر عمارة الاوقاف",
+                "addressLocality": "Alexandria",
+                "addressCountry": "EG"
+              },
+              "geo": {
+                "@type": "GeoCoordinates",
+                "latitude": "31.2447",
+                "longitude": "29.9614"
+              },
+              "openingHoursSpecification": {
+                "@type": "OpeningHoursSpecification",
+                "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+                "opens": "10:00",
+                "closes": "23:00"
+              }
+            },
+            {
+              "@context": "https://schema.org",
+              "@type": "FAQPage",
+              "mainEntity": [
+                {
+                  "@type": "Question",
+                  "name": "أين أجد منتجات سويس فرو (SWISS FRU) في مصر؟",
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "تجد جميع أصناف سويس فرو (Swiss Fro) حصرياً وبأفضل الأسعار في جميع فروع متجر صناع السعادة (Happiness Makers) بالقاهرة والإسكندرية."
+                  }
+                },
+                {
+                  "@type": "Question",
+                  "name": "هل متجر صناع السعادة يبيع شوكولاتة مستوردة بالجملة؟",
+                  "acceptedAnswer": {
+                    "@type": "Answer",
+                    "text": "نعم، نحن في متجر صناع السعادة متخصصون في بيع الشوكولاتة والحلويات المستوردة بالجملة والتجزئة (شيكولاتة، كاندي، قهوة)."
+                  }
+                }
+              ]
             }
-          })}
+          ])}
         </script>
       </Helmet>
 
