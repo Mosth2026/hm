@@ -151,10 +151,7 @@ const AdminDashboard = () => {
         notificationSound.current.volume = 0.5;
     }, []);
 
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [isAuthenticated, activeTab]);
+
 
     const lastOrderId = useRef<number | null>(null);
     const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
@@ -226,49 +223,62 @@ const AdminDashboard = () => {
             }
         };
 
-        const interval = setInterval(checkNewOrders, 30000); 
+        const interval = setInterval(checkNewOrders, 15000); // Check every 15 seconds (Aggressive)
         return () => clearInterval(interval);
     }, [isAuthenticated, isNotificationsEnabled, activeTab]);
 
     const triggerOrderAlert = (order: any, isPolling = false) => {
+        console.log("📢 Triggering Order Alert:", order);
         // 1. Play Sound
         if (notificationSound.current) {
-            notificationSound.current.play().catch(e => console.error("Audio play failed:", e));
+            notificationSound.current.currentTime = 0;
+            notificationSound.current.play().catch(e => console.error("Audio play failed (Autoplay?):", e));
         }
 
         // 2. Show Toast
         toast.success(isPolling ? "🔔 طلب جديد (مكتشف بالرادار)" : "🔔 طلب جديد وصل الآن!", {
-            description: `طلب من ${order.customer_name || 'عميل'} بقيمة ${formatPrice(order.total_amount)}`,
-            duration: 15000,
+            description: `من: ${order.customer_name || 'عميل'} - المبلغ: ${formatPrice(order.total_amount)}`,
+            duration: 20000,
             position: "top-center",
             style: { 
                 background: '#10b981', 
                 color: 'white', 
-                fontSize: '1.2rem',
-                padding: '1.5rem',
+                fontSize: '1.4rem',
+                padding: '2rem',
                 fontWeight: 'bold',
-                border: '4px solid white',
-                boxShadow: '0 0 30px rgba(0,0,0,0.4)',
-                zIndex: 9999
+                border: '5px solid white',
+                boxShadow: '0 0 40px rgba(0,0,0,0.5)',
+                zIndex: 99999
             }
         });
 
         // 3. Tab Title Flash
-        const originalTitle = document.title;
+        const originalTitle = "لوحة تحكم صناع السعادة";
         let flashCount = 0;
         const flashInterval = setInterval(() => {
             document.title = flashCount % 2 === 0 ? "📢 [طلب جديد!]" : originalTitle;
             flashCount++;
-            if (flashCount > 30) {
+            if (flashCount > 40) {
                 clearInterval(flashInterval);
                 document.title = originalTitle;
             }
-        }, 1000);
+        }, 800);
 
         // 4. Refresh Orders if on the orders tab
         if (activeTab === 'orders' || activeTab === 'analytics') {
             fetchOrders();
         }
+    };
+
+    const handleTestNotification = () => {
+        if (!isNotificationsEnabled) {
+            toast.error("يرجى تفعيل جرس التنبيه أولاً");
+            return;
+        }
+        triggerOrderAlert({
+            customer_name: "اختبار النظام",
+            total_amount: 999
+        });
     };
 
     const logAction = async (action: string, details: any = {}, productId?: number) => {
@@ -2308,18 +2318,30 @@ const AdminDashboard = () => {
                                 إضافة صنف
                             </Button>
                         )}
-                        <Button
-                            variant="outline"
-                            onClick={toggleNotifications}
-                            className={`h-10 md:h-12 border-2 rounded-xl font-bold w-full flex items-center gap-2 transition-all ${isNotificationsEnabled ? 'bg-emerald-50 border-emerald-500 text-emerald-600 animate-pulse' : 'border-gray-300 text-gray-500'}`}
-                        >
-                            {isNotificationsEnabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
-                            {isNotificationsEnabled ? 'جرس الطلبات نشط' : 'تفعيل جرس التنبيه'}
-                        </Button>
+                        <div className="flex flex-col gap-2 w-full lg:w-72">
+                            <Button
+                                variant="outline"
+                                onClick={toggleNotifications}
+                                className={`h-11 md:h-12 border-2 rounded-xl font-black w-full flex items-center justify-center gap-2 transition-all ${isNotificationsEnabled ? 'bg-emerald-50 border-emerald-500 text-emerald-600 animate-pulse' : 'border-gray-200 text-gray-400 opacity-60'}`}
+                            >
+                                {isNotificationsEnabled ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
+                                {isNotificationsEnabled ? 'جرس التنبيه (نشط الآن)' : 'تفعيل جرس التنبيه'}
+                            </Button>
+                            {isNotificationsEnabled && (
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={handleTestNotification}
+                                    className="h-8 text-[10px] font-bold text-saada-red hover:bg-red-50"
+                                >
+                                    ⚡ تجربة إرسال تنبيه وهمي (للفحص)
+                                </Button>
+                            )}
+                        </div>
                         <Button
                             variant="outline"
                             onClick={logout}
-                            className="h-10 md:h-12 border-saada-brown text-saada-brown hover:bg-saada-brown hover:text-white rounded-xl font-bold w-full"
+                            className="h-11 md:h-12 border-saada-brown text-saada-brown hover:bg-saada-brown hover:text-white rounded-xl font-black w-full lg:w-40"
                         >
                             تسجيل الخروج
                         </Button>
