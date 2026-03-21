@@ -196,7 +196,7 @@ const AdminDashboard = () => {
             try {
                 const { data, error } = await supabase
                     .from('orders')
-                    .select('id, total_amount, customer_name, created_at')
+                    .select('id, total_price, customer_name, created_at')
                     .order('id', { ascending: false })
                     .limit(1);
 
@@ -231,7 +231,7 @@ const AdminDashboard = () => {
         }
 
         toast.success(isPolling ? "🔔 طلب جديد (مكتشف بالرادار)" : "🔔 طلب جديد وصل الآن!", {
-            description: `من: ${order.customer_name || 'عميل'} - المبلغ: ${formatPrice(order.total_amount)}`,
+            description: `من: ${order.customer_name || 'عميل'} - المبلغ: ${formatPrice(order.total_price || 0)}`,
             duration: 20000,
             position: "top-center",
             style: { 
@@ -265,7 +265,7 @@ const AdminDashboard = () => {
             toast.error("يرجى تفعيل جرس التنبيه أولاً");
             return;
         }
-        triggerOrderAlert({ customer_name: "اختبار النظام", total_amount: 999 });
+        triggerOrderAlert({ customer_name: "اختبار النظام", total_price: 999 });
     };
 
     const logAction = async (action: string, details: any = {}, productId?: number) => {
