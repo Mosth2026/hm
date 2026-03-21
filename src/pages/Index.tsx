@@ -40,82 +40,52 @@ const Index = () => {
               "@context": "https://schema.org",
               "@type": "Organization",
               "name": "صناع السعادة - Makers of Happiness",
-              "alternateName": ["صانع السعادة", "صناع السعاده", "Makers of Happiness", "Happiness Makers", "Saade Makers"],
+              "alternateName": ["صانع السعادة", "صناع السعاده", "صانع السعاده", "Makers of Happiness", "Happiness Makers", "Saade Makers", "Suna Al Saada"],
               "url": "https://happinessmakers.online",
               "logo": "https://happinessmakers.online/assets/logo.png",
               "description": "Premium imported chocolate and sweets store in Egypt. Specializing in SWISS FRU, Lindt, Ritter Sport, Milka, and luxury brands.",
-              "brand": [
-                {
-                  "@type": "Brand",
-                  "name": "SWISS FRU",
-                  "alternateName": ["سويس فرو", "Swiss Fro", "Swiss Fruit"]
-                },
-                {
-                  "@type": "Brand",
-                  "name": "Lindt",
-                  "alternateName": ["ليندت", "Lindit"]
-                },
-                {
-                  "@type": "Brand",
-                  "name": "Ritter Sport",
-                  "alternateName": ["ريتر سبورت", "Ritter"]
-                }
-              ],
               "contactPoint": {
                 "@type": "ContactPoint",
                 "telephone": "+201050663539",
                 "contactType": "Customer Service",
                 "areaServed": "EG",
                 "availableLanguage": ["Arabic", "English"]
-              }
-            },
-            {
-              "@context": "https://schema.org",
-              "@type": "LocalBusiness",
-              "name": "صناع السعادة - متجر حلويات مستوردة",
-              "image": "https://happinessmakers.online/assets/logo.png",
-              "telephone": "+201050663539",
-              "priceRange": "$$",
+              },
               "address": {
                 "@type": "PostalAddress",
                 "streetAddress": "سان ستيفانو ممر عمارة الاوقاف",
                 "addressLocality": "Alexandria",
+                "addressRegion": "Alexandria",
+                "postalCode": "21311",
+                "addressCountry": "EG"
+              }
+            },
+            ...[
+              { name: "فرع الرحاب", info: "السوق القديم بجانب مكتبة الأوائل", geo: { lat: "30.0594", lng: "31.4287" } },
+              { name: "فرع المهندسين", info: "تقاطع شارع شهاب مع شارع سوريا", geo: { lat: "30.0543", lng: "31.2006" } },
+              { name: "فرع المعادي 1", info: "82 شارع 9 بجانب بابا جونز", geo: { lat: "29.9602", lng: "31.2625" } },
+              { name: "فرع مدينة نصر", info: "63 شارع كابول مكرم عبيد", geo: { lat: "30.0601", lng: "31.3411" } },
+              { name: "فرع مصر الجديدة", info: "24 شارع الميرغني امام النادي", geo: { lat: "30.0917", lng: "31.3323" } },
+              { name: "فرع اسكندرية", info: "سان ستيفانو ممر عمارة الاوقاف", geo: { lat: "31.2447", lng: "29.9614" } }
+            ].map(branch => ({
+              "@context": "https://schema.org",
+              "@type": "LocalBusiness",
+              "name": `صناع السعادة - ${branch.name}`,
+              "image": "https://happinessmakers.online/assets/logo.png",
+              "address": {
+                "@type": "PostalAddress",
+                "streetAddress": branch.info,
                 "addressCountry": "EG"
               },
               "geo": {
                 "@type": "GeoCoordinates",
-                "latitude": "31.2447",
-                "longitude": "29.9614"
+                "latitude": branch.geo.lat,
+                "longitude": branch.geo.lng
               },
-              "openingHoursSpecification": {
-                "@type": "OpeningHoursSpecification",
-                "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-                "opens": "10:00",
-                "closes": "23:00"
-              }
-            },
-            {
-              "@context": "https://schema.org",
-              "@type": "FAQPage",
-              "mainEntity": [
-                {
-                  "@type": "Question",
-                  "name": "أين أجد منتجات سويس فرو (SWISS FRU) في مصر؟",
-                  "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": "تجد جميع أصناف سويس فرو (Swiss Fro) حصرياً وبأفضل الأسعار في جميع فروع متجر صناع السعادة (Happiness Makers) بالقاهرة والإسكندرية."
-                  }
-                },
-                {
-                  "@type": "Question",
-                  "name": "هل متجر صناع السعادة يبيع شوكولاتة مستوردة بالجملة؟",
-                  "acceptedAnswer": {
-                    "@type": "Answer",
-                    "text": "نعم، نحن في متجر صناع السعادة متخصصون في بيع الشوكولاتة والحلويات المستوردة بالجملة والتجزئة (شيكولاتة، كاندي، قهوة)."
-                  }
-                }
-              ]
-            }
+              "url": "https://happinessmakers.online",
+              "telephone": "+201050663539",
+              "priceRange": "$$"
+            }))
           ])}
         </script>
       </Helmet>
