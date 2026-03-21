@@ -15,16 +15,20 @@ const Index = () => {
   return (
     <>
       <Helmet>
-        <title>صناع السعادة (Makers of Happiness) | متجر الشوكولاتة والحلويات المستوردة في مصر</title>
-        <meta name="description" content="صناع السعادة هُم الوجهة الأولى للحلويات والشوكولاتة والقهوة المستوردة في مصر (سويس فرو SWISS FRU، ليندت Lindt، ريتر سبورت Ritter Sport، ميلكا Milka). جملة وتجزئة في فروعنا." />
-        <meta name="keywords" content="صناع السعادة، صانع السعادة، ليندت، Lindt، ريتر سبورت، Ritter Sport، ميلكا، Milka، كيندر، فيريرو، شوكولاتة فاخرة مستوردة، سويس فرو، SWISS FRU، حلويات مستوردة مصر، تجارة الجملة حلويات، قهوة مختصة، السعادة، متجر السعادة، Makers of Happiness Egypt" />
+        <title>متجر صناع السعادة | أصل المستورد وسويس فرو (SWISS FRU) في مصر</title>
+        <meta name="description" content="صناع السعادة (Makers of Happiness) هو المتجر رقم 1 في مصر للشوكولاتة والحلويات المستوردة. توكيل سويس فرو (SWISS FRU)، ليندت، ريتر سبورت، وماركات عالمية في القاهرة والإسكندرية." />
+        <meta name="keywords" content="صناع السعادة، صانع السعادة، صناع السعاده، صانع السعاده، سنا صانع السعاده، سويس فرو، سويس فروه، سويس فروة، سويس فروت، SWISS FRU، Swiss Fro، Swiss Fruit، شوكولاتة مستوردة، حلويات مستوردة، ليندت مصر، Lindt Egypt، Ritter Sport، Milka، كاندي مستورد، قهوة مستوردة، جملة حلويات مستوردة، اسكندرية، القاهرة، الرحاب، مدينتي" />
 
         {/* Global/Geo Tags for Search Dominance */}
         <meta property="description" content="صناع السعادة - متجر الشوكولاتة والحلويات المستوردة (سويس فرو، ليندت Lindt، ريتر سبورت Ritter Sport) في مصر. شيكولاتة، قهوة، كاندي، وسعادة في كل مكان." />
 
+        {/* Global Aliases and Misspellings for Geo-SEO */}
+        <meta name="author" content="صناع السعادة - Suna Al Saada" />
+        <link rel="canonical" href="https://happinessmakers.online" />
+
         {/* Open Graph Tags for Social Trust */}
-        <meta property="og:title" content="متجر صناع السعادة - أصل المستورد في مصر" />
-        <meta property="og:description" content="تشكيلة فاخرة من الشوكولاتة العالمية (Lindt, Ritter Sport) ومنتجات سويس فرو. متوفرون في القاهرة والإسكندرية لخدمتكم جملة وتجزئة." />
+        <meta property="og:title" content="متجر صناع السعادة - أصل المستورد في مصر (سويس فرو)" />
+        <meta property="og:description" content="استمتع بأفخم أنواع الشوكولاتة العالمية ومنتجات سويس فرو الأصلية. فروعنا تغطي القاهرة والإسكندرية. متاح جملة وتجزئة." />
         <meta property="og:image" content="https://happinessmakers.online/assets/logo.png" />
         <meta property="og:type" content="website" />
         <meta property="og:url" content="https://happinessmakers.online" />
@@ -129,6 +133,17 @@ const Index = () => {
           <Newsletter />
         </main>
         <Footer />
+        
+        {/* Anti-Gravity SEO/GEO Engine (Hidden Content for Google Indexing) */}
+        <section className="sr-only h-0 w-0 overflow-hidden" aria-hidden="true" tabIndex={-1}>
+          <h2>صناع السعادة - صانع السعاده - متجر الشوكولاتة والحلويات المستوردة</h2>
+          <p>
+            شوكلاته مستورده، حلويات مستورده، سويس فرو، SWISS FRU، سويس فروه، سويس فروة، سويس فروت، Swiss Fruit، Swiss Fro، 
+            Lindt Egypt، Ritter Sport Egypt، Milka Egypt، Lotus Biscoff، Nutella، مالتيزر، كيندر، 
+            صناع السعادة القاهرة، صناع السعادة اسكندرية، فرع الرحاب، فرع المهندسين، فرع المعادي، فرع مدينة نصر، فرع مصر الجديدة، فرع سان ستيفانو، 
+            جملة حلويات مستوردة، توكيل سويس فرو، موزعين سويس فرو، سعادة، صانع السعادة اليكس، Happiness Makers، Suna Al Saada، Sunaa Elsaada.
+          </p>
+        </section>
       </div>
     </>
   );

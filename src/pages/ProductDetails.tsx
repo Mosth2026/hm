@@ -125,21 +125,21 @@ const ProductDetails = () => {
   return (
     <>
       <Helmet>
-        <title>{cleanProductName(product.name)} | صناع السعادة (Makers of Happiness)</title>
-        <meta name="description" content={`${product.description} | متوفر الآن في متجر صناع السعادة (Happiness Makers) - الوجهة الأولى لمنتجات سويس فرو (SWISS FRU) والحلويات المستوردة في مصر.`} />
-        <meta name="keywords" content={`${cleanProductName(product.name)}، شوكولاتة، شيكولاتة، شيكولاته، سويس فرو، سوس فرو، Swiss Fro، Swiss Fru، Swiss Fruit، صناع السعادة، صانع السعادة، صانع السعاده، متجر حلويات مستوردة`} />
+        <title>{cleanProductName(product.name)} | صناع السعادة - متجر سويس فرو (SWISS FRU)</title>
+        <meta name="description" content={`${product.description} | اطلب الآن من صناع السعادة (Happiness Makers). الوجهة الأولى لمنتجات سويس فرو (SWISS FRU) والحلويات المستوردة في مصر. فروعنا في الرحاب والمهندسين والمدن الجديدة.`} />
+        <meta name="keywords" content={`${cleanProductName(product.name)}، شوكولاتة مستوردة، شيكولاتة مستوردة، سويس فرو، سويس فروات، سويس فروه، سويس فروت، Swiss Fro، Swiss Fru، Swiss Fruit، صناع السعادة، صانع السعادة، صانع السعاده، جيو سيو، حلويات مستوردة مصر`} />
 
         {/* Open Graph Meta Tags */}
-        <meta property="og:title" content={`${cleanProductName(product.name)} | صناع السعادة`} />
-        <meta property="og:description" content={`${product.description} | متوفر الآن بجميع أصناف سويس فرو (SWISS FRU) جملة وتجزئة لدى صناع السعادة.`} />
+        <meta property="og:title" content={`${cleanProductName(product.name)} | صناع السعادة (Makers of Happiness)`} />
+        <meta property="og:description" content={`${product.description} | متوفر الآن بجميع أصناف سويس فرو (SWISS FRU) جملة وتجزئة لدى صناع السعادة في مصر.`} />
         <meta property="og:image" content={cleanImageUrl(product.image)} />
         <meta property="og:type" content="product" />
         <meta property="og:url" content={`${SITE_CONFIG.siteUrl}${window.location.pathname}`} />
 
         {/* Twitter Card Meta Tags */}
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={`${cleanProductName(product.name)} | سويس فرو (SWISS FRU)`} />
-        <meta name="twitter:description" content={`اطلب ${cleanProductName(product.name)} الآن من صناع السعادة. نفخر بتوفير جميع منتجات سويس فرو (SWISS FRU) والماركات العالمية.`} />
+        <meta name="twitter:title" content={`${cleanProductName(product.name)} | أصل المستورد`} />
+        <meta name="twitter:description" content={`اطلب ${cleanProductName(product.name)} الآن من صناع السعادة (Suna Alsaada). نفخر بتوفير جميع منتجات سويس فرو (SWISS FRU) والماركات العالمية.`} />
         <meta name="twitter:image" content={cleanImageUrl(product.image)} />
 
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
