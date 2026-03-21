@@ -105,8 +105,17 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
 }
 
 import { BranchProvider } from "./context/BranchContext";
+import { useLocation as useRouteLocation } from "react-router-dom";
 
 import FestiveBalloons from "./components/FestiveBalloons";
+
+const ScrollToTop = () => {
+  const { pathname } = useRouteLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+};
 
 const App = () => {
   return (
@@ -118,6 +127,7 @@ const App = () => {
               <Toaster />
               <Sonner position="bottom-right" richColors />
               <BrowserRouter>
+                <ScrollToTop />
                 <div className="relative min-h-screen bg-background overflow-x-hidden">
                   <FestiveBalloons />
                   <LuxuryExperience />
@@ -127,6 +137,7 @@ const App = () => {
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/admin" element={<AdminDashboard />} />
+                    <Route path="/products" element={<Index />} />
                     <Route path="/categories/:categoryId" element={<CategoryPage />} />
                     <Route path="/products/:productId" element={<ProductDetails />} />
                     <Route path="/search" element={<SearchPage />} />

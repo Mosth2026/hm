@@ -48,14 +48,20 @@ const Footer = () => {
           <div className="space-y-6 md:space-y-8 text-center md:text-right">
             <h3 className="text-xl md:text-2xl font-black text-secondary uppercase tracking-widest font-outfit">Sitemap</h3>
             <ul className="space-y-3 md:space-y-4">
-              {['الرئيسية', 'المنتجات', 'من نحن', 'اتصل بنا', 'لوحة التحكم'].map((item, idx) => (
+              {[
+                { label: 'الرئيسية', path: '/' },
+                { label: 'المنتجات', path: '/categories/chocolate' },
+                { label: 'من نحن', path: '/#about' },
+                { label: 'اتصل بنا', path: '#contact' },
+                { label: 'لوحة التحكم', path: '/admin' }
+              ].map((item, idx) => (
                 <li key={idx}>
                   <Link
-                    to={idx === 4 ? "/admin" : (idx === 1 ? "/products" : "/")}
+                    to={item.path}
                     className="text-white/60 hover:text-white flex items-center justify-center md:justify-start gap-2 group transition-all font-bold"
                   >
                     <div className="h-1.5 w-1.5 rounded-full bg-secondary scale-0 group-hover:scale-100 transition-transform" />
-                    {item}
+                    {item.label}
                   </Link>
                 </li>
               ))}
@@ -117,7 +123,7 @@ const Footer = () => {
         </div>
 
         {/* Branches Section - FULL WIDTH on Desktop for balance */}
-        <div className="pt-16 border-t border-white/5 mb-20 text-center md:text-right">
+        <div id="contact" className="pt-16 border-t border-white/5 mb-20 text-center md:text-right">
           <h3 className="text-xl md:text-2xl font-black text-secondary uppercase tracking-widest font-outfit mb-8">Our Branches</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8 lg:gap-16">
             {[
