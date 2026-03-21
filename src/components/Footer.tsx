@@ -51,8 +51,8 @@ const Footer = () => {
               {[
                 { label: 'الرئيسية', path: '/' },
                 { label: 'المنتجات', path: '/categories/chocolate' },
-                { label: 'من نحن', path: '/#about' },
-                { label: 'اتصل بنا', path: '#contact' },
+                { label: 'من نحن', path: '/about' },
+                { label: 'اتصل بنا', path: '/#contact' },
                 { label: 'لوحة التحكم', path: '/admin' }
               ].map((item, idx) => (
                 <li key={idx}>

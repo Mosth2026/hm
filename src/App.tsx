@@ -18,6 +18,7 @@ import OrderTracking from "./pages/OrderTracking";
 import MyOrders from "./pages/MyOrders";
 import LoginPage from "./pages/LoginPage";
 import AdminDashboard from "./pages/AdminDashboard";
+import AboutUs from "./pages/AboutUs";
 import ThemeToggle from "./components/ThemeToggle";
 import WhatsAppWidget from "./components/WhatsAppWidget";
 import LuxuryExperience from "./components/LuxuryExperience";
@@ -137,6 +138,7 @@ const App = () => {
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/admin" element={<AdminDashboard />} />
+                    <Route path="/about" element={<AboutUs />} />
                     <Route path="/products" element={<Index />} />
                     <Route path="/categories/:categoryId" element={<CategoryPage />} />
                     <Route path="/products/:productId" element={<ProductDetails />} />
