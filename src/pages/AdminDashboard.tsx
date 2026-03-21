@@ -144,6 +144,8 @@ const AdminDashboard = () => {
     const [branches, setBranches] = useState<any[]>([]);
     const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
     const notificationSound = useRef<HTMLAudioElement | null>(null);
+    const lastOrderId = useRef<number | null>(null);
+    const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
 
     // Initialize notification sound
     useEffect(() => {
@@ -151,15 +153,9 @@ const AdminDashboard = () => {
         notificationSound.current.volume = 0.5;
     }, []);
 
-
-
-    const lastOrderId = useRef<number | null>(null);
-    const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
-
     // Toggle Audio and Notifications
     const toggleNotifications = () => {
         if (!isNotificationsEnabled) {
-            // "Unlock" audio context
             if (notificationSound.current) {
                 notificationSound.current.play().then(() => {
                     notificationSound.current?.pause();
@@ -174,7 +170,7 @@ const AdminDashboard = () => {
         }
     };
 
-    // Real-time Order Listener (Primary)
+    // Real-time Order Notifications
     useEffect(() => {
         if (!isAuthenticated || !isNotificationsEnabled) return;
 
@@ -192,7 +188,7 @@ const AdminDashboard = () => {
         };
     }, [isAuthenticated, isNotificationsEnabled, activeTab]);
 
-    // Polling Backup for Order Notifications (Checks every 30 seconds as failover)
+    // Polling Backup for Order Notifications (Checks every 15 seconds)
     useEffect(() => {
         if (!isAuthenticated || !isNotificationsEnabled) return;
 
@@ -223,19 +219,17 @@ const AdminDashboard = () => {
             }
         };
 
-        const interval = setInterval(checkNewOrders, 15000); // Check every 15 seconds (Aggressive)
+        const interval = setInterval(checkNewOrders, 15000); 
         return () => clearInterval(interval);
     }, [isAuthenticated, isNotificationsEnabled, activeTab]);
 
     const triggerOrderAlert = (order: any, isPolling = false) => {
         console.log("📢 Triggering Order Alert:", order);
-        // 1. Play Sound
         if (notificationSound.current) {
             notificationSound.current.currentTime = 0;
-            notificationSound.current.play().catch(e => console.error("Audio play failed (Autoplay?):", e));
+            notificationSound.current.play().catch(e => console.error("Audio play failed:", e));
         }
 
-        // 2. Show Toast
         toast.success(isPolling ? "🔔 طلب جديد (مكتشف بالرادار)" : "🔔 طلب جديد وصل الآن!", {
             description: `من: ${order.customer_name || 'عميل'} - المبلغ: ${formatPrice(order.total_amount)}`,
             duration: 20000,
@@ -252,7 +246,6 @@ const AdminDashboard = () => {
             }
         });
 
-        // 3. Tab Title Flash
         const originalTitle = "لوحة تحكم صناع السعادة";
         let flashCount = 0;
         const flashInterval = setInterval(() => {
@@ -264,10 +257,7 @@ const AdminDashboard = () => {
             }
         }, 800);
 
-        // 4. Refresh Orders if on the orders tab
-        if (activeTab === 'orders' || activeTab === 'analytics') {
-            fetchOrders();
-        }
+        if (activeTab === 'orders' || activeTab === 'analytics') fetchOrders();
     };
 
     const handleTestNotification = () => {
@@ -275,10 +265,7 @@ const AdminDashboard = () => {
             toast.error("يرجى تفعيل جرس التنبيه أولاً");
             return;
         }
-        triggerOrderAlert({
-            customer_name: "اختبار النظام",
-            total_amount: 999
-        });
+        triggerOrderAlert({ customer_name: "اختبار النظام", total_amount: 999 });
     };
 
     const logAction = async (action: string, details: any = {}, productId?: number) => {
