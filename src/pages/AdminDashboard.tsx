@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth, UserRole } from "@/hooks/use-auth";
 import { supabase } from "@/lib/supabase";
@@ -34,7 +34,9 @@ import {
     PieChart,
     Calendar,
     MousePointer2,
-    RotateCcw
+    RotateCcw,
+    Bell,
+    BellOff
 } from "lucide-react";
 import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard";
 import * as XLSX from 'xlsx';
@@ -141,6 +143,133 @@ const AdminDashboard = () => {
     const [isExemptImport, setIsExemptImport] = useState(false);
     const [branches, setBranches] = useState<any[]>([]);
     const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
+    const notificationSound = useRef<HTMLAudioElement | null>(null);
+
+    // Initialize notification sound
+    useEffect(() => {
+        notificationSound.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        notificationSound.current.volume = 0.5;
+    }, []);
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [isAuthenticated, activeTab]);
+
+    const lastOrderId = useRef<number | null>(null);
+    const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
+
+    // Toggle Audio and Notifications
+    const toggleNotifications = () => {
+        if (!isNotificationsEnabled) {
+            // "Unlock" audio context
+            if (notificationSound.current) {
+                notificationSound.current.play().then(() => {
+                    notificationSound.current?.pause();
+                    if (notificationSound.current) notificationSound.current.currentTime = 0;
+                }).catch(e => console.warn("Initial unlock failed:", e));
+            }
+            setIsNotificationsEnabled(true);
+            toast.success("🔔 تم تفعيل جرس التنبيهات بنجاح");
+        } else {
+            setIsNotificationsEnabled(false);
+            toast.info("🔕 تم إيقاف جرس التنبيهات");
+        }
+    };
+
+    // Real-time Order Listener (Primary)
+    useEffect(() => {
+        if (!isAuthenticated || !isNotificationsEnabled) return;
+
+        console.log("🔔 Subscribing to real-time orders...");
+        const channel = supabase
+            .channel('public:orders_realtime')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
+                console.log("🚀 Real-time: New Order Detected:", payload);
+                triggerOrderAlert(payload.new);
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [isAuthenticated, isNotificationsEnabled, activeTab]);
+
+    // Polling Backup for Order Notifications (Checks every 30 seconds as failover)
+    useEffect(() => {
+        if (!isAuthenticated || !isNotificationsEnabled) return;
+
+        const checkNewOrders = async () => {
+            try {
+                const { data, error } = await supabase
+                    .from('orders')
+                    .select('id, total_amount, customer_name, created_at')
+                    .order('id', { ascending: false })
+                    .limit(1);
+
+                if (error) throw error;
+                if (!data || data.length === 0) return;
+
+                const newest = data[0];
+                if (lastOrderId.current === null) {
+                    lastOrderId.current = newest.id;
+                    return;
+                }
+
+                if (newest.id > lastOrderId.current) {
+                    console.log("🛡️ Polling: New order detected by radar:", newest);
+                    triggerOrderAlert(newest, true);
+                    lastOrderId.current = newest.id;
+                }
+            } catch (err) {
+                console.warn("Polling error:", err);
+            }
+        };
+
+        const interval = setInterval(checkNewOrders, 30000); 
+        return () => clearInterval(interval);
+    }, [isAuthenticated, isNotificationsEnabled, activeTab]);
+
+    const triggerOrderAlert = (order: any, isPolling = false) => {
+        // 1. Play Sound
+        if (notificationSound.current) {
+            notificationSound.current.play().catch(e => console.error("Audio play failed:", e));
+        }
+
+        // 2. Show Toast
+        toast.success(isPolling ? "🔔 طلب جديد (مكتشف بالرادار)" : "🔔 طلب جديد وصل الآن!", {
+            description: `طلب من ${order.customer_name || 'عميل'} بقيمة ${formatPrice(order.total_amount)}`,
+            duration: 15000,
+            position: "top-center",
+            style: { 
+                background: '#10b981', 
+                color: 'white', 
+                fontSize: '1.2rem',
+                padding: '1.5rem',
+                fontWeight: 'bold',
+                border: '4px solid white',
+                boxShadow: '0 0 30px rgba(0,0,0,0.4)',
+                zIndex: 9999
+            }
+        });
+
+        // 3. Tab Title Flash
+        const originalTitle = document.title;
+        let flashCount = 0;
+        const flashInterval = setInterval(() => {
+            document.title = flashCount % 2 === 0 ? "📢 [طلب جديد!]" : originalTitle;
+            flashCount++;
+            if (flashCount > 30) {
+                clearInterval(flashInterval);
+                document.title = originalTitle;
+            }
+        }, 1000);
+
+        // 4. Refresh Orders if on the orders tab
+        if (activeTab === 'orders' || activeTab === 'analytics') {
+            fetchOrders();
+        }
+    };
 
     const logAction = async (action: string, details: any = {}, productId?: number) => {
         try {
@@ -2179,6 +2308,14 @@ const AdminDashboard = () => {
                                 إضافة صنف
                             </Button>
                         )}
+                        <Button
+                            variant="outline"
+                            onClick={toggleNotifications}
+                            className={`h-10 md:h-12 border-2 rounded-xl font-bold w-full flex items-center gap-2 transition-all ${isNotificationsEnabled ? 'bg-emerald-50 border-emerald-500 text-emerald-600 animate-pulse' : 'border-gray-300 text-gray-500'}`}
+                        >
+                            {isNotificationsEnabled ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+                            {isNotificationsEnabled ? 'جرس الطلبات نشط' : 'تفعيل جرس التنبيه'}
+                        </Button>
                         <Button
                             variant="outline"
                             onClick={logout}

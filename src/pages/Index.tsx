@@ -10,6 +10,7 @@ import LuxuryExperience from "@/components/LuxuryExperience";
 
 import SocialBanner from "@/components/SocialBanner";
 import { Helmet } from "react-helmet-async";
+import { SITE_CONFIG } from "@/lib/constants";
 
 const Index = () => {
   return (
