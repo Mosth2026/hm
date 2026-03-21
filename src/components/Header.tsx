@@ -116,18 +116,18 @@ const Header = () => {
             <Link to="/" className="group flex items-center gap-2 md:gap-3 shrink-0 relative transition-transform hover:scale-[1.02]">
               <div className="relative h-9 w-9 md:h-13 md:w-13 bg-white rounded-xl md:rounded-2xl flex items-center justify-center shadow-[0_10px_20px_rgba(0,0,0,0.1)] group-hover:shadow-secondary/20 group-hover:rotate-6 transition-all duration-500 overflow-hidden border border-primary/5">
                 <img
-                  src="/assets/logo.png"
-                  alt="Logo"
-                  className="h-full w-full object-cover"
+                  src={SITE_CONFIG.logoPath}
+                  alt={SITE_CONFIG.name}
+                  className="h-full w-full object-contain"
                 />
               </div>
               <div className="flex flex-col">
                 <div className="flex items-center gap-1">
                   <span className="text-[17px] md:text-2xl font-black leading-tight tracking-tight text-primary flex items-center gap-1">
-                    صنا<span className="text-[#f31b3e] drop-shadow-[0_0_12px_rgba(243,27,62,0.4)]">ع</span> السعادة
+                    {SITE_CONFIG.name.slice(0, 3)}<span className="text-[#f31b3e] drop-shadow-[0_0_12px_rgba(243,27,62,0.4)]">{SITE_CONFIG.name.slice(3, 4)}</span>{SITE_CONFIG.name.slice(4)}
                   </span>
                 </div>
-                <span className="text-[8px] md:text-[10px] uppercase tracking-[0.2em] md:tracking-[0.25em] font-outfit text-secondary font-bold leading-none">Makers of Happiness</span>
+                <span className="text-[8px] md:text-[10px] uppercase tracking-[0.2em] md:tracking-[0.25em] font-outfit text-secondary font-bold leading-none">{SITE_CONFIG.englishName}</span>
               </div>
             </Link>
 

@@ -2,6 +2,7 @@
 import { Facebook, Instagram, MessageCircle, Users, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { SITE_CONFIG } from "@/lib/constants";
 
 const SocialBanner = () => {
   return (
@@ -53,7 +54,7 @@ const SocialBanner = () => {
                   size="lg"
                   className="h-16 px-10 bg-[#1877F2] hover:bg-[#0d65d9] text-white rounded-2xl text-xl font-black shadow-xl shadow-blue-600/20 transition-all hover:scale-105 group"
                 >
-                  <a href="https://www.facebook.com/share/1HpTkYTqRf/" target="_blank" rel="noopener noreferrer">
+                  <a href={SITE_CONFIG.social.facebook} target="_blank" rel="noopener noreferrer">
                     <Facebook className="ml-3 h-6 w-6 transition-transform group-hover:scale-110" />
                     تابعنا على فيسبوك
                   </a>
@@ -63,7 +64,7 @@ const SocialBanner = () => {
                   size="lg"
                   className="h-16 px-10 bg-gradient-to-tr from-[#f9ce34] via-[#ee2a7b] to-[#6228d7] hover:opacity-90 text-white rounded-2xl text-xl font-black shadow-xl shadow-purple-600/20 transition-all hover:scale-105 group border-0"
                 >
-                  <a href="https://www.instagram.com/happiness.makers.20?igsh=anRnZ2Mzcmw2Ymdk" target="_blank" rel="noopener noreferrer">
+                  <a href={SITE_CONFIG.social.instagram} target="_blank" rel="noopener noreferrer">
                     <Instagram className="ml-3 h-6 w-6 transition-transform group-hover:scale-110" />
                     تابعنا على انستجرام
                   </a>
@@ -77,7 +78,7 @@ const SocialBanner = () => {
                     <div className="aspect-[4/5] rounded-[2.5rem] overflow-hidden relative">
                          <img 
                             src="/assets/social-joy.png"
-                            alt="Suna Al Saada Community" 
+                            alt={`${SITE_CONFIG.name} Community`}
                             className="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-700"
                             loading="lazy"
                          />
@@ -89,7 +90,7 @@ const SocialBanner = () => {
                                     <Users className="h-6 w-6" />
                                 </div>
                                 <div className="text-white">
-                                    <p className="font-black text-lg leading-none">مجتمع صناع السعادة</p>
+                                    <p className="font-black text-lg leading-none">مجتمع {SITE_CONFIG.name}</p>
                                     <p className="text-xs font-bold text-white/70 mt-1">نشط الآن على مدار الساعة</p>
                                 </div>
                             </div>

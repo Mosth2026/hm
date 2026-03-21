@@ -4,13 +4,14 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Helmet } from "react-helmet-async";
 import { BadgeCheck, Heart, MapPin, Store, Users, ShoppingBag, Star, ShieldCheck } from "lucide-react";
+import { SITE_CONFIG } from "@/lib/constants";
 
 const AboutUs = () => {
   return (
     <div className="min-h-screen flex flex-col bg-[#fdfdfd] font-tajawal rtl">
       <Helmet>
-        <title>من نحن | صناع السعادة - أصل المستورد في مصر</title>
-        <meta name="description" content="تعرف على قصة صناع السعادة، وجهتكم الأولى لأجود أنواع الشوكولاتة والحلويات المستوردة وسويس فرو (SWISS FRU) في مصر. فروعنا في القاهرة والإسكندرية في خدمتكم." />
+        <title>من نحن | {SITE_CONFIG.name} - {SITE_CONFIG.slogan} في مصر</title>
+        <meta name="description" content={`تعرف على قصة ${SITE_CONFIG.name}، وجهتكم الأولى لأجود أنواع الشوكولاتة والحلويات المستوردة وسويس فرو (SWISS FRU) في مصر. فروعنا في القاهرة والإسكندرية في خدمتكم.`} />
       </Helmet>
 
       <Header />
@@ -22,10 +23,10 @@ const AboutUs = () => {
           <div className="container mx-auto px-4 md:px-8 text-center relative z-10">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/10 border border-secondary/20 text-secondary mb-8 animate-fade-in">
               <Star className="h-4 w-4 fill-secondary" />
-              <span className="font-black uppercase tracking-widest text-xs">Makers of Happiness Since 2011</span>
+              <span className="font-black uppercase tracking-widest text-xs">{SITE_CONFIG.englishName} Since 2011</span>
             </div>
             <h1 className="text-5xl md:text-7xl font-black text-primary mb-6 leading-tight">
-              صناع السعادة <br />
+              {SITE_CONFIG.name} <br />
               <span className="text-secondary italic">قصة شغف بالتميز</span>
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">

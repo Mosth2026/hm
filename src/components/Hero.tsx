@@ -7,6 +7,7 @@ import { supabase } from "@/lib/supabase";
 import { cn, cleanImageUrl, cleanProductName, formatPrice } from "@/lib/utils";
 import { useCart } from "@/hooks/use-cart";
 import { toast } from "sonner";
+import { SITE_CONFIG } from "@/lib/constants";
 
 const Hero = () => {
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
@@ -90,11 +91,11 @@ const Hero = () => {
 
             <div className="space-y-4">
               <h1 className="text-4xl md:text-7xl lg:text-8xl font-black text-primary leading-[1.1]">
-                صناع السعادة <br />
-                <span className="text-secondary italic">أصل المستورد</span>
+                {SITE_CONFIG.name} <br />
+                <span className="text-secondary italic">{SITE_CONFIG.slogan}</span>
               </h1>
               <p className="text-base md:text-xl text-muted-foreground max-w-xl leading-relaxed font-medium">
-                أكبر تشكيلة في مصر من الشوكولاتة، الكاندي، القهوة، والاسناكس العالمية الفاخرة، ونفخر بتوفير جميع أصناف سويس فرو (SWISS FRU) وبكميات في جميع فروعنا. اطلب من أي فرع جملة أو تجزئة بأفضل الأسعار.
+                أكبر تشكيلة في مصر من الشوكولاتة، الكاندي، القهوة، والاسناكس العالمية الفاخرة، ونفخر في {SITE_CONFIG.name} بتوفير جميع أصناف سويس فرو (SWISS FRU) وبكميات في جميع فروعنا. اطلب من أي فرع جملة أو تجزئة بأفضل الأسعار.
               </p>
             </div>
 

@@ -16,17 +16,17 @@ const Footer = () => {
           <div className="space-y-6 md:space-y-8 text-center md:text-right">
             <Link to="/" className="inline-block transition-transform hover:scale-105 duration-500">
               <img
-                src="/assets/logo.png"
-                alt="Suna Al-Saada"
+                src={SITE_CONFIG.logoPath}
+                alt={SITE_CONFIG.name}
                 className="h-20 md:h-28 mx-auto md:mx-0 object-contain"
               />
             </Link>
             <p className="text-white/60 text-base md:text-lg leading-relaxed font-medium">
-              نفخر في صناع السعادة بتوفير جميع أصناف سويس فرو (SWISS FRU) وبكميات في جميع فروعنا بالجملة والتجزئة، لنقدم لكم دائماً أصل المستورد وأجود الماركات العالمية.
+              نفخر في {SITE_CONFIG.name} بتوفير جميع أصناف سويس فرو (SWISS FRU) وبكميات في جميع فروعنا بالجملة والتجزئة، لنقدم لكم دائماً أصل المستورد وأجود الماركات العالمية.
             </p>
             <div className="flex items-center justify-center md:justify-start gap-4">
               <a
-                href="https://www.facebook.com/share/1HpTkYTqRf/"
+                href={SITE_CONFIG.social.facebook}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="h-11 w-11 md:h-12 md:w-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary hover:-translate-y-2 transition-all duration-500"
@@ -34,7 +34,7 @@ const Footer = () => {
                 <Facebook className="h-5 w-5 md:h-6 md:w-6" />
               </a>
               <a
-                href="https://www.instagram.com/happiness.makers.20?igsh=anRnZ2Mzcmw2Ymdk"
+                href={SITE_CONFIG.social.instagram}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="h-11 w-11 md:h-12 md:w-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-secondary hover:text-primary hover:-translate-y-2 transition-all duration-500"
@@ -126,15 +126,7 @@ const Footer = () => {
         <div id="contact" className="pt-16 border-t border-white/5 mb-20 text-center md:text-right">
           <h3 className="text-xl md:text-2xl font-black text-secondary uppercase tracking-widest font-outfit mb-8">Our Branches</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 md:gap-8 lg:gap-16">
-            {[
-              { name: "فرع الرحاب", info: "السوق القديم بجانب مكتبة الأوائل", phone: "01050005701", map: "https://maps.app.goo.gl/atDFtjPyawmjVF2f7" },
-              { name: "فرع المهندسين", info: "تقاطع شارع شهاب مع شارع سوريا", phone: "01050663537", map: "https://maps.app.goo.gl/n8ZGWeHtxUBbdA497" },
-              { name: "فرع المعادي 1", info: "82 شارع 9 بجانب بابا جونز", phone: "01050663538", map: "https://maps.app.goo.gl/1QEZhey61yARYkai6" },
-              { name: "فرع المعادي 2", info: "49 شارع 9 المعادي", phone: "01050006956", map: "https://maps.app.goo.gl/gqYx3aiy9VbaJWD28" },
-              { name: "فرع مدينة نصر", info: "63 شارع كابول مكرم عبيد", phone: "01050006929", map: "https://maps.app.goo.gl/xEoTtekT3Yii3Rag9" },
-              { name: "فرع مصر الجديدة", info: "24 شارع الميرغني امام النادي", phone: "01050006946", map: "https://maps.app.goo.gl/52u6nSZCBhzigG2v5" },
-              { name: "فرع اسكندرية", info: "سان ستيفانو ممر عمارة الاوقاف", phone: "01050663539", map: "https://maps.app.goo.gl/GzcPvygy4inj9dbj7" },
-            ].map((branch, idx) => (
+            {SITE_CONFIG.branches.map((branch, idx) => (
               <div key={idx} className="space-y-1 bg-white/5 p-4 rounded-2xl md:bg-transparent md:p-0">
                 <div className="flex items-center justify-center md:justify-start gap-2 text-secondary">
                   <MapPin className="h-4 w-4" />
