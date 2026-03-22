@@ -1984,8 +1984,14 @@ const AdminDashboard = () => {
                         sales_quantities: sessionSalesQuantities
                     });
                 } else {
-                    toast.info("تمت المزامنة: لا توجد فروقات في البيانات المرفوعة");
+                    toast.info("تمت المزامنة: بيانات الملف مطابقة تماماً للمتجر");
                 }
+
+                // DIAGNOSTIC TOAST: Show raw session calculation
+                toast(`📊 نتيجة الجرد: ${sessionSalesCount} صنف مبيع - إجمالي: ${sessionSalesValue} ج.م`, {
+                    description: "هذه الأرقام تمثل الفرق بين الملف المرفوع وحالة المتجر الحالية فقط.",
+                    duration: 10000
+                });
 
                 const currentSessionStats = {
                     count: sessionSalesCount,
