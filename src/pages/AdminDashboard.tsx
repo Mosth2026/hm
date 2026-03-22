@@ -1907,11 +1907,23 @@ const AdminDashboard = () => {
 
                 // PHASE 1.5: Branch Stock Upsert
                 if (toUpdateBranchStock.length > 0) {
-                    const BRANCH_BATCH_SIZE = 100;
+                    const BRANCH_BATCH_SIZE = 50;
                     for (let i = 0; i < toUpdateBranchStock.length; i += BRANCH_BATCH_SIZE) {
                         const chunk = toUpdateBranchStock.slice(i, i + BRANCH_BATCH_SIZE);
-                        const { error } = await supabase.from('product_branch_stock').upsert(chunk);
-                        if (error) console.error("Branch Stock Upsert failed:", error);
+                        // Using explicit onConflict to ensure it updates the correct row per branch
+                        const { error } = await supabase
+                            .from('product_branch_stock')
+                            .upsert(chunk, { onConflict: 'product_id,branch_id' });
+                        
+                        if (error) {
+                            console.error("Branch Stock Upsert failed:", error);
+                            failCount += chunk.length;
+                            if (!firstUpdateError) firstUpdateError = error;
+                        } else {
+                            // Only if the branch stock was actually updated do we consider it a success
+                            // We don't double count successCount globally as Products table already did,
+                            // but we MUST track failure here.
+                        }
                     }
                 }
 
