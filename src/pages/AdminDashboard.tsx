@@ -151,7 +151,9 @@ const AdminDashboard = () => {
     const notificationSound = useRef<HTMLAudioElement | null>(null);
     const lastOrderId = useRef<number | null>(null);
     const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(() => {
-        return localStorage.getItem('saada_notifications_active') === 'true';
+        if (typeof window === 'undefined') return false;
+        const saved = localStorage.getItem('SAADA_BELL_MASTER_V1');
+        return saved === 'true';
     });
 
     // Initialize notification sound
@@ -171,11 +173,11 @@ const AdminDashboard = () => {
                 }).catch(e => console.warn("Initial unlock failed:", e));
             }
             setIsNotificationsEnabled(true);
-            localStorage.setItem('saada_notifications_active', 'true');
+            localStorage.setItem('SAADA_BELL_MASTER_V1', 'true');
             toast.success("🔔 تم تفعيل جرس التنبيهات بنجاح");
         } else {
             setIsNotificationsEnabled(false);
-            localStorage.setItem('saada_notifications_active', 'false');
+            localStorage.setItem('SAADA_BELL_MASTER_V1', 'false');
             toast.info("🔕 تم إيقاف جرس التنبيهات");
         }
     };
