@@ -144,6 +144,7 @@ const AdminDashboard = () => {
     const [branches, setBranches] = useState<any[]>([]);
     const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
     const [sessionSalesOverride, setSessionSalesOverride] = useState<{ count: number, value: number, ids: number[], quantities: any } | null>(null);
+    const sessionSalesOverrideRef = useRef<{ count: number, value: number, ids: number[], quantities: any } | null>(null);
     const notificationSound = useRef<HTMLAudioElement | null>(null);
     const lastOrderId = useRef<number | null>(null);
     const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
@@ -1155,11 +1156,14 @@ const AdminDashboard = () => {
             let salesProductIds: number[] = [];
             let salesQuantities: Record<number, number> = {};
 
-            if (sessionSalesOverride) {
-                dailyChanges = sessionSalesOverride.count;
-                dailyValue = sessionSalesOverride.value;
-                salesProductIds = sessionSalesOverride.ids;
-                salesQuantities = sessionSalesOverride.quantities;
+            // Sync Ref Check: Use the latest session stats if they exist (prevents race conditions)
+            const activeOverride = sessionSalesOverrideRef.current || sessionSalesOverride;
+            
+            if (activeOverride) {
+                dailyChanges = activeOverride.count;
+                dailyValue = activeOverride.value;
+                salesProductIds = activeOverride.ids;
+                salesQuantities = activeOverride.quantities;
             } else {
                 const { data: latestLogs } = await supabase
                     .from('admin_logs')
@@ -1498,6 +1502,7 @@ const AdminDashboard = () => {
         const file = e.target.files?.[0];
         if (!file) return;
         setSessionSalesOverride(null);
+        sessionSalesOverrideRef.current = null;
         const reader = new FileReader();
         reader.onload = async (evt) => {
             const barcodeMap = new Map<string, number>();
@@ -1982,7 +1987,16 @@ const AdminDashboard = () => {
                     toast.info("تمت المزامنة: لا توجد فروقات في البيانات المرفوعة");
                 }
 
+                const currentSessionStats = {
+                    count: sessionSalesCount,
+                    value: sessionSalesValue,
+                    ids: sessionSalesProductIds,
+                    quantities: sessionSalesQuantities
+                };
+
                 setIsExemptImport(false);
+                setSessionSalesOverride(currentSessionStats);
+                sessionSalesOverrideRef.current = currentSessionStats;
                 fetchProducts();
             } catch (err: any) {
                 console.error("Excel Import Error:", err);
