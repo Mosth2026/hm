@@ -1863,7 +1863,7 @@ const AdminDashboard = () => {
                         const oldStock = branchRecord ? branchRecord.stock : 0;
                         const stockDiff = oldStock - item.stock;
                         if (stockDiff > 0) {
-                            sessionSalesCount += stockDiff;
+                            sessionSalesCount++;
                             sessionSalesProductIds.push(dbProd.id);
                             sessionSalesQuantities[dbProd.id] = stockDiff;
                             const updateFields = toUpdate.find(u => u.id === dbProd.id);
