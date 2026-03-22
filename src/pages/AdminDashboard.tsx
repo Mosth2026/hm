@@ -1497,6 +1497,7 @@ const AdminDashboard = () => {
     const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        setSessionSalesOverride(null);
         const reader = new FileReader();
         reader.onload = async (evt) => {
             const barcodeMap = new Map<string, number>();
@@ -1955,12 +1956,18 @@ const AdminDashboard = () => {
                         }
                     }
                 }
-
                 setImportProgress(null);
+                
+                // FORCE UI UPDATE (Even if 0)
+                setSessionSalesOverride({
+                    count: sessionSalesCount,
+                    value: sessionSalesValue,
+                    ids: sessionSalesProductIds,
+                    quantities: sessionSalesQuantities
+                });
+
                 if (successCount > 0 || addedCount > 0) {
-                    toast.success(`تمت المزامنة بنجاح`);
-                    
-                    // Final Calculation based on actual results to ensure freshness
+                    toast.success("تمت المزامنة بنجاح");
                     await logAction('excel_sync_summary', {
                         updated: successCount,
                         added: addedCount,
@@ -1971,23 +1978,11 @@ const AdminDashboard = () => {
                         sales_product_ids: sessionSalesProductIds,
                         sales_quantities: sessionSalesQuantities
                     });
-
-                    setStats(prev => ({
-                        ...prev,
-                        dailyChanges: sessionSalesCount,
-                        dailyValue: sessionSalesValue,
-                        salesProductIds: [...sessionSalesProductIds],
-                        salesQuantities: { ...sessionSalesQuantities }
-                    }));
+                } else {
+                    toast.info("تمت المزامنة: لا توجد فروقات في البيانات المرفوعة");
                 }
-                if (failCount > 0) toast.error(`تنبيه: فشل عمل ${failCount} صنف`);
+
                 setIsExemptImport(false);
-                setSessionSalesOverride({
-                    count: sessionSalesCount,
-                    value: sessionSalesValue,
-                    ids: sessionSalesProductIds,
-                    quantities: sessionSalesQuantities
-                });
                 fetchProducts();
             } catch (err: any) {
                 console.error("Excel Import Error:", err);
