@@ -1149,9 +1149,10 @@ const AdminDashboard = () => {
 
             const value = (allProducts || []).reduce((acc, p) => acc + (p.price * (p.stock ?? 0)), 0);
 
-            // Get session stats from logs today (Sales tracking)
-            const startOfToday = new Date();
-            startOfToday.setHours(0, 0, 0, 0);
+            let dailyChanges = 0;
+            let dailyValue = 0;
+            let salesProductIds: number[] = [];
+            let salesQuantities: Record<number, number> = {};
 
             const { data: latestLogs } = await supabase
                 .from('admin_logs')
@@ -1160,21 +1161,12 @@ const AdminDashboard = () => {
                 .order('created_at', { ascending: false })
                 .limit(1);
 
-            let dailyChanges = 0;
-            let dailyValue = 0;
-            let salesProductIds: number[] = [];
-            let salesQuantities: Record<number, number> = {};
-
             if (latestLogs && latestLogs.length > 0) {
                 const details = latestLogs[0].details;
-                dailyChanges = (details.sales_count || 0);
-                dailyValue = (details.sales_value || 0);
-                if (details.sales_product_ids) {
-                    salesProductIds = details.sales_product_ids;
-                }
-                if (details.sales_quantities) {
-                    salesQuantities = details.sales_quantities;
-                }
+                dailyChanges = Number(details.sales_count || 0);
+                dailyValue = Number(details.sales_value || 0);
+                salesProductIds = Array.isArray(details.sales_product_ids) ? details.sales_product_ids : [];
+                salesQuantities = typeof details.sales_quantities === 'object' ? details.sales_quantities : {};
             }
 
             setStats({
@@ -1970,18 +1962,15 @@ const AdminDashboard = () => {
                         sales_quantities: sessionSalesQuantities
                     });
                     setStats(prev => {
-                        const newDailyChanges = prev.dailyChanges + sessionSalesCount;
-                        const newDailyValue = prev.dailyValue + sessionSalesValue;
-                        const newSalesQuantities = { ...prev.salesQuantities };
+                        const newSalesQuantities: Record<number, number> = {};
                         Object.entries(sessionSalesQuantities).forEach(([id, qty]) => {
-                            const pid = Number(id);
-                            newSalesQuantities[pid] = (newSalesQuantities[pid] || 0) + (qty as number);
+                            newSalesQuantities[Number(id)] = qty as number;
                         });
                         return {
                             ...prev,
-                            dailyChanges: newDailyChanges,
-                            dailyValue: newDailyValue,
-                            salesProductIds: [...new Set([...prev.salesProductIds, ...sessionSalesProductIds])],
+                            dailyChanges: sessionSalesCount,
+                            dailyValue: sessionSalesValue,
+                            salesProductIds: [...sessionSalesProductIds],
                             salesQuantities: newSalesQuantities
                         };
                     });
