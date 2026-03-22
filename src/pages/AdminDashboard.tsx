@@ -322,23 +322,23 @@ const AdminDashboard = () => {
             if (data && data.length > 0) {
                 setBranches(data);
                 
-                // Persistence First: Respect storage above all
+                // Persistence First: Respect storage
                 const savedBranchId = localStorage.getItem('saada_selected_branch');
                 const currentSelectionFromStorage = savedBranchId ? Number(savedBranchId) : null;
                 
-                if (currentSelectionFromStorage) {
+                // Account-Based Override: Ensure restricted staff ALWAYS land in their branch
+                // even if storage is wiped or has something else
+                if (isRestrictedStaff) {
+                    const alexBranch = data.find(b => b.name.includes('اسكندرية'));
+                    const targetId = alexBranch ? alexBranch.id : data[0].id;
+                    setSelectedBranchId(targetId);
+                    localStorage.setItem('saada_selected_branch', targetId.toString());
+                } else if (currentSelectionFromStorage) {
                     setSelectedBranchId(currentSelectionFromStorage);
                 } else if (!selectedBranchId) {
-                    // Only fallback to logic if NOTHING in storage
-                    if (isRestrictedStaff) {
-                        const alexBranch = data.find(b => b.name.includes('اسكندرية'));
-                        const targetId = alexBranch ? alexBranch.id : data[0].id;
-                        setSelectedBranchId(targetId);
-                        localStorage.setItem('saada_selected_branch', targetId.toString());
-                    } else {
-                        setSelectedBranchId(data[0].id);
-                        localStorage.setItem('saada_selected_branch', data[0].id.toString());
-                    }
+                    // General admin/manager fallback
+                    setSelectedBranchId(data[0].id);
+                    localStorage.setItem('saada_selected_branch', data[0].id.toString());
                 }
             }
         };
