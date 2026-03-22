@@ -143,6 +143,7 @@ const AdminDashboard = () => {
     const [isExemptImport, setIsExemptImport] = useState(false);
     const [branches, setBranches] = useState<any[]>([]);
     const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
+    const [sessionSalesOverride, setSessionSalesOverride] = useState<{ count: number, value: number, ids: number[], quantities: any } | null>(null);
     const notificationSound = useRef<HTMLAudioElement | null>(null);
     const lastOrderId = useRef<number | null>(null);
     const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
@@ -1115,7 +1116,7 @@ const AdminDashboard = () => {
         setLoading(false);
     };
 
-    const calculateStats = async (data: Product[], sessionOverride?: { count: number, value: number, ids: number[], quantities: any }) => {
+    const calculateStats = async (data: Product[]) => {
         try {
             const [
                 { count: totalCount },
@@ -1154,11 +1155,11 @@ const AdminDashboard = () => {
             let salesProductIds: number[] = [];
             let salesQuantities: Record<number, number> = {};
 
-            if (sessionOverride) {
-                dailyChanges = sessionOverride.count;
-                dailyValue = sessionOverride.value;
-                salesProductIds = sessionOverride.ids;
-                salesQuantities = sessionOverride.quantities;
+            if (sessionSalesOverride) {
+                dailyChanges = sessionSalesOverride.count;
+                dailyValue = sessionSalesOverride.value;
+                salesProductIds = sessionSalesOverride.ids;
+                salesQuantities = sessionSalesOverride.quantities;
             } else {
                 const { data: latestLogs } = await supabase
                     .from('admin_logs')
@@ -1979,14 +1980,15 @@ const AdminDashboard = () => {
                         salesQuantities: { ...sessionSalesQuantities }
                     }));
                 }
+                if (failCount > 0) toast.error(`تنبيه: فشل عمل ${failCount} صنف`);
                 setIsExemptImport(false);
-                setProducts(processed);
-                calculateStats(processed, {
+                setSessionSalesOverride({
                     count: sessionSalesCount,
                     value: sessionSalesValue,
                     ids: sessionSalesProductIds,
                     quantities: sessionSalesQuantities
                 });
+                fetchProducts();
             } catch (err: any) {
                 console.error("Excel Import Error:", err);
                 toast.error("خطأ في قراءة ملف الإكسيل أو تحديث البيانات");
