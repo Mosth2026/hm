@@ -26,9 +26,20 @@ import PremiumDecorations from "./components/PremiumDecorations";
 import AnalyticsTracker from "./components/AnalyticsTracker";
 
 try {
-  const version = "3.3.4-final";
+  const version = "3.3.5-final";
   if (typeof window !== 'undefined' && localStorage.getItem('site_v') !== version) {
+    // Preserve mission-critical settings before clearing
+    const savedBranch = localStorage.getItem('saada_selected_branch');
+    const savedBell = localStorage.getItem('SAADA_BELL_MASTER_V1');
+    const savedBellOld = localStorage.getItem('saada_notifications_active');
+    
     localStorage.clear();
+    
+    // Restore preserved settings
+    if (savedBranch) localStorage.setItem('saada_selected_branch', savedBranch);
+    if (savedBell) localStorage.setItem('SAADA_BELL_MASTER_V1', savedBell);
+    if (savedBellOld) localStorage.setItem('saada_notifications_active', savedBellOld);
+    
     localStorage.setItem('site_v', version);
   }
 } catch (e) { }
