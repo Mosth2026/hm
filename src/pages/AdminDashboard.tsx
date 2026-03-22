@@ -162,7 +162,8 @@ const AdminDashboard = () => {
 
     // Toggle Audio and Notifications
     const toggleNotifications = () => {
-        if (!isNotificationsEnabled) {
+        const newState = !isNotificationsEnabled;
+        if (newState) {
             if (notificationSound.current) {
                 notificationSound.current.play().then(() => {
                     notificationSound.current?.pause();
@@ -181,6 +182,7 @@ const AdminDashboard = () => {
 
     const handleBranchChange = (branchId: string) => {
         const bId = Number(branchId);
+        console.log("📍 Changing branch to:", bId);
         setSelectedBranchId(bId);
         localStorage.setItem('saada_selected_branch', bId.toString());
     };
@@ -320,25 +322,19 @@ const AdminDashboard = () => {
             if (data && data.length > 0) {
                 setBranches(data);
                 
-                // Persistence: Check storage FIRST
-                const savedBranch = localStorage.getItem('saada_selected_branch');
+                // Persistence First: Respect storage above all
+                const savedBranchId = localStorage.getItem('saada_selected_branch');
+                const currentSelectionFromStorage = savedBranchId ? Number(savedBranchId) : null;
                 
-                if (savedBranch) {
-                    const bId = Number(savedBranch);
-                    if (selectedBranchId !== bId) {
-                        setSelectedBranchId(bId);
-                    }
+                if (currentSelectionFromStorage) {
+                    setSelectedBranchId(currentSelectionFromStorage);
                 } else if (!selectedBranchId) {
-                    // Only if NO saved branch AND no active state
+                    // Only fallback to logic if NOTHING in storage
                     if (isRestrictedStaff) {
                         const alexBranch = data.find(b => b.name.includes('اسكندرية'));
-                        if (alexBranch) {
-                            setSelectedBranchId(alexBranch.id);
-                            localStorage.setItem('saada_selected_branch', alexBranch.id.toString());
-                        } else {
-                            setSelectedBranchId(data[0].id);
-                            localStorage.setItem('saada_selected_branch', data[0].id.toString());
-                        }
+                        const targetId = alexBranch ? alexBranch.id : data[0].id;
+                        setSelectedBranchId(targetId);
+                        localStorage.setItem('saada_selected_branch', targetId.toString());
                     } else {
                         setSelectedBranchId(data[0].id);
                         localStorage.setItem('saada_selected_branch', data[0].id.toString());
@@ -347,7 +343,7 @@ const AdminDashboard = () => {
             }
         };
         fetchBranches();
-    }, [isRestrictedStaff]); // Remove selectedBranchId from deps to prevent loops if state syncs with storage
+    }, [isRestrictedStaff]); // Decouple from selectedBranchId to prevent overwrite loops
 
     // Define filteredProducts near the top but as a derived value
 
