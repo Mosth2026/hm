@@ -142,12 +142,17 @@ const AdminDashboard = () => {
     const [bulkCategoryId, setBulkCategoryId] = useState("");
     const [isExemptImport, setIsExemptImport] = useState(false);
     const [branches, setBranches] = useState<any[]>([]);
-    const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
+    const [selectedBranchId, setSelectedBranchId] = useState<number | null>(() => {
+        const saved = localStorage.getItem('admin_selected_branch_id');
+        return saved ? Number(saved) : null;
+    });
     const [sessionSalesOverride, setSessionSalesOverride] = useState<{ count: number, value: number, ids: number[], quantities: any } | null>(null);
     const sessionSalesOverrideRef = useRef<{ count: number, value: number, ids: number[], quantities: any } | null>(null);
     const notificationSound = useRef<HTMLAudioElement | null>(null);
     const lastOrderId = useRef<number | null>(null);
-    const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
+    const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(() => {
+        return localStorage.getItem('admin_notifications_enabled') === 'true';
+    });
 
     // Initialize notification sound
     useEffect(() => {
@@ -269,6 +274,17 @@ const AdminDashboard = () => {
         }
         triggerOrderAlert({ customer_name: "اختبار النظام", total_price: 999 });
     };
+
+    // Persistence: Save branch and notifications to local storage
+    useEffect(() => {
+        if (selectedBranchId) {
+            localStorage.setItem('admin_selected_branch_id', selectedBranchId.toString());
+        }
+    }, [selectedBranchId]);
+
+    useEffect(() => {
+        localStorage.setItem('admin_notifications_enabled', isNotificationsEnabled.toString());
+    }, [isNotificationsEnabled]);
 
     const logAction = async (action: string, details: any = {}, productId?: number) => {
         try {
@@ -1517,7 +1533,7 @@ const AdminDashboard = () => {
                     while (hasMore) {
                         const { data, error } = await supabase
                             .from('products')
-                            .select('id, name, category_id, description, image, stock, price, product_branch_stock(stock, branch_id)')
+                            .select('id, name, description, stock, price, product_branch_stock(stock, branch_id)')
                             .range(from, from + lmt - 1);
 
                         if (error) {
