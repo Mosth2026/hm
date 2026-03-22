@@ -287,16 +287,14 @@ const AdminDashboard = () => {
         triggerOrderAlert({ customer_name: "اختبار النظام", total_price: 999 });
     };
 
-    // Persistence: Save branch and notifications to local storage
+    // Diagnostic logging for persistence
     useEffect(() => {
-        if (selectedBranchId) {
-            localStorage.setItem('admin_selected_branch_id', selectedBranchId.toString());
-        }
-    }, [selectedBranchId]);
-
-    useEffect(() => {
-        localStorage.setItem('admin_notifications_enabled', isNotificationsEnabled.toString());
-    }, [isNotificationsEnabled]);
+        console.log("⚙️ Sync Diagnostic:", {
+            branch: localStorage.getItem('saada_selected_branch'),
+            bell: localStorage.getItem('SAADA_BELL_MASTER_V1'),
+            username: user?.username
+        });
+    }, [user]);
 
     const logAction = async (action: string, details: any = {}, productId?: number) => {
         try {
