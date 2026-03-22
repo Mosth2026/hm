@@ -2330,6 +2330,10 @@ const AdminDashboard = () => {
                         <h1 className="text-2xl md:text-3xl font-bold text-saada-brown flex items-center gap-2">
                             <BarChart className="h-6 w-6 md:h-8 md:h-8 text-saada-red" />
                             لوحة تحكم صناع السعادة ({username === 'fikry' ? 'الموظف فكري' : (isAdmin ? 'المدير' : (username.includes('mostafa') ? 'الموظف مصطفى' : (username.includes('hesham') ? 'الموظف هشام' : `الموظف ${user?.username || ''}`)))})
+                            <span className="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full border border-emerald-200 animate-pulse flex items-center gap-1">
+                                <CheckCircle className="h-3 w-3" />
+                                درع الثبات نشط
+                            </span>
                         </h1>
                         <p className="text-gray-500 mt-1 flex items-center gap-1.5 font-bold">
                             {isRestrictedStaff ? `إدارة مخزون فرع: ${branches.find(b => b.id === selectedBranchId)?.name || '...'}` : (isAdmin ? 'إدارة كاملة للمتجر والمنتجات' : 'صلاحية محدودة لتعديل الصور والأسماء')}
