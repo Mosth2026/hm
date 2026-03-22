@@ -2757,8 +2757,14 @@ const AdminDashboard = () => {
                                                     <TableCell colSpan={6} className="text-center py-20 text-gray-500">لا توجد منتجات مطابقة لـ "{searchQuery}"</TableCell>
                                                 </TableRow>
                                             ) : (
-                                                filteredProducts.map((p) => (
-                                                    <TableRow
+                                                filteredProducts.map((p) => {
+                                                    // Failsafe: Hide items with 0 movement in daily filter
+                                                    if (activeFilter === "daily" && !(stats.salesQuantities[p.id] > 0)) {
+                                                        return null;
+                                                    }
+                                                    
+                                                    return (
+                                                        <TableRow
                                                         key={p.id}
                                                         className={`group hover: bg - gray - 50 / 80 transition - colors border - b border - gray - 100 ${updatedSessionIds.includes(p.id) ? 'bg-emerald-50/40 hover:bg-emerald-50/60' : ''} ${selectedProductIds.includes(p.id) ? 'bg-blue-50/50' : ''} `}
                                                     >
