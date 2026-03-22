@@ -86,6 +86,7 @@ const PLACEHOLDER_IMAGE = SITE_CONFIG.placeholderImage;
 const AdminDashboard = () => {
     const { user, isAuthenticated, login, logout, initialize } = useAuth();
     const queryClient = useQueryClient();
+    const [searchParams, setSearchParams] = useSearchParams();
 
     useEffect(() => {
         initialize();
@@ -362,30 +363,34 @@ const AdminDashboard = () => {
             if (data && data.length > 0) {
                 setBranches(data);
                 
-                // Persistence First: Respect URL Params > Storage > Cookies
-                // If it's already set (from useState initializer using URL), DON'T overwrite it with defaults!
-                if (!selectedBranchId) {
+                // Purity First: Forced branch for restricted staff MUST happen even if selectedBranchId exists
+                if (isRestrictedStaff) {
+                    const alexBranch = data.find(b => b.name.includes('اسكندرية'));
+                    const targetId = alexBranch ? alexBranch.id : data[0].id;
+                    if (selectedBranchId !== targetId) {
+                        console.log("🛠️ Shield: Forcing Alexandria branch for restricted staff member", username);
+                        setSelectedBranchId(targetId);
+                        localStorage.setItem('saada_selected_branch', targetId.toString());
+                        setCookie('saada_selected_branch', targetId.toString());
+                        updateUrlParams('branch', targetId.toString());
+                    }
+                } else if (!selectedBranchId) {
+                    // Standard persistence for general admins/managers
                     const cookieVal = typeof document !== 'undefined' ? (`; ${document.cookie}`.split('; saada_selected_branch=').pop()?.split(';').shift()) : null;
                     const savedBranchId = localStorage.getItem('saada_selected_branch') || cookieVal;
                     const currentSelectionFromStorage = savedBranchId ? Number(savedBranchId) : null;
                     
-                    if (isRestrictedStaff) {
-                        const alexBranch = data.find(b => b.name.includes('اسكندرية'));
-                        const targetId = alexBranch ? alexBranch.id : data[0].id;
-                        setSelectedBranchId(targetId);
-                        localStorage.setItem('saada_selected_branch', targetId.toString());
-                        setCookie('saada_selected_branch', targetId.toString());
-                    } else if (currentSelectionFromStorage) {
+                    if (currentSelectionFromStorage) {
                         setSelectedBranchId(currentSelectionFromStorage);
                     } else {
-                        // General admin/manager fallback
+                        // General admin/manager fallback to first branch (likely Rehab)
                         setSelectedBranchId(data[0].id);
                     }
                 }
             }
         };
         fetchBranches();
-    }, [isRestrictedStaff]); // Decouple from selectedBranchId to prevent overwrite loops
+    }, [isRestrictedStaff, username]); // username added to ensure re-run after auth initialize
 
     // Define filteredProducts near the top but as a derived value
 
@@ -2340,8 +2345,8 @@ const AdminDashboard = () => {
                         </p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-row gap-2 md:gap-3 w-full md:w-auto items-end">
-                        {isAdmin && (
-                            <div className="flex flex-col gap-1 min-w-[150px] w-full lg:w-48">
+                        {isSpecial && (
+                            <div className="flex flex-col gap-1 min-w-[150px] w-full lg:w-48 order-2 lg:order-none">
                                 <Label className="text-xs font-bold text-emerald-800 pr-2">إدارة مخزون فرع:</Label>
                                 <Select value={String(selectedBranchId || "")} onValueChange={handleBranchChange}>
                                     <SelectTrigger className="h-10 md:h-12 border-emerald-200 bg-emerald-50/50 text-emerald-700 font-black rounded-xl">
@@ -2796,168 +2801,173 @@ const AdminDashboard = () => {
                                     </div>
                                 </div>
                             </CardHeader>
-                            <CardContent className="p-0">
-                                <div className="overflow-x-auto">
-                                    <Table>
-                                        <TableHeader className="bg-gray-50/50">
-                                            <TableRow>
-                                                <TableHead className="w-10 py-4 text-center">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="h-4 w-4 rounded"
-                                                        checked={selectedProductIds.length === filteredProducts.length && filteredProducts.length > 0}
-                                                        onChange={(e) => {
-                                                            if (e.target.checked) setSelectedProductIds(filteredProducts.map(p => p.id));
-                                                            else setSelectedProductIds([]);
-                                                        }}
-                                                    />
-                                                </TableHead>
-                                                <TableHead className="text-right py-4 font-bold text-saada-brown">المنتج</TableHead>
-                                                <TableHead className="text-right py-4 font-bold text-saada-brown">الباركود</TableHead>
-                                                <TableHead className="text-right py-4 font-bold text-saada-brown">القسم</TableHead>
-                                                <TableHead className="text-right py-4 font-bold text-saada-brown">السعر</TableHead>
-                                                <TableHead className="text-right py-4 font-bold text-saada-brown">المخزون</TableHead>
-                                                {activeFilter === "daily" && (
-                                                    <TableHead className="text-right py-4 font-bold text-saada-red bg-red-50/50">تم بيعه (الفرق)</TableHead>
-                                                )}
-                                                {isSpecial && (
-                                                    <TableHead className="text-right py-4 font-bold text-saada-brown">الصلاحية</TableHead>
-                                                )}
-                                                <TableHead className="text-center py-4 font-bold text-saada-brown">الإجراءات</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {loading ? (
+                                <CardContent className="p-0">
+                                    <div className="overflow-x-auto">
+                                        <Table>
+                                            <TableHeader className="bg-gray-50/50">
                                                 <TableRow>
-                                                    <TableCell colSpan={6} className="text-center py-20 text-gray-500">جاري التحميل...</TableCell>
+                                                    <TableHead className="w-10 py-4 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="h-4 w-4 rounded"
+                                                            checked={selectedProductIds.length === filteredProducts.length && filteredProducts.length > 0}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) setSelectedProductIds(filteredProducts.map(p => p.id));
+                                                                else setSelectedProductIds([]);
+                                                            }}
+                                                        />
+                                                    </TableHead>
+                                                    <TableHead className="text-right py-4 font-bold text-saada-brown">المنتج</TableHead>
+                                                    <TableHead className="text-right py-4 font-bold text-saada-brown">الباركود</TableHead>
+                                                    <TableHead className="text-right py-4 font-bold text-saada-brown">القسم</TableHead>
+                                                    <TableHead className="text-right py-4 font-bold text-saada-brown">السعر</TableHead>
+                                                    <TableHead className="text-right py-4 font-bold text-saada-brown">المخزون</TableHead>
+                                                    {activeFilter === "daily" && (
+                                                        <TableHead className="text-right py-4 font-bold text-saada-red bg-red-50/50">تم بيعه (الفرق)</TableHead>
+                                                    )}
+                                                    {isSpecial && (
+                                                        <TableHead className="text-right py-4 font-bold text-saada-brown">الصلاحية</TableHead>
+                                                    )}
+                                                    <TableHead className="text-center py-4 font-bold text-saada-brown">الإجراءات</TableHead>
                                                 </TableRow>
-                                            ) : filteredProducts.length === 0 ? (
-                                                <TableRow>
-                                                    <TableCell colSpan={6} className="text-center py-20 text-gray-500">لا توجد منتجات مطابقة لـ "{searchQuery}"</TableCell>
-                                                </TableRow>
-                                            ) : (
-                                                filteredProducts.map((p) => {
-                                                    // Failsafe: Hide items with 0 movement in daily filter
-                                                    if (activeFilter === "daily" && !(stats.salesQuantities[p.id] > 0)) {
-                                                        return null;
-                                                    }
-                                                    
-                                                    return (
-                                                        <TableRow
-                                                        key={p.id}
-                                                        className={`group hover: bg - gray - 50 / 80 transition - colors border - b border - gray - 100 ${updatedSessionIds.includes(p.id) ? 'bg-emerald-50/40 hover:bg-emerald-50/60' : ''} ${selectedProductIds.includes(p.id) ? 'bg-blue-50/50' : ''} `}
-                                                    >
-                                                        <TableCell className="w-10 text-center">
-                                                            <input
-                                                                type="checkbox"
-                                                                className="h-4 w-4 rounded"
-                                                                checked={selectedProductIds.includes(p.id)}
-                                                                onChange={(e) => {
-                                                                    if (e.target.checked) setSelectedProductIds([...selectedProductIds, p.id]);
-                                                                    else setSelectedProductIds(selectedProductIds.filter(id => id !== p.id));
-                                                                }}
-                                                            />
-                                                        </TableCell>
-                                                        <TableCell className="py-4">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="h-10 w-10 rounded-lg bg-gray-100 overflow-hidden border border-gray-200 relative">
-                                                                    <img src={p.image} alt={p.name} className="h-full w-full object-cover" />
-                                                                    {updatedSessionIds.includes(p.id) && (
-                                                                        <div className="absolute inset-0 bg-emerald-500/10 flex items-center justify-center">
-                                                                            <Check className="h-4 w-4 text-emerald-600 drop-shadow-sm" />
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                                <div className="flex flex-col">
-                                                                    <span className="font-medium text-gray-900 group-hover:text-saada-red transition-colors flex items-center gap-2">
-                                                                        {p.name.replace(/\[TAX_EXEMPT\]/g, '').replace(/\[DRAFT\]/g, '').trim()}
-                                                                        {updatedSessionIds.includes(p.id) && (
-                                                                            <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.5 rounded font-bold">مُلحق</span>
-                                                                        )}
-                                                                        {p.created_at && (new Date().getTime() - new Date(p.created_at).getTime() < 48 * 60 * 60 * 1000) && (
-                                                                            <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded font-bold">جديد</span>
-                                                                        )}
-                                                                        {p.description?.includes('[DRAFT]') && (
-                                                                            <span className="text-[10px] bg-gray-800 text-white px-1.5 py-0.5 rounded font-bold">درافت (مخفي)</span>
-                                                                        )}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className="py-4">
-                                                            <span className="text-xs font-mono text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-100">
-                                                                {p.description?.includes('باركود:') ? p.description.split('باركود:')[1].replace('[TAX_EXEMPT]', '').replace('[DRAFT]', '').trim() : '-'}
-                                                            </span>
-                                                        </TableCell>
-                                                        <TableCell className="py-4">
-                                                            <div className="flex flex-wrap gap-1">
-                                                                {(p.category_name || '').split(',').map((cat, idx) => (
-                                                                    <span key={idx} className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-bold">
-                                                                        {cat.trim()}
-                                                                    </span>
-                                                                ))}
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className="py-4 font-bold text-gray-900">{formatPrice(p.price)}</TableCell>
-                                                        <TableCell className="py-4">
-                                                            <span className={`font-bold ${(p.stock ?? 0) < 10 ? 'text-orange-600' : 'text-gray-600'}`}>
-                                                                {p.stock ?? "-"}
-                                                            </span>
-                                                        </TableCell>
-                                                        {activeFilter === "daily" && (
-                                                            <TableCell className="py-4 bg-red-50/30">
-                                                                <span className="font-black text-saada-red bg-white px-2 py-1 rounded-md border border-red-100 shadow-sm">
-                                                                    -{stats.salesQuantities[p.id] || 0}
-                                                                </span>
-                                                            </TableCell>
-                                                        )}
-                                                        {isSpecial && (
-                                                            <TableCell className="py-4">
-                                                                <span className={`text-[10px] font-bold ${p.expiry_date ? (new Date(p.expiry_date).getTime() < new Date().getTime() ? 'text-red-600 bg-red-50' : 'text-blue-600 bg-blue-50') : 'text-gray-400'} px-2 py-1 rounded-lg`}>
-                                                                    {p.expiry_date || "-"}
-                                                                </span>
-                                                            </TableCell>
-                                                        )}
-                                                        <TableCell className="py-4">
-                                                            <div className="flex items-center justify-center gap-2">
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    onClick={() => fetchProductLifecycle(p)}
-                                                                    title="تاريخ المنتج"
-                                                                    className="h-9 w-9 text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg"
-                                                                >
-                                                                    <Clock className="h-4 w-4" />
-                                                                </Button>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    onClick={() => handleEdit(p)}
-                                                                    className="h-9 w-9 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-                                                                >
-                                                                    <Edit className="h-4 w-4" />
-                                                                </Button>
-                                                                {(isAdmin || isSuperAdmin) && (
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        onClick={() => handleDelete(p.id)}
-                                                                        className="h-9 w-9 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                                                                    >
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                    </Button>
-                                                                )}
-                                                            </div>
-                                                        </TableCell>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {loading ? (
+                                                    <TableRow>
+                                                        <TableCell colSpan={6} className="text-center py-20 text-gray-500">جاري التحميل...</TableCell>
                                                     </TableRow>
-                                                ))
-                                            )}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </>
+                                                ) : filteredProducts.length === 0 ? (
+                                                    <TableRow>
+                                                        <TableCell colSpan={6} className="text-center py-20 text-gray-500">لا توجد منتجات مطابقة لـ "{searchQuery}"</TableCell>
+                                                    </TableRow>
+                                                ) : (
+                                                    filteredProducts.map((p) => {
+                                                        // Failsafe: Hide items with 0 movement in daily filter
+                                                        if (activeFilter === "daily" && !(stats.salesQuantities[p.id] > 0)) {
+                                                            return null;
+                                                        }
+                                                        
+                                                        return (
+                                                            <TableRow
+                                                                key={p.id}
+                                                                className={`group hover:bg-gray-50/80 transition-colors border-b border-gray-100 ${updatedSessionIds.includes(p.id) ? 'bg-emerald-50/40 hover:bg-emerald-50/60' : ''} ${selectedProductIds.includes(p.id) ? 'bg-blue-50/50' : ''}`}
+                                                            >
+                                                                <TableCell className="w-10 text-center">
+                                                                    <input
+                                                                        type="checkbox"
+                                                                        className="h-4 w-4 rounded"
+                                                                        checked={selectedProductIds.includes(p.id)}
+                                                                        onChange={(e) => {
+                                                                            if (e.target.checked) setSelectedProductIds([...selectedProductIds, p.id]);
+                                                                            else setSelectedProductIds(selectedProductIds.filter(id => id !== p.id));
+                                                                        }}
+                                                                    />
+                                                                </TableCell>
+                                                                <TableCell className="py-4">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="h-10 w-10 rounded-lg bg-gray-100 overflow-hidden border border-gray-200 relative">
+                                                                            <img src={p.image} alt={p.name} className="h-full w-full object-cover" />
+                                                                            {updatedSessionIds.includes(p.id) && (
+                                                                                <div className="absolute inset-0 bg-emerald-500/10 flex items-center justify-center">
+                                                                                    <Check className="h-4 w-4 text-emerald-600 drop-shadow-sm" />
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                        <div className="flex flex-col">
+                                                                            <span className="font-medium text-gray-900 group-hover:text-saada-red transition-colors flex items-center gap-2">
+                                                                                {p.name.replace(/\[TAX_EXEMPT\]/g, '').replace(/\[DRAFT\]/g, '').trim()}
+                                                                                {updatedSessionIds.includes(p.id) && (
+                                                                                    <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.5 rounded font-bold">مُلحق</span>
+                                                                                )}
+                                                                                {p.created_at && (new Date().getTime() - new Date(p.created_at).getTime() < 48 * 60 * 60 * 1000) && (
+                                                                                    <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded font-bold">جديد</span>
+                                                                                )}
+                                                                                {p.description?.includes('[DRAFT]') && (
+                                                                                    <span className="text-[10px] bg-gray-800 text-white px-1.5 py-0.5 rounded font-bold">درافت (مخفي)</span>
+                                                                                )}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell className="py-4">
+                                                                    <span className="text-xs font-mono text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-100">
+                                                                        {p.description?.includes('باركود:') ? p.description.split('باركود:')[1].replace('[TAX_EXEMPT]', '').replace('[DRAFT]', '').trim() : '-'}
+                                                                    </span>
+                                                                </TableCell>
+                                                                <TableCell className="py-4">
+                                                                    <div className="flex flex-wrap gap-1">
+                                                                        {(p.category_name || '').split(',').map((cat, idx) => (
+                                                                            <span key={idx} className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-bold">
+                                                                                {cat.trim()}
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell className="py-4 font-bold text-gray-900">{formatPrice(p.price)}</TableCell>
+                                                                <TableCell className="py-4">
+                                                                    <span className={`font-bold ${(p.stock ?? 0) < 10 ? 'text-orange-600' : 'text-gray-600'}`}>
+                                                                        {p.stock ?? "-"}
+                                                                    </span>
+                                                                </TableCell>
+                                                                {activeFilter === "daily" && (
+                                                                    <TableCell className="py-4 bg-red-50/30">
+                                                                        <span className="font-black text-saada-red bg-white px-2 py-1 rounded-md border border-red-100 shadow-sm">
+                                                                            -{stats.salesQuantities[p.id] || 0}
+                                                                        </span>
+                                                                    </TableCell>
+                                                                )}
+                                                                {isSpecial && (
+                                                                    <TableCell className="py-4">
+                                                                        <span className={`text-[10px] font-bold ${p.expiry_date ? (new Date(p.expiry_date).getTime() < new Date().getTime() ? 'text-red-600 bg-red-50' : 'text-blue-600 bg-blue-50') : 'text-gray-400'} px-2 py-1 rounded-lg`}>
+                                                                            {p.expiry_date || "-"}
+                                                                        </span>
+                                                                    </TableCell>
+                                                                )}
+                                                                <TableCell className="py-4">
+                                                                    <div className="flex items-center justify-center gap-2">
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            onClick={() => fetchProductLifecycle(p)}
+                                                                            title="تاريخ المنتج"
+                                                                            className="h-9 w-9 text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg"
+                                                                        >
+                                                                            <Clock className="h-4 w-4" />
+                                                                        </Button>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            onClick={() => handleEdit(p)}
+                                                                            className="h-9 w-9 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                                                                        >
+                                                                            <Edit className="h-4 w-4" />
+                                                                        </Button>
+                                                                        {(isAdmin || isSuperAdmin) && (
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                onClick={() => handleDelete(p.id)}
+                                                                                className="h-9 w-9 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                                                                            >
+                                                                                <Trash2 className="h-4 w-4" />
+                                                                            </Button>
+                                                                        )}
+                                                                    </div>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        );
+                                                    })}
+                                                )
+                                            )
+                                        )
+                                    )}
+                                </TableBody>
+                                        </Table>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </>
+
                 ) : activeTab === "orders" ? (
                     <Card className="border-none shadow-xl bg-white overflow-hidden">
                         <CardHeader className="border-b border-gray-100 bg-white p-6 flex flex-row items-center justify-between">
@@ -3811,6 +3821,7 @@ const AdminDashboard = () => {
                 </DialogContent>
             </Dialog>
         </div>
+    </div>
     );
 };
 

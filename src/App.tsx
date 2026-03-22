@@ -25,24 +25,8 @@ import LuxuryExperience from "./components/LuxuryExperience";
 import PremiumDecorations from "./components/PremiumDecorations";
 import AnalyticsTracker from "./components/AnalyticsTracker";
 
-try {
-  const version = "3.3.5-final";
-  if (typeof window !== 'undefined' && localStorage.getItem('site_v') !== version) {
-    // Preserve mission-critical settings before clearing
-    const savedBranch = localStorage.getItem('saada_selected_branch');
-    const savedBell = localStorage.getItem('SAADA_BELL_MASTER_V1');
-    const savedBellOld = localStorage.getItem('saada_notifications_active');
-    
-    localStorage.clear();
-    
-    // Restore preserved settings
-    if (savedBranch) localStorage.setItem('saada_selected_branch', savedBranch);
-    if (savedBell) localStorage.setItem('SAADA_BELL_MASTER_V1', savedBell);
-    if (savedBellOld) localStorage.setItem('saada_notifications_active', savedBellOld);
-    
-    localStorage.setItem('site_v', version);
-  }
-} catch (e) { }
+// The previous localStorage cleanup logic has been moved into a useEffect hook within the App component
+// to ensure it runs in a React-managed lifecycle and can use React hooks if needed.
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -140,6 +124,34 @@ const ScrollToTop = () => {
 };
 
 const App = () => {
+  useEffect(() => {
+    try {
+      const CURRENT_VERSION = "4.0.0-shield-stable";
+      const savedVersion = localStorage.getItem('saada_site_v');
+      
+      if (savedVersion !== CURRENT_VERSION) {
+        // Selective cleanup: Keep mission-critical settings
+        const whitelist = [
+          'saada_selected_branch', 
+          'SAADA_BELL_MASTER_V1', 
+          'saada_notifications_active', 
+          'saada-final-auth-v1'
+        ];
+        
+        Object.keys(localStorage).forEach(key => {
+          if (!whitelist.includes(key) && !key.startsWith('saada_') && !key.startsWith('SAADA_')) {
+            localStorage.removeItem(key);
+          }
+        });
+
+        localStorage.setItem('saada_site_v', CURRENT_VERSION);
+        console.log("♻️ Selective storage cleanup performed for version:", CURRENT_VERSION);
+      }
+    } catch (e) {
+      console.warn("Storage cleanup error:", e);
+    }
+  }, []);
+
   return (
     <ErrorBoundary>
       <BranchProvider>
