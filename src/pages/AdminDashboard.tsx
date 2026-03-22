@@ -1036,9 +1036,8 @@ const AdminDashboard = () => {
             if (stats.salesProductIds && stats.salesProductIds.length > 0) {
                 query = query.in('id', stats.salesProductIds);
             } else {
-                const startOfToday = new Date();
-                startOfToday.setHours(0, 0, 0, 0);
-                query = query.gte('updated_at', startOfToday.toISOString());
+                // If no sales in session, show nothing rather than all updated today
+                query = query.eq('id', -1);
             }
         } else if (activeFilter === "zero") {
             query = query.eq('stock', 0).not('image', 'ilike', '%unsplash.com%').not('image', 'is', null).neq('image', '').neq('image', PLACEHOLDER_IMAGE);
@@ -2000,6 +1999,13 @@ const AdminDashboard = () => {
                 setIsExemptImport(false);
                 setSessionSalesOverride(currentSessionStats);
                 sessionSalesOverrideRef.current = currentSessionStats;
+                
+                // AUTO-FOCUS: Switch to daily sales view immediately to show only items that changed
+                if (sessionSalesCount > 0) {
+                    setActiveFilter("daily");
+                    setSelectedCategoryLabel(null);
+                }
+                
                 fetchProducts();
             } catch (err: any) {
                 console.error("Excel Import Error:", err);
