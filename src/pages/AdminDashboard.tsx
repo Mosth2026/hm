@@ -143,7 +143,7 @@ const AdminDashboard = () => {
     const [isExemptImport, setIsExemptImport] = useState(false);
     const [branches, setBranches] = useState<any[]>([]);
     const [selectedBranchId, setSelectedBranchId] = useState<number | null>(() => {
-        const saved = localStorage.getItem('admin_selected_branch_id');
+        const saved = localStorage.getItem('saada_selected_branch');
         return saved ? Number(saved) : null;
     });
     const [sessionSalesOverride, setSessionSalesOverride] = useState<{ count: number, value: number, ids: number[], quantities: any } | null>(null);
@@ -151,7 +151,7 @@ const AdminDashboard = () => {
     const notificationSound = useRef<HTMLAudioElement | null>(null);
     const lastOrderId = useRef<number | null>(null);
     const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(() => {
-        return localStorage.getItem('admin_notifications_enabled') === 'true';
+        return localStorage.getItem('saada_notifications_active') === 'true';
     });
 
     // Initialize notification sound
@@ -170,11 +170,19 @@ const AdminDashboard = () => {
                 }).catch(e => console.warn("Initial unlock failed:", e));
             }
             setIsNotificationsEnabled(true);
+            localStorage.setItem('saada_notifications_active', 'true');
             toast.success("🔔 تم تفعيل جرس التنبيهات بنجاح");
         } else {
             setIsNotificationsEnabled(false);
+            localStorage.setItem('saada_notifications_active', 'false');
             toast.info("🔕 تم إيقاف جرس التنبيهات");
         }
+    };
+
+    const handleBranchChange = (branchId: string) => {
+        const bId = Number(branchId);
+        setSelectedBranchId(bId);
+        localStorage.setItem('saada_selected_branch', bId.toString());
     };
 
     // Real-time Order Notifications
@@ -308,25 +316,38 @@ const AdminDashboard = () => {
 
     useEffect(() => {
         const fetchBranches = async () => {
-            const { data, error } = await supabase.from('branches').select('*');
+            const { data, error } = await supabase.from('branches').select('*').order('name');
             if (data && data.length > 0) {
                 setBranches(data);
-                if (!selectedBranchId) {
+                
+                // Persistence: Check storage FIRST
+                const savedBranch = localStorage.getItem('saada_selected_branch');
+                
+                if (savedBranch) {
+                    const bId = Number(savedBranch);
+                    if (selectedBranchId !== bId) {
+                        setSelectedBranchId(bId);
+                    }
+                } else if (!selectedBranchId) {
+                    // Only if NO saved branch AND no active state
                     if (isRestrictedStaff) {
                         const alexBranch = data.find(b => b.name.includes('اسكندرية'));
                         if (alexBranch) {
                             setSelectedBranchId(alexBranch.id);
+                            localStorage.setItem('saada_selected_branch', alexBranch.id.toString());
                         } else {
                             setSelectedBranchId(data[0].id);
+                            localStorage.setItem('saada_selected_branch', data[0].id.toString());
                         }
                     } else {
                         setSelectedBranchId(data[0].id);
+                        localStorage.setItem('saada_selected_branch', data[0].id.toString());
                     }
                 }
             }
         };
         fetchBranches();
-    }, [isRestrictedStaff, selectedBranchId]);
+    }, [isRestrictedStaff]); // Remove selectedBranchId from deps to prevent loops if state syncs with storage
 
     // Define filteredProducts near the top but as a derived value
 
@@ -2280,7 +2301,7 @@ const AdminDashboard = () => {
                         {isAdmin && (
                             <div className="flex flex-col gap-1 min-w-[150px] w-full lg:w-48">
                                 <Label className="text-xs font-bold text-emerald-800 pr-2">إدارة مخزون فرع:</Label>
-                                <Select value={String(selectedBranchId || "")} onValueChange={(val) => setSelectedBranchId(Number(val))}>
+                                <Select value={String(selectedBranchId || "")} onValueChange={handleBranchChange}>
                                     <SelectTrigger className="h-10 md:h-12 border-emerald-200 bg-emerald-50/50 text-emerald-700 font-black rounded-xl">
                                         <SelectValue placeholder="اختر الفرع" />
                                     </SelectTrigger>
