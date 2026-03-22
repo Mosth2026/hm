@@ -175,8 +175,9 @@ const AdminDashboard = () => {
         if (urlBellActive === 'on') return true;
         if (urlBellActive === 'off') return false;
         if (typeof window === 'undefined') return false;
+        // Prioritize localStorage for maximum persistence
         const saved = localStorage.getItem('SAADA_BELL_MASTER_V1') || getCookie('SAADA_BELL_MASTER_V1');
-        return saved === 'true';
+        return saved === 'true'; // Stay on forever once turned on
     });
 
     const [sessionSalesOverride, setSessionSalesOverride] = useState<{ count: number, value: number, ids: number[], quantities: any } | null>(null);
@@ -363,27 +364,32 @@ const AdminDashboard = () => {
             if (data && data.length > 0) {
                 setBranches(data);
                 
-                // Purity First: Forced branch for restricted staff MUST happen even if selectedBranchId exists
-                if (isRestrictedStaff) {
-                    const alexBranch = data.find(b => b.name.includes('اسكندرية'));
-                    const targetId = alexBranch ? alexBranch.id : data[0].id;
-                    if (selectedBranchId !== targetId) {
-                        console.log("🛠️ Shield: Forcing Alexandria branch for restricted staff member", username);
-                        setSelectedBranchId(targetId);
-                        localStorage.setItem('saada_selected_branch', targetId.toString());
-                        setCookie('saada_selected_branch', targetId.toString());
-                        updateUrlParams('branch', targetId.toString());
-                    }
-                } else if (!selectedBranchId) {
-                    // Standard persistence for general admins/managers
+                // Persistence Logic: Only force a default if no selection exists
+                // This respects manual choices (Alexandria stays Alexandria, Rehab stays Rehab)
+                if (!selectedBranchId) {
                     const cookieVal = typeof document !== 'undefined' ? (`; ${document.cookie}`.split('; saada_selected_branch=').pop()?.split(';').shift()) : null;
                     const savedBranchId = localStorage.getItem('saada_selected_branch') || cookieVal;
                     const currentSelectionFromStorage = savedBranchId ? Number(savedBranchId) : null;
-                    
+
                     if (currentSelectionFromStorage) {
+                        console.log("📍 Restoring saved branch selection:", currentSelectionFromStorage);
                         setSelectedBranchId(currentSelectionFromStorage);
+                    } else if (isRestrictedStaff) {
+                        // Default to Alexandria ONLY if no saved selection exists
+                        const alexBranch = data.find(b => b.name.includes('اسكندرية'));
+                        const targetId = alexBranch ? alexBranch.id : data[0].id;
+                        console.log("🛠️ Shield: Applying default Alexandria for restricted staff member", username);
+                        setSelectedBranchId(targetId);
+                        localStorage.setItem('saada_selected_branch', targetId.toString());
+                        setCookie('saada_selected_branch', targetId.toString());
                     } else {
                         // General admin/manager fallback to first branch (likely Rehab)
+                        setSelectedBranchId(data[0].id);
+                    }
+                } else {
+                    // Current selectedBranchId is already set (from URL or init), verify it exists
+                    const exists = data.some(b => b.id === selectedBranchId);
+                    if (!exists) {
                         setSelectedBranchId(data[0].id);
                     }
                 }
