@@ -1156,7 +1156,7 @@ const AdminDashboard = () => {
             let salesProductIds: number[] = [];
             let salesQuantities: Record<number, number> = {};
 
-            // Sync Ref Check: Use the latest session stats if they exist (prevents race conditions)
+            // PURE SESSION LOGIC: Only show results from the ACTIVE session's sync
             const activeOverride = sessionSalesOverrideRef.current || sessionSalesOverride;
             
             if (activeOverride) {
@@ -1164,21 +1164,6 @@ const AdminDashboard = () => {
                 dailyValue = activeOverride.value;
                 salesProductIds = activeOverride.ids;
                 salesQuantities = activeOverride.quantities;
-            } else {
-                const { data: latestLogs } = await supabase
-                    .from('admin_logs')
-                    .select('details, created_at')
-                    .eq('action', 'excel_sync_summary')
-                    .order('created_at', { ascending: false })
-                    .limit(1);
-
-                if (latestLogs && latestLogs.length > 0) {
-                    const details = latestLogs[0].details;
-                    dailyChanges = Number(details.sales_count || 0);
-                    dailyValue = Number(details.sales_value || 0);
-                    salesProductIds = Array.isArray(details.sales_product_ids) ? details.sales_product_ids : [];
-                    salesQuantities = typeof details.sales_quantities === 'object' ? details.sales_quantities : {};
-                }
             }
 
             setStats({
