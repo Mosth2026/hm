@@ -174,10 +174,12 @@ const AdminDashboard = () => {
     const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(() => {
         if (urlBellActive === 'on') return true;
         if (urlBellActive === 'off') return false;
-        if (typeof window === 'undefined') return false;
-        // Prioritize localStorage for maximum persistence
+        if (typeof window === 'undefined') return true; 
+
         const saved = localStorage.getItem('SAADA_BELL_MASTER_V1') || getCookie('SAADA_BELL_MASTER_V1');
-        return saved === 'true'; // Stay on forever once turned on
+        // Default to TRUE for admins if not explicitly turned off (always active by default)
+        if (saved === null) return true;
+        return saved === 'true';
     });
 
     const [sessionSalesOverride, setSessionSalesOverride] = useState<{ count: number, value: number, ids: number[], quantities: any } | null>(null);
@@ -364,33 +366,32 @@ const AdminDashboard = () => {
             if (data && data.length > 0) {
                 setBranches(data);
                 
-                // Persistence Logic: Only force a default if no selection exists
-                // This respects manual choices (Alexandria stays Alexandria, Rehab stays Rehab)
-                if (!selectedBranchId) {
-                    const cookieVal = typeof document !== 'undefined' ? (`; ${document.cookie}`.split('; saada_selected_branch=').pop()?.split(';').shift()) : null;
-                    const savedBranchId = localStorage.getItem('saada_selected_branch') || cookieVal;
-                    const currentSelectionFromStorage = savedBranchId ? Number(savedBranchId) : null;
+                // FINAL PERSISTENCE SHIELD: Never reset a valid selection
+                let currentId = selectedBranchId;
+                const saved = localStorage.getItem('saada_selected_branch') || getCookie('saada_selected_branch');
+                const savedId = saved ? Number(saved) : null;
+                
+                // If current state is null but storage has it, prioritize storage
+                if (!currentId && savedId) currentId = savedId;
 
-                    if (currentSelectionFromStorage) {
-                        console.log("📍 Restoring saved branch selection:", currentSelectionFromStorage);
-                        setSelectedBranchId(currentSelectionFromStorage);
-                    } else if (isRestrictedStaff) {
-                        // Default to Alexandria ONLY if no saved selection exists
+                if (!currentId) {
+                    // No selection at all: Apply defaults
+                    if (isRestrictedStaff) {
                         const alexBranch = data.find(b => b.name.includes('اسكندرية'));
                         const targetId = alexBranch ? alexBranch.id : data[0].id;
-                        console.log("🛠️ Shield: Applying default Alexandria for restricted staff member", username);
                         setSelectedBranchId(targetId);
                         localStorage.setItem('saada_selected_branch', targetId.toString());
-                        setCookie('saada_selected_branch', targetId.toString());
                     } else {
-                        // General admin/manager fallback to first branch (likely Rehab)
                         setSelectedBranchId(data[0].id);
                     }
                 } else {
-                    // Current selectedBranchId is already set (from URL or init), verify it exists
-                    const exists = data.some(b => b.id === selectedBranchId);
+                    // Selection exists: Verify validity but don't reset to Rehab if valid ID is present
+                    const exists = data.some(b => Number(b.id) === Number(currentId));
                     if (!exists) {
                         setSelectedBranchId(data[0].id);
+                    } else if (!selectedBranchId) {
+                        // Restore from local currentId calculation if state was null
+                        setSelectedBranchId(currentId);
                     }
                 }
             }
