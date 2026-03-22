@@ -143,7 +143,8 @@ const AdminDashboard = () => {
     const [isExemptImport, setIsExemptImport] = useState(false);
     const [branches, setBranches] = useState<any[]>([]);
     const [selectedBranchId, setSelectedBranchId] = useState<number | null>(() => {
-        const saved = localStorage.getItem('saada_selected_branch');
+        if (typeof window === 'undefined') return null;
+        const saved = localStorage.getItem('saada_selected_branch') || (typeof document !== 'undefined' ? (`; ${document.cookie}`.split('; saada_selected_branch=').pop()?.split(';').shift()) : null);
         return saved ? Number(saved) : null;
     });
     const [sessionSalesOverride, setSessionSalesOverride] = useState<{ count: number, value: number, ids: number[], quantities: any } | null>(null);
@@ -162,6 +163,26 @@ const AdminDashboard = () => {
         notificationSound.current.volume = 0.5;
     }, []);
 
+    // Cookie Helpers for extreme persistence
+    const setCookie = (name: string, value: string) => {
+        const d = new Date();
+        d.setTime(d.getTime() + (365 * 24 * 60 * 60 * 1000));
+        document.cookie = `${name}=${value};expires=${d.toUTCString()};path=/;SameSite=Lax`;
+    };
+
+    const getCookie = (name: string) => {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop()?.split(';').shift();
+        return null;
+    };
+
+    const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        const saved = localStorage.getItem('SAADA_BELL_MASTER_V1') || getCookie('SAADA_BELL_MASTER_V1');
+        return saved === 'true';
+    });
+
     // Toggle Audio and Notifications
     const toggleNotifications = () => {
         const newState = !isNotificationsEnabled;
@@ -174,10 +195,12 @@ const AdminDashboard = () => {
             }
             setIsNotificationsEnabled(true);
             localStorage.setItem('SAADA_BELL_MASTER_V1', 'true');
+            setCookie('SAADA_BELL_MASTER_V1', 'true');
             toast.success("🔔 تم تفعيل جرس التنبيهات بنجاح");
         } else {
             setIsNotificationsEnabled(false);
             localStorage.setItem('SAADA_BELL_MASTER_V1', 'false');
+            setCookie('SAADA_BELL_MASTER_V1', 'false');
             toast.info("🔕 تم إيقاف جرس التنبيهات");
         }
     };
@@ -187,6 +210,7 @@ const AdminDashboard = () => {
         console.log("📍 Changing branch to:", bId);
         setSelectedBranchId(bId);
         localStorage.setItem('saada_selected_branch', bId.toString());
+        setCookie('saada_selected_branch', bId.toString());
     };
 
     // Real-time Order Notifications
@@ -322,8 +346,9 @@ const AdminDashboard = () => {
             if (data && data.length > 0) {
                 setBranches(data);
                 
-                // Persistence First: Respect storage
-                const savedBranchId = localStorage.getItem('saada_selected_branch');
+                // Persistence First: Respect storage/cookies
+                const cookieVal = typeof document !== 'undefined' ? (`; ${document.cookie}`.split('; saada_selected_branch=').pop()?.split(';').shift()) : null;
+                const savedBranchId = localStorage.getItem('saada_selected_branch') || cookieVal;
                 const currentSelectionFromStorage = savedBranchId ? Number(savedBranchId) : null;
                 
                 // Account-Based Override: Ensure restricted staff ALWAYS land in their branch
@@ -333,6 +358,10 @@ const AdminDashboard = () => {
                     const targetId = alexBranch ? alexBranch.id : data[0].id;
                     setSelectedBranchId(targetId);
                     localStorage.setItem('saada_selected_branch', targetId.toString());
+                    if (typeof document !== 'undefined') {
+                       const d = new Date(); d.setTime(d.getTime() + (365*24*60*60*1000));
+                       document.cookie = `saada_selected_branch=${targetId};expires=${d.toUTCString()};path=/;SameSite=Lax`;
+                    }
                 } else if (currentSelectionFromStorage) {
                     setSelectedBranchId(currentSelectionFromStorage);
                 } else if (!selectedBranchId) {
