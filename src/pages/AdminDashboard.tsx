@@ -1863,7 +1863,7 @@ const AdminDashboard = () => {
                         const oldStock = branchRecord ? branchRecord.stock : 0;
                         const stockDiff = oldStock - item.stock;
                         if (stockDiff > 0) {
-                            sessionSalesCount++;
+                            sessionSalesCount += stockDiff;
                             sessionSalesProductIds.push(dbProd.id);
                             sessionSalesQuantities[dbProd.id] = stockDiff;
                             const updateFields = toUpdate.find(u => u.id === dbProd.id);
@@ -1951,29 +1951,26 @@ const AdminDashboard = () => {
                 setImportProgress(null);
                 if (successCount > 0 || addedCount > 0) {
                     toast.success(`تمت المزامنة بنجاح`);
+                    
+                    // Final Calculation based on actual results to ensure freshness
                     await logAction('excel_sync_summary', {
                         updated: successCount,
                         added: addedCount,
-                        deleted: toDeleteIds.length,
-                        zeroed: toZeroStockIds.length,
+                        deleted: (toDeleteIds || []).length,
+                        zeroed: (toZeroStockIds || []).length,
                         sales_count: sessionSalesCount,
                         sales_value: sessionSalesValue,
                         sales_product_ids: sessionSalesProductIds,
                         sales_quantities: sessionSalesQuantities
                     });
-                    setStats(prev => {
-                        const newSalesQuantities: Record<number, number> = {};
-                        Object.entries(sessionSalesQuantities).forEach(([id, qty]) => {
-                            newSalesQuantities[Number(id)] = qty as number;
-                        });
-                        return {
-                            ...prev,
-                            dailyChanges: sessionSalesCount,
-                            dailyValue: sessionSalesValue,
-                            salesProductIds: [...sessionSalesProductIds],
-                            salesQuantities: newSalesQuantities
-                        };
-                    });
+
+                    setStats(prev => ({
+                        ...prev,
+                        dailyChanges: sessionSalesCount,
+                        dailyValue: sessionSalesValue,
+                        salesProductIds: [...sessionSalesProductIds],
+                        salesQuantities: { ...sessionSalesQuantities }
+                    }));
                 }
                 if (failCount > 0) toast.error(`تنبيه: فشل عمل ${failCount} صنف`);
                 setIsExemptImport(false);
