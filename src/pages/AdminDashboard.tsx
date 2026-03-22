@@ -1115,7 +1115,7 @@ const AdminDashboard = () => {
         setLoading(false);
     };
 
-    const calculateStats = async (data: Product[]) => {
+    const calculateStats = async (data: Product[], sessionOverride?: { count: number, value: number, ids: number[], quantities: any }) => {
         try {
             const [
                 { count: totalCount },
@@ -1154,19 +1154,26 @@ const AdminDashboard = () => {
             let salesProductIds: number[] = [];
             let salesQuantities: Record<number, number> = {};
 
-            const { data: latestLogs } = await supabase
-                .from('admin_logs')
-                .select('details, created_at')
-                .eq('action', 'excel_sync_summary')
-                .order('created_at', { ascending: false })
-                .limit(1);
+            if (sessionOverride) {
+                dailyChanges = sessionOverride.count;
+                dailyValue = sessionOverride.value;
+                salesProductIds = sessionOverride.ids;
+                salesQuantities = sessionOverride.quantities;
+            } else {
+                const { data: latestLogs } = await supabase
+                    .from('admin_logs')
+                    .select('details, created_at')
+                    .eq('action', 'excel_sync_summary')
+                    .order('created_at', { ascending: false })
+                    .limit(1);
 
-            if (latestLogs && latestLogs.length > 0) {
-                const details = latestLogs[0].details;
-                dailyChanges = Number(details.sales_count || 0);
-                dailyValue = Number(details.sales_value || 0);
-                salesProductIds = Array.isArray(details.sales_product_ids) ? details.sales_product_ids : [];
-                salesQuantities = typeof details.sales_quantities === 'object' ? details.sales_quantities : {};
+                if (latestLogs && latestLogs.length > 0) {
+                    const details = latestLogs[0].details;
+                    dailyChanges = Number(details.sales_count || 0);
+                    dailyValue = Number(details.sales_value || 0);
+                    salesProductIds = Array.isArray(details.sales_product_ids) ? details.sales_product_ids : [];
+                    salesQuantities = typeof details.sales_quantities === 'object' ? details.sales_quantities : {};
+                }
             }
 
             setStats({
@@ -1972,9 +1979,14 @@ const AdminDashboard = () => {
                         salesQuantities: { ...sessionSalesQuantities }
                     }));
                 }
-                if (failCount > 0) toast.error(`تنبيه: فشل عمل ${failCount} صنف`);
                 setIsExemptImport(false);
-                fetchProducts();
+                setProducts(processed);
+                calculateStats(processed, {
+                    count: sessionSalesCount,
+                    value: sessionSalesValue,
+                    ids: sessionSalesProductIds,
+                    quantities: sessionSalesQuantities
+                });
             } catch (err: any) {
                 console.error("Excel Import Error:", err);
                 toast.error("خطأ في قراءة ملف الإكسيل أو تحديث البيانات");
