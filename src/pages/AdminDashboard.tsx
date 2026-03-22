@@ -49,6 +49,8 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
+import { useSearchParams } from "react-router-dom";
 import {
     Table,
     TableBody,
@@ -142,26 +144,6 @@ const AdminDashboard = () => {
     const [bulkCategoryId, setBulkCategoryId] = useState("");
     const [isExemptImport, setIsExemptImport] = useState(false);
     const [branches, setBranches] = useState<any[]>([]);
-    const [selectedBranchId, setSelectedBranchId] = useState<number | null>(() => {
-        if (typeof window === 'undefined') return null;
-        const saved = localStorage.getItem('saada_selected_branch') || (typeof document !== 'undefined' ? (`; ${document.cookie}`.split('; saada_selected_branch=').pop()?.split(';').shift()) : null);
-        return saved ? Number(saved) : null;
-    });
-    const [sessionSalesOverride, setSessionSalesOverride] = useState<{ count: number, value: number, ids: number[], quantities: any } | null>(null);
-    const sessionSalesOverrideRef = useRef<{ count: number, value: number, ids: number[], quantities: any } | null>(null);
-    const notificationSound = useRef<HTMLAudioElement | null>(null);
-    const lastOrderId = useRef<number | null>(null);
-    const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(() => {
-        if (typeof window === 'undefined') return false;
-        const saved = localStorage.getItem('SAADA_BELL_MASTER_V1');
-        return saved === 'true';
-    });
-
-    // Initialize notification sound
-    useEffect(() => {
-        notificationSound.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-        notificationSound.current.volume = 0.5;
-    }, []);
 
     // Cookie Helpers for extreme persistence
     const setCookie = (name: string, value: string) => {
@@ -177,11 +159,42 @@ const AdminDashboard = () => {
         return null;
     };
 
+    // Initial State - Prioritize URL Params for maximum reliability
+    const urlBranchId = searchParams.get('branch');
+    const urlBellActive = searchParams.get('bell');
+
+    const [selectedBranchId, setSelectedBranchId] = useState<number | null>(() => {
+        if (urlBranchId) return Number(urlBranchId);
+        if (typeof window === 'undefined') return null;
+        const saved = localStorage.getItem('saada_selected_branch') || getCookie('saada_selected_branch');
+        return saved ? Number(saved) : null;
+    });
+
     const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(() => {
+        if (urlBellActive === 'on') return true;
+        if (urlBellActive === 'off') return false;
         if (typeof window === 'undefined') return false;
         const saved = localStorage.getItem('SAADA_BELL_MASTER_V1') || getCookie('SAADA_BELL_MASTER_V1');
         return saved === 'true';
     });
+
+    const [sessionSalesOverride, setSessionSalesOverride] = useState<{ count: number, value: number, ids: number[], quantities: any } | null>(null);
+    const sessionSalesOverrideRef = useRef<{ count: number, value: number, ids: number[], quantities: any } | null>(null);
+    const notificationSound = useRef<HTMLAudioElement | null>(null);
+    const lastOrderId = useRef<number | null>(null);
+
+    // Initialize notification sound
+    useEffect(() => {
+        notificationSound.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        notificationSound.current.volume = 0.5;
+    }, []);
+
+    // Global State management with URL sync
+    const updateUrlParams = (key: string, value: string) => {
+        const newParams = new URLSearchParams(searchParams);
+        newParams.set(key, value);
+        setSearchParams(newParams);
+    };
 
     // Toggle Audio and Notifications
     const toggleNotifications = () => {
@@ -196,11 +209,13 @@ const AdminDashboard = () => {
             setIsNotificationsEnabled(true);
             localStorage.setItem('SAADA_BELL_MASTER_V1', 'true');
             setCookie('SAADA_BELL_MASTER_V1', 'true');
+            updateUrlParams('bell', 'on');
             toast.success("🔔 تم تفعيل جرس التنبيهات بنجاح");
         } else {
             setIsNotificationsEnabled(false);
             localStorage.setItem('SAADA_BELL_MASTER_V1', 'false');
             setCookie('SAADA_BELL_MASTER_V1', 'false');
+            updateUrlParams('bell', 'off');
             toast.info("🔕 تم إيقاف جرس التنبيهات");
         }
     };
@@ -211,6 +226,7 @@ const AdminDashboard = () => {
         setSelectedBranchId(bId);
         localStorage.setItem('saada_selected_branch', bId.toString());
         setCookie('saada_selected_branch', bId.toString());
+        updateUrlParams('branch', branchId);
     };
 
     // Real-time Order Notifications
@@ -346,28 +362,25 @@ const AdminDashboard = () => {
             if (data && data.length > 0) {
                 setBranches(data);
                 
-                // Persistence First: Respect storage/cookies
-                const cookieVal = typeof document !== 'undefined' ? (`; ${document.cookie}`.split('; saada_selected_branch=').pop()?.split(';').shift()) : null;
-                const savedBranchId = localStorage.getItem('saada_selected_branch') || cookieVal;
-                const currentSelectionFromStorage = savedBranchId ? Number(savedBranchId) : null;
-                
-                // Account-Based Override: Ensure restricted staff ALWAYS land in their branch
-                // even if storage is wiped or has something else
-                if (isRestrictedStaff) {
-                    const alexBranch = data.find(b => b.name.includes('اسكندرية'));
-                    const targetId = alexBranch ? alexBranch.id : data[0].id;
-                    setSelectedBranchId(targetId);
-                    localStorage.setItem('saada_selected_branch', targetId.toString());
-                    if (typeof document !== 'undefined') {
-                       const d = new Date(); d.setTime(d.getTime() + (365*24*60*60*1000));
-                       document.cookie = `saada_selected_branch=${targetId};expires=${d.toUTCString()};path=/;SameSite=Lax`;
+                // Persistence First: Respect URL Params > Storage > Cookies
+                // If it's already set (from useState initializer using URL), DON'T overwrite it with defaults!
+                if (!selectedBranchId) {
+                    const cookieVal = typeof document !== 'undefined' ? (`; ${document.cookie}`.split('; saada_selected_branch=').pop()?.split(';').shift()) : null;
+                    const savedBranchId = localStorage.getItem('saada_selected_branch') || cookieVal;
+                    const currentSelectionFromStorage = savedBranchId ? Number(savedBranchId) : null;
+                    
+                    if (isRestrictedStaff) {
+                        const alexBranch = data.find(b => b.name.includes('اسكندرية'));
+                        const targetId = alexBranch ? alexBranch.id : data[0].id;
+                        setSelectedBranchId(targetId);
+                        localStorage.setItem('saada_selected_branch', targetId.toString());
+                        setCookie('saada_selected_branch', targetId.toString());
+                    } else if (currentSelectionFromStorage) {
+                        setSelectedBranchId(currentSelectionFromStorage);
+                    } else {
+                        // General admin/manager fallback
+                        setSelectedBranchId(data[0].id);
                     }
-                } else if (currentSelectionFromStorage) {
-                    setSelectedBranchId(currentSelectionFromStorage);
-                } else if (!selectedBranchId) {
-                    // General admin/manager fallback
-                    setSelectedBranchId(data[0].id);
-                    localStorage.setItem('saada_selected_branch', data[0].id.toString());
                 }
             }
         };
