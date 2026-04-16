@@ -1,3 +1,6 @@
+# Claude Code memory & config (local only)
+.claude/
+
 # Logs
 logs
 *.log

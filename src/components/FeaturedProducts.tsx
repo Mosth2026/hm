@@ -18,14 +18,9 @@ const FeaturedProducts = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="py-24 text-center">
-        <div className="bg-destructive/10 text-destructive p-6 rounded-[2rem] inline-block">
-          <p className="font-black">عذراً، حدث خطأ أثناء تحميل المنتجات.</p>
-        </div>
-      </div>
-    );
+  // On error, render silently (no error message shown to customers)
+  if (error || !products?.length) {
+    return null;
   }
 
   return (
@@ -49,8 +44,9 @@ const FeaturedProducts = () => {
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
-          {products && products.length > 0 ? (
-            products.map((product, idx) => (
+          {products
+            .filter(p => p.image && p.image !== "null" && p.image !== "undefined" && !p.image.includes("placeholder"))
+            .map((product, idx) => (
               <div
                 key={product.id}
                 className="animate-in fade-in slide-in-from-bottom-8 duration-500 fill-mode-both"
@@ -63,11 +59,7 @@ const FeaturedProducts = () => {
                 />
               </div>
             ))
-          ) : (
-            <div className="col-span-full text-center py-20 bg-primary/5 rounded-[3rem] border-2 border-dashed border-primary/10">
-              <p className="text-xl font-bold text-muted-foreground italic">لا توجد منتجات مميزة متاحة حالياً.</p>
-            </div>
-          )}
+          }
         </div>
       </div>
     </section>

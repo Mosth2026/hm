@@ -31,17 +31,24 @@ export const useCart = create<CartStore>()(
                 const currentItems = get().items;
                 const existingItem = currentItems.find((item) => item.id === product.id);
                 const safeQuantity = Math.max(1, quantity);
+                
+                // UNBREAKABLE STOCK RULE: Never add more than available in branch
+                const maxStock = product.stock || 0;
 
                 if (existingItem) {
+                    const newQty = Math.min(maxStock, (existingItem.quantity || 0) + safeQuantity);
                     set({
                         items: currentItems.map((item) =>
                             item.id === product.id
-                                ? { ...item, quantity: (item.quantity || 0) + safeQuantity }
+                                ? { ...item, quantity: newQty }
                                 : item
                         ),
                     });
                 } else {
-                    set({ items: [...currentItems, { ...product, quantity: safeQuantity }] });
+                    const finalQty = Math.min(maxStock, safeQuantity);
+                    if (finalQty > 0) {
+                        set({ items: [...currentItems, { ...product, quantity: finalQty }] });
+                    }
                 }
             },
 
@@ -52,14 +59,21 @@ export const useCart = create<CartStore>()(
             },
 
             updateQuantity: (productId, quantity) => {
+                const item = get().items.find(i => i.id === productId);
+                if (!item) return;
+
                 if (quantity <= 0) {
                     get().removeItem(productId);
                     return;
                 }
 
+                // UNBREAKABLE STOCK RULE: Limit by current branch stock
+                const maxStock = item.stock || 0;
+                const finalQty = Math.min(maxStock, quantity);
+
                 set({
-                    items: get().items.map((item) =>
-                        item.id === productId ? { ...item, quantity } : item
+                    items: get().items.map((i) =>
+                        i.id === productId ? { ...i, quantity: finalQty } : i
                     ),
                 });
             },

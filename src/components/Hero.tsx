@@ -37,6 +37,7 @@ const Hero = () => {
         const { data, error } = await supabase
           .from('products')
           .select('*')
+          .or('name.ilike.%سويس فرو%,name.ilike.%Swiss Fru%,category_name.ilike.%سويس فرو%,category_name.ilike.%Swiss Fru%')
           .not('image', 'ilike', '%unsplash.com%')
           .not('image', 'is', null)
           .neq('image', '')

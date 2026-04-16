@@ -2,16 +2,31 @@
 import React from 'react';
 import { MessageCircle } from 'lucide-react';
 import { SITE_CONFIG } from '@/lib/constants';
+import { getWhatsAppLink } from '@/lib/utils';
 
 const WhatsAppWidget = () => {
     const phoneNumber = SITE_CONFIG.whatsappNumber;
-    const message = encodeURIComponent("مرحباً صناع السعادة، أريد الاستفسار عن ...");
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${message}`;
+    const message = "مرحباً صناع السعادة، أريد الاستفسار عن ...";
+    const whatsappUrl = getWhatsAppLink(phoneNumber, message);
+
+    const handleWhatsAppClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        const start = Date.now();
+        window.location.href = whatsappUrl;
+        
+        setTimeout(() => {
+            if (Date.now() - start < 1000) {
+                const universalLink = `https://wa.me/${phoneNumber.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+                window.open(universalLink, '_blank');
+            }
+        }, 500);
+    };
 
     return (
-        <div className="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-[100] flex items-center gap-3">
+        <div className="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-[100]">
             <a
                 href={whatsappUrl}
+                onClick={handleWhatsAppClick}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="group flex items-center gap-4"

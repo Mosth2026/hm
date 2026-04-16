@@ -4,17 +4,19 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/use-cart";
 import { Trash2, Plus, Minus, ShoppingBag, ArrowRight, MessageCircle } from "lucide-react";
-import { cleanProductName, formatPrice } from "@/lib/utils";
+import { cleanProductName, formatPrice, getWhatsAppLink } from "@/lib/utils";
 import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { SITE_CONFIG } from "@/lib/constants";
 import { saveOrderToDb, OrderItem } from "@/lib/orders";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
+import { useBranchContext } from "@/context/BranchContext";
 
 const CartPage = () => {
     const { items, removeItem, updateQuantity, getTotalPrice, getItemCount } = useCart();
     const { user } = useAuth();
+    const { selectedBranch } = useBranchContext();
     const navigate = useNavigate();
 
     const totalPrice = getTotalPrice();
@@ -212,8 +214,17 @@ const CartPage = () => {
                                                         `مرحباً صناع السعادة، أود إتمام هذا الطلب.`
                                                     );
 
-                                                    const waLink = `https://wa.me/${SITE_CONFIG.whatsappNumber}?text=${message}`;
-                                                    window.open(waLink, '_blank');
+                                                    const waNumber = selectedBranch?.whatsapp_number || SITE_CONFIG.whatsappNumber;
+                                                    const waLink = getWhatsAppLink(waNumber, decodeURIComponent(message));
+                                                    
+                                                    const start = Date.now();
+                                                    window.location.href = waLink;
+                                                    
+                                                    setTimeout(() => {
+                                                        if (Date.now() - start < 1000) {
+                                                            window.open(`https://wa.me/${waNumber.replace(/\D/g, '')}?text=${message}`, '_blank');
+                                                        }
+                                                    }, 500);
                                                 } catch (err) {
                                                     console.error("WhatsApp Button Error:", err);
                                                     toast.error("حدث خطأ غير متوقع. جرب مرة أخرى.");

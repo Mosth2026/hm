@@ -1,6 +1,5 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useBranches, Branch } from '../hooks/use-branches';
-import { useAuth } from '../hooks/use-auth';
 
 interface BranchContextType {
   branches: Branch[];
@@ -13,15 +12,10 @@ interface BranchContextType {
 
 const BranchContext = createContext<BranchContextType | undefined>(undefined);
 
-export const BranchProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export function BranchProvider({ children }: { children: ReactNode }) {
   const branchData = useBranches();
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'admin' || user?.role === 'editor';
-
-  // Force null selected branch for customers to return to global store view
   const providerValue = {
-    ...branchData,
-    selectedBranch: isAdmin ? branchData.selectedBranch : null
+    ...branchData
   };
 
   return (
@@ -29,12 +23,12 @@ export const BranchProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       {children}
     </BranchContext.Provider>
   );
-};
+}
 
-export const useBranchContext = () => {
+export function useBranchContext() {
   const context = useContext(BranchContext);
   if (context === undefined) {
     throw new Error('useBranchContext must be used within a BranchProvider');
   }
   return context;
-};
+}

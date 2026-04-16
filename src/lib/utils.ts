@@ -8,11 +8,16 @@ export function cn(...inputs: ClassValue[]) {
 
 export function cleanProductName(name: any): string {
   if (!name) return "";
-  const strName = String(name);
-  return strName
+  let str = String(name);
+  return str
     .replace(/^"/, '')
-    .replace(/\[TAX_EXEMPT\]/g, '') // Remove tax tag
-    .split('*')[0] // Take everything before the first '*'
+    .replace(/\[ADD_CAT:.*?(\]|$)/g, '') // Remove [ADD_CAT:...] even if unclosed
+    .replace(/\[.*?\]/g, '') // Remove any closed bracket metadata
+    .replace(/\[\w+(\-[^\]\s]*)?(\]|$)/g, '') // Remove dangling [tags
+    .replace(/باركود:\s*\d+/g, '')
+    .replace(/\d+\s*:باركود/g, '')
+    .replace(/@/g, '')
+    .split('*')[0]
     .trim();
 }
 
@@ -83,4 +88,30 @@ export function copyToClipboard(text: string): Promise<boolean> {
       resolve(false);
     }
   });
+}
+
+export function getWhatsAppLink(phone: string, message: string): string {
+  // Clean phone number: remove all non-digits
+  const cleanPhone = phone.replace(/\D/g, '');
+  
+  // Encode message for URI
+  const encodedMessage = encodeURIComponent(message);
+  
+  // Detect if user is on a mobile device
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent || navigator.vendor || (window as any).opera
+  );
+
+  // Smart Redirection logic:
+  // On mobile: Use the app protocol directly to skip the "Web/Landing" page
+  // On Desktop: Use the web client for convenience, or the api link
+  if (isMobile) {
+    return `whatsapp://send?phone=${cleanPhone}&text=${encodedMessage}`;
+  } else {
+    // For desktop, we can use web.whatsapp.com if we want to be aggressive, 
+    // or just use the official api.whatsapp.com which handles both.
+    // However, the user specifically mentioned preferring avoiding the 'web' confusion on mobile.
+    // On desktop, web.whatsapp.com is often what people expect.
+    return `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMessage}`;
+  }
 }

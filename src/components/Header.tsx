@@ -5,7 +5,7 @@ import { MapPin, ChevronDown, ShoppingCart, Menu, User, X, Search, Heart, Trash2
 import LiveVisitors from "./LiveVisitors";
 import { useAnalytics } from "@/hooks/use-analytics";
 import { SITE_CONFIG } from "@/lib/constants";
-import { cn, cleanProductName, formatPrice } from "@/lib/utils";
+import { cn, cleanProductName, formatPrice, cleanImageUrl, copyToClipboard, getWhatsAppLink } from "@/lib/utils";
 import { useCart } from "@/hooks/use-cart";
 import { saveOrderToDb } from "@/lib/orders";
 import { toast } from "sonner";
@@ -87,21 +87,53 @@ const Header = () => {
     }
   };
 
-  const navLinks = [
-    { name: "الرئيسية", path: "/" },
-    { name: "روائع الشوكولاتة", path: "/categories/chocolate" },
-    { name: "ركن القهوة", path: "/categories/coffee" },
-    { name: "منعشات عالمية", path: "/categories/drinks" },
-    { name: "الكوكيز والبسكويت", path: "/categories/cookies" },
-    { name: "عالم الحلوى", path: "/categories/candy" },
-    { name: "سناكس ومسليات", path: "/categories/snacks" },
-    { name: "لمسات الجمال", path: "/categories/cosmetics" },
-    { name: "هدايا السعادة", path: "/categories/gifts" },
-  ];
+  const [dynamicNavLinks, setDynamicNavLinks] = useState<{name: string, path: string}[]>([
+    { name: "الرئيسية", path: "/" }
+  ]);
 
-  if (user && user.role === 'customer') {
-    navLinks.push({ name: "طلباتي", path: "/my-orders" });
-  }
+  useEffect(() => {
+    const fetchNavCategories = async () => {
+      try {
+        // Fetch ALL categories for robustness
+        const { data, error } = await supabase
+          .from("categories")
+          .select("*");
+
+        if (error) throw error;
+
+        if (data) {
+          const links = data
+            .filter((cat) => {
+              const isRoot = !cat.parent_id;
+              const label = (cat.label || "").toLowerCase();
+              const isAccounting = cat.id === "no-tax" || label.includes("ضريبة") || label.includes("محاسب");
+              return isRoot && !isAccounting;
+            })
+            // Sort by order_index if it exists
+            .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
+            .map(cat => ({
+              name: cat.label,
+              path: `/categories/${cat.id}`
+            }));
+          
+          const baseLinks = [{ name: "الرئيسية", path: "/" }];
+          const finalLinks = [...baseLinks, ...links];
+          
+          if (user && user.role === 'customer') {
+            finalLinks.push({ name: "طلباتي", path: "/my-orders" });
+          }
+          
+          setDynamicNavLinks(finalLinks);
+        }
+      } catch (err) {
+        console.error("Nav links fetch error:", err);
+      }
+    };
+
+    fetchNavCategories();
+  }, [user]);
+
+  const navLinks = dynamicNavLinks;
 
   return (
     <>
@@ -113,7 +145,12 @@ const Header = () => {
       )}>
         <div className="border-b border-primary/5">
           <div className="container mx-auto px-4 md:px-8 h-14 md:h-20 flex items-center justify-between gap-4 md:gap-12">
-            <Link to="/" className="group flex items-center gap-2 md:gap-3 shrink-0 relative transition-transform hover:scale-[1.02]">
+            <Link 
+              to="/" 
+              onDoubleClick={() => navigate("/admin")}
+              className="group flex items-center gap-2 md:gap-3 shrink-0 relative transition-transform hover:scale-[1.02] cursor-pointer selection:bg-transparent"
+              title="Happiness Makers"
+            >
               <div className="relative h-9 w-9 md:h-13 md:w-13 bg-white rounded-xl md:rounded-2xl flex items-center justify-center shadow-[0_10px_20px_rgba(0,0,0,0.1)] group-hover:shadow-secondary/20 group-hover:rotate-6 transition-all duration-500 overflow-hidden border border-primary/5">
                 <img
                   src={SITE_CONFIG.logoPath}
@@ -429,7 +466,16 @@ const Header = () => {
                                 `مرحباً فرع ${selectedBranch?.name || "صناع السعادة"}، أود إتمام هذا الطلب من المتجر.`
                               );
                               const whatsappNumber = selectedBranch?.whatsapp_number || SITE_CONFIG.whatsappNumber;
-                              window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank');
+                              const waLink = getWhatsAppLink(whatsappNumber, decodeURIComponent(message));
+                              
+                              const start = Date.now();
+                              window.location.href = waLink;
+                              
+                              setTimeout(() => {
+                                  if (Date.now() - start < 1000) {
+                                      window.open(`https://wa.me/${whatsappNumber.replace(/\D/g, '')}?text=${message}`, '_blank');
+                                  }
+                              }, 500);
                             } catch (err) {
                               console.error("WhatsApp Error:", err);
                               toast.error("حدث خطأ في الاتصال.");
@@ -470,17 +516,17 @@ const Header = () => {
         {/* Mobile Category Navigation - STREAMLINED */}
         <div className="lg:hidden bg-white/70 backdrop-blur-md border-b border-primary/5 overflow-x-auto shadow-sm no-scrollbar">
           <div className="flex items-center gap-1.5 px-3 py-1 min-w-max">
-            {navLinks.map((link) => {
+            {navLinks.map((link, idx) => {
               const isActive = location.pathname === link.path;
               return (
                 <Link
-                  key={link.path}
+                  key={`${link.path}-${idx}`}
                   to={link.path}
                   className={cn(
-                    "px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded-md transition-all whitespace-nowrap border-b-2 shadow-sm",
+                    "px-3 py-1.5 text-[10px] md:text-xs font-black uppercase tracking-wider rounded-xl transition-all whitespace-nowrap border-b-2 shadow-sm",
                     isActive
                       ? "bg-primary text-white border-secondary scale-105 shadow-primary/20"
-                      : "bg-white/50 text-primary/70 border-transparent hover:bg-primary/5 hover:text-primary"
+                      : "bg-white/80 text-primary/70 border-transparent hover:bg-primary/10 hover:text-primary"
                   )}
                 >
                   {link.name}

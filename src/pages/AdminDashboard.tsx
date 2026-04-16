@@ -1,3835 +1,555 @@
 
-import { useState, useEffect, useMemo, useRef } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { useAuth, UserRole } from "@/hooks/use-auth";
-import { supabase } from "@/lib/supabase";
-import {
-    BarChart,
-    Package,
-    Plus,
-    Search,
-    Edit,
-    Trash2,
-    TrendingUp,
-    AlertTriangle,
-    AlertCircle,
-    Save,
-    X,
-    Image as ImageIcon,
-    Check,
-    Camera,
-    Upload,
-    Sparkles as SparklesIcon,
-    ExternalLink,
-    CheckCircle2,
-    CheckCircle,
-    Merge,
-    FileSpreadsheet,
-    RefreshCw,
-    Percent,
-    Ticket,
-    List,
-    Users,
-    Clock,
-    PieChart,
-    Calendar,
-    MousePointer2,
-    RotateCcw,
-    Bell,
-    BellOff
-} from "lucide-react";
+import React, { useEffect, useCallback } from 'react';
+import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
+import AdminStats from "@/components/admin/AdminStats";
+import AdminTabs from "@/components/admin/AdminTabs";
+import ProductTable from "@/components/admin/ProductTable";
+import OrderList from "@/components/admin/OrderList";
+import DashboardDialogs from "@/components/admin/DashboardDialogs";
 import AnalyticsDashboard from "@/components/admin/AnalyticsDashboard";
-import * as XLSX from 'xlsx';
-import ImageCropper from "@/components/admin/ImageCropper";
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle
-} from "@/components/ui/card";
+import UserManagement from "@/components/admin/UserManagement";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
-import { useSearchParams } from "react-router-dom";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow
-} from "@/components/ui/table";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from "@/components/ui/dialog";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue
-} from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { toast } from "sonner";
-import { Product } from "@/hooks/use-products";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { 
+    Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
+} from "@/components/ui/table";
+import { 
+    Heart, Package, Plus, Upload, RefreshCw, Trash2, 
+    Ticket, Users, List, TrendingUp, Calendar, Phone, Mail,
+    CheckCircle2, XCircle, LogOut, MapPin, Navigation
+} from "lucide-react";
 
-import { formatPrice } from "@/lib/utils";
-import { SITE_CONFIG } from "@/lib/constants";
-
-const PLACEHOLDER_IMAGE = SITE_CONFIG.placeholderImage;
+import { CategoryTreeManager } from "@/components/admin/CategoryTreeManager";
+import PaymentSettings from "@/components/admin/PaymentSettings";
+import { hasPermission, ROLE_LABELS, ROLE_COLORS, UserRole } from "@/hooks/use-auth";
 
 const AdminDashboard = () => {
-    const { user, isAuthenticated, login, logout, initialize } = useAuth();
-    const queryClient = useQueryClient();
-    const [searchParams, setSearchParams] = useSearchParams();
+    const { 
+        user, isAuthenticated, products, loading, searchQuery, stats, activeFilter, selectedCategoryLabel, activeTab,
+        isEditDialogOpen, isUploading, isCropperOpen, tempImageUrl, currentProduct, importProgress, selectedProductIds,
+        coupons, couponsLoading, isCouponDialogOpen, newCoupon, subscribers, subscribersLoading, orders, ordersLoading,
+        logs, logsLoading, isLifecycleOpen, lifecycleProduct, lifecycleData, lifecycleLoading, isBulkCategoryOpen,
+        bulkCategoryId, isExemptImport, branches, selectedBranchId, isNotificationsEnabled, updatedSessionIds,
+        
+        setSearchQuery, setActiveFilter, setSelectedCategoryLabel, setActiveTab, setIsEditDialogOpen, setIsUploading,
+        setIsCropperOpen, setTempImageUrl, setCurrentProduct, setImportProgress, setSelectedProductIds,
+        setIsCouponDialogOpen, setNewCoupon, setIsLifecycleOpen, setIsBulkCategoryOpen, setBulkCategoryId,
+        setIsExemptImport, setSelectedBranchId, setIsNotificationsEnabled,
+        
+        login, logout, initialize, logAction, fetchProducts, fetchOrders, handleBranchChange, toggleNotifications,
+        handleEdit, handleAddNew, handleDelete, handleSave, handleImageUpload, handleCropComplete, handleSkip,
+        handleMarkAsReceived, handleReturnOrder, handleDeleteOrder, handleExportData, handleBulkCategoryUpdate,
+        fetchProductLifecycle, formatPrice, categories, fetchCategories, handleExcelImport, handleCleanupDuplicates, handleRestoreLostImages
+    } = useAdminDashboard();
 
-    useEffect(() => {
-        initialize();
+    const userRole = (user?.role || 'customer') as UserRole;
+    const isStaff = hasPermission(user, 'dashboard');
+
+    // =====================================================
+    // GEO-BRANCH AUTO-DETECTION
+    // =====================================================
+    const calculateDistance = useCallback((lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = 
+            Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        return R * c;
     }, []);
 
-    const [authData, setAuthData] = useState({ username: '', password: '' });
-    const [products, setProducts] = useState<Product[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-    const [isUploading, setIsUploading] = useState(false);
-    const [isCropperOpen, setIsCropperOpen] = useState(false);
-    const [tempImageUrl, setTempImageUrl] = useState<string | null>(null);
-    const [currentProduct, setCurrentProduct] = useState<Partial<Product>>({});
-    const [stats, setStats] = useState({
-        totalProducts: 0,
-        lowStock: 0,
-        totalValue: 0,
-        categories: 0,
-        zeroStock: 0,
-        needsPhoto: 0,
-        published: 0,
-        noTax: 0,
-        readyToShot: 0,
-        trash: 0,
-        dailyChanges: 0,
-        dailyValue: 0,
-        salesProductIds: [] as number[],
-        salesQuantities: {} as Record<number, number>
-    });
-    const [activeFilter, setActiveFilter] = useState<"all" | "low" | "value" | "categories" | "zero" | "draft" | "published" | "no-tax" | "ready" | "trash" | "daily">("all");
-    const [selectedCategoryLabel, setSelectedCategoryLabel] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<"products" | "orders" | "coupons" | "logs" | "subscribers" | "analytics">("products");
-    const [coupons, setCoupons] = useState<any[]>([]);
-    const [couponsLoading, setCouponsLoading] = useState(false);
-    const [isCouponDialogOpen, setIsCouponDialogOpen] = useState(false);
-    const [subscribers, setSubscribers] = useState<any[]>([]);
-    const [subscribersLoading, setSubscribersLoading] = useState(false);
-    const [newCoupon, setNewCoupon] = useState({
-        code: "",
-        discount_type: "percentage",
-        discount_value: 0
-    });
-    const [orders, setOrders] = useState<any[]>([]);
-    const [ordersLoading, setOrdersLoading] = useState(false);
-    const [updatedSessionIds, setUpdatedSessionIds] = useState<number[]>([]);
-    const [importProgress, setImportProgress] = useState<{ current: number, total: number } | null>(null);
-    const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
-    const [logs, setLogs] = useState<any[]>([]);
-    const [logsLoading, setLogsLoading] = useState(false);
-    const [isLifecycleOpen, setIsLifecycleOpen] = useState(false);
-    const [lifecycleProduct, setLifecycleProduct] = useState<Product | null>(null);
-    const [lifecycleData, setLifecycleData] = useState<any[]>([]);
-    const [lifecycleLoading, setLifecycleLoading] = useState(false);
-    const [isBulkCategoryOpen, setIsBulkCategoryOpen] = useState(false);
-    const [bulkCategoryId, setBulkCategoryId] = useState("");
-    const [isExemptImport, setIsExemptImport] = useState(false);
-    const [branches, setBranches] = useState<any[]>([]);
-
-    // Cookie Helpers for extreme persistence
-    const setCookie = (name: string, value: string) => {
-        const d = new Date();
-        d.setTime(d.getTime() + (365 * 24 * 60 * 60 * 1000));
-        document.cookie = `${name}=${value};expires=${d.toUTCString()};path=/;SameSite=Lax`;
-    };
-
-    const getCookie = (name: string) => {
-        const value = `; ${document.cookie}`;
-        const parts = value.split(`; ${name}=`);
-        if (parts.length === 2) return parts.pop()?.split(';').shift();
-        return null;
-    };
-
-    // Initial State - Prioritize URL Params for maximum reliability
-    const urlBranchId = searchParams.get('branch');
-    const urlBellActive = searchParams.get('bell');
-
-    const [selectedBranchId, setSelectedBranchId] = useState<number | null>(() => {
-        if (urlBranchId) return Number(urlBranchId);
-        if (typeof window === 'undefined') return null;
-        const saved = localStorage.getItem('saada_selected_branch') || getCookie('saada_selected_branch');
-        return saved ? Number(saved) : null;
-    });
-
-    const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(() => {
-        if (urlBellActive === 'on') return true;
-        if (urlBellActive === 'off') return false;
-        if (typeof window === 'undefined') return true; 
-
-        const saved = localStorage.getItem('SAADA_BELL_MASTER_V1') || getCookie('SAADA_BELL_MASTER_V1');
-        // Default to TRUE for admins if not explicitly turned off (always active by default)
-        if (saved === null) return true;
-        return saved === 'true';
-    });
-
-    const [sessionSalesOverride, setSessionSalesOverride] = useState<{ count: number, value: number, ids: number[], quantities: any } | null>(null);
-    const sessionSalesOverrideRef = useRef<{ count: number, value: number, ids: number[], quantities: any } | null>(null);
-    const notificationSound = useRef<HTMLAudioElement | null>(null);
-    const lastOrderId = useRef<number | null>(null);
-
-    // Initialize notification sound
-    useEffect(() => {
-        notificationSound.current = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-        notificationSound.current.volume = 0.5;
-    }, []);
-
-    // Global State management with URL sync
-    const updateUrlParams = (key: string, value: string) => {
-        const newParams = new URLSearchParams(searchParams);
-        newParams.set(key, value);
-        setSearchParams(newParams);
-    };
-
-    // Toggle Audio and Notifications
-    const toggleNotifications = () => {
-        const newState = !isNotificationsEnabled;
-        if (newState) {
-            if (notificationSound.current) {
-                notificationSound.current.play().then(() => {
-                    notificationSound.current?.pause();
-                    if (notificationSound.current) notificationSound.current.currentTime = 0;
-                }).catch(e => console.warn("Initial unlock failed:", e));
-            }
-            setIsNotificationsEnabled(true);
-            localStorage.setItem('SAADA_BELL_MASTER_V1', 'true');
-            setCookie('SAADA_BELL_MASTER_V1', 'true');
-            updateUrlParams('bell', 'on');
-            toast.success("🔔 تم تفعيل جرس التنبيهات بنجاح");
-        } else {
-            setIsNotificationsEnabled(false);
-            localStorage.setItem('SAADA_BELL_MASTER_V1', 'false');
-            setCookie('SAADA_BELL_MASTER_V1', 'false');
-            updateUrlParams('bell', 'off');
-            toast.info("🔕 تم إيقاف جرس التنبيهات");
-        }
-    };
-
-    const handleBranchChange = (branchId: string) => {
-        const bId = Number(branchId);
-        console.log("📍 Changing branch to:", bId);
-        setSelectedBranchId(bId);
-        localStorage.setItem('saada_selected_branch', bId.toString());
-        setCookie('saada_selected_branch', bId.toString());
-        updateUrlParams('branch', branchId);
-    };
-
-    // Real-time Order Notifications
-    useEffect(() => {
-        if (!isAuthenticated || !isNotificationsEnabled) return;
-
-        console.log("🔔 Subscribing to real-time orders...");
-        const channel = supabase
-            .channel('public:orders_realtime')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, (payload) => {
-                console.log("🚀 Real-time: New Order Detected:", payload);
-                triggerOrderAlert(payload.new);
-            })
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [isAuthenticated, isNotificationsEnabled, activeTab]);
-
-    // Polling Backup for Order Notifications (Checks every 15 seconds)
-    useEffect(() => {
-        if (!isAuthenticated || !isNotificationsEnabled) return;
-
-        const checkNewOrders = async () => {
-            try {
-                const { data, error } = await supabase
-                    .from('orders')
-                    .select('id, total_price, customer_name, created_at')
-                    .order('id', { ascending: false })
-                    .limit(1);
-
-                if (error) throw error;
-                if (!data || data.length === 0) return;
-
-                const newest = data[0];
-                if (lastOrderId.current === null) {
-                    lastOrderId.current = newest.id;
-                    return;
-                }
-
-                if (newest.id > lastOrderId.current) {
-                    console.log("🛡️ Polling: New order detected by radar:", newest);
-                    triggerOrderAlert(newest, true);
-                    lastOrderId.current = newest.id;
-                }
-            } catch (err) {
-                console.warn("Polling error:", err);
-            }
-        };
-
-        const interval = setInterval(checkNewOrders, 15000); 
-        return () => clearInterval(interval);
-    }, [isAuthenticated, isNotificationsEnabled, activeTab]);
-
-    const triggerOrderAlert = (order: any, isPolling = false) => {
-        console.log("📢 Triggering Order Alert:", order);
-        if (notificationSound.current) {
-            notificationSound.current.currentTime = 0;
-            notificationSound.current.play().catch(e => console.error("Audio play failed:", e));
-        }
-
-        toast.success(isPolling ? "🔔 طلب جديد (مكتشف بالرادار)" : "🔔 طلب جديد وصل الآن!", {
-            description: `من: ${order.customer_name || 'عميل'} - المبلغ: ${formatPrice(order.total_price || 0)}`,
-            duration: 20000,
-            position: "top-center",
-            style: { 
-                background: '#10b981', 
-                color: 'white', 
-                fontSize: '1.4rem',
-                padding: '2rem',
-                fontWeight: 'bold',
-                border: '5px solid white',
-                boxShadow: '0 0 40px rgba(0,0,0,0.5)',
-                zIndex: 99999
-            }
-        });
-
-        const originalTitle = "لوحة تحكم صناع السعادة";
-        let flashCount = 0;
-        const flashInterval = setInterval(() => {
-            document.title = flashCount % 2 === 0 ? "📢 [طلب جديد!]" : originalTitle;
-            flashCount++;
-            if (flashCount > 40) {
-                clearInterval(flashInterval);
-                document.title = originalTitle;
-            }
-        }, 800);
-
-        if (activeTab === 'orders' || activeTab === 'analytics') fetchOrders();
-    };
-
-    const handleTestNotification = () => {
-        if (!isNotificationsEnabled) {
-            toast.error("يرجى تفعيل جرس التنبيه أولاً");
-            return;
-        }
-        triggerOrderAlert({ customer_name: "اختبار النظام", total_price: 999 });
-    };
-
-    // Diagnostic logging for persistence
-    useEffect(() => {
-        console.log("⚙️ Sync Diagnostic:", {
-            branch: localStorage.getItem('saada_selected_branch'),
-            bell: localStorage.getItem('SAADA_BELL_MASTER_V1'),
-            username: user?.username
-        });
-    }, [user]);
-
-    const logAction = async (action: string, details: any = {}, productId?: number) => {
-        try {
-            await supabase.from('admin_logs').insert([{
-                username: user?.username || user?.email?.split('@')[0] || 'unknown',
-                action,
-                details: productId ? { ...details, product_id: productId } : details
-            }]);
-        } catch (e) {
-            console.error("Failed to log action:", e);
-        }
-    };
-
-    const username = user?.username?.toLowerCase() || "";
-    const isRestrictedStaff = username.includes('mostafa') || username.includes('hesham') || username.includes('fikry') || username.includes('fekry') || username === 'h';
-    const isSpecial = isRestrictedStaff || user?.role === 'admin' || user?.role === 'editor';
-    const isSuperAdmin = username.includes('elhanafy') || username === 'h';
-    const isAdmin = (user?.role === 'admin' || isSuperAdmin) && !isRestrictedStaff;
-    const canDelete = isAdmin;
-    const canEditPrice = isAdmin;
-
-    useEffect(() => {
-        const fetchBranches = async () => {
-            const { data, error } = await supabase.from('branches').select('*').order('name');
-            if (data && data.length > 0) {
-                setBranches(data);
-                
-                // FINAL PERSISTENCE SHIELD: Never reset a valid selection
-                let currentId = selectedBranchId;
-                const saved = localStorage.getItem('saada_selected_branch') || getCookie('saada_selected_branch');
-                const savedId = saved ? Number(saved) : null;
-                
-                // If current state is null but storage has it, prioritize storage
-                if (!currentId && savedId) currentId = savedId;
-
-                if (!currentId) {
-                    // No selection at all: Apply defaults
-                    if (isRestrictedStaff) {
-                        const alexBranch = data.find(b => b.name.includes('اسكندرية'));
-                        const targetId = alexBranch ? alexBranch.id : data[0].id;
-                        setSelectedBranchId(targetId);
-                        localStorage.setItem('saada_selected_branch', targetId.toString());
-                    } else {
-                        setSelectedBranchId(data[0].id);
-                    }
-                } else {
-                    // Selection exists: Verify validity but don't reset to Rehab if valid ID is present
-                    const exists = data.some(b => Number(b.id) === Number(currentId));
-                    if (!exists) {
-                        setSelectedBranchId(data[0].id);
-                    } else if (!selectedBranchId) {
-                        // Restore from local currentId calculation if state was null
-                        setSelectedBranchId(currentId);
-                    }
-                }
-            }
-        };
-        fetchBranches();
-    }, [isRestrictedStaff, username]); // username added to ensure re-run after auth initialize
-
-    // Define filteredProducts near the top but as a derived value
-
-    const filteredProducts = useMemo(() => {
-        return [...products].sort((a, b) => {
-            const aUpdated = updatedSessionIds.includes(a.id);
-            const bUpdated = updatedSessionIds.includes(b.id);
-            if (aUpdated && !bUpdated) return -1;
-            if (!aUpdated && bUpdated) return 1;
-            return (new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
-        });
-    }, [products, updatedSessionIds]);
-
-    useEffect(() => {
-        setSelectedProductIds([]);
-    }, [activeFilter, selectedCategoryLabel, searchQuery]);
-
-    const handleExportData = () => {
-        if (filteredProducts.length === 0) {
-            toast.error("لا توجد بيانات لتصديرها في هذا القسم");
-            return;
-        }
-
-        const exportData = filteredProducts.map(p => {
-            const row: any = {
-                "الاسم": p.name,
-                "الباركود": p.description?.includes('باركود:') ? p.description.split('باركود:')[1].trim().replace('[TAX_EXEMPT]', '').replace('[DRAFT]', '').trim() : "",
-                "القسم": p.category_name,
-                "السعر": p.price,
-                "المخزون الحالي": p.stock,
-                "تاريخ الصلاحية": p.expiry_date || "-",
-            };
-
-            // إضافة أعمدة الجرد والمبيعات في حال كان الفلتر 'daily' نشطاً
-            if (activeFilter === "daily") {
-                row["الفرق (المباع)"] = stats.salesQuantities[p.id] || 0;
-                row["قيمة المبيعات"] = (stats.salesQuantities[p.id] || 0) * p.price;
-            }
-
-            row["الحالة"] = p.description?.includes('[DRAFT]') ? 'مسودة' : ((p.stock ?? 0) > 0 ? 'نشط' : 'منتهي (رصيد صفر)');
-            return row;
-        });
-
-        const ws = XLSX.utils.json_to_sheet(exportData);
-        const wb = XLSX.utils.book_new();
-        const sheetName = activeFilter === "all" ? "جميع المنتجات" :
-            activeFilter === "daily" ? "فاتورة مبيعات الجرد" : 
-            activeFilter === "categories" ? (selectedCategoryLabel || "قسم محدد") :
-                activeFilter === "trash" ? "الدرافت" : "تقرير المنتجات";
-
-        const now = new Date();
-        const dateStr = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}-${now.getMinutes().toString().padStart(2, '0')}`;
-
-        XLSX.utils.book_append_sheet(wb, ws, sheetName);
-        XLSX.writeFile(wb, `saada_export_${activeFilter}_${dateStr}.xlsx`);
-        toast.success("تم تصدير البيانات بنجاح");
-    };
-
-    const handleBulkDelete = async () => {
-        if (selectedProductIds.length === 0) return;
-        if (!confirm(`هل أنت متأكد من حذف ${selectedProductIds.length} صنف نهائياً؟`)) return;
-
-        const { error } = await supabase.from('products').delete().in('id', selectedProductIds);
-        if (error) {
-            toast.error("فشل الحذف الجماعي");
-        } else {
-            toast.success("تم الحذف بنجاح");
-            logAction('bulk_delete_products', { count: selectedProductIds.length, ids: [...selectedProductIds] });
-            setSelectedProductIds([]);
-            fetchProducts();
-        }
-    };
-
-    const handleBulkCategoryUpdate = async () => {
-        if (selectedProductIds.length === 0 || !bulkCategoryId) return;
-        const toastId = toast.loading("جاري تحديث الأقسام...");
-        try {
-            const catIds = bulkCategoryId.split(',').filter(Boolean);
-            const catLabels = catIds.map(id => categories.find(c => c.id === id)?.label).filter(Boolean).join(', ');
-            const searchableCategoryName = `${catLabels} [IDS:${catIds.join(',')}]`;
-
-            const { error } = await supabase
-                .from('products')
-                .update({
-                    category_id: catIds[0] || null,
-                    category_name: searchableCategoryName
-                })
-                .in('id', selectedProductIds);
-
-            if (error) throw error;
-            toast.success(`تم تحديث القسم لـ ${selectedProductIds.length} صنف`, { id: toastId });
-            logAction('bulk_edit_category', { count: selectedProductIds.length, new_categories: bulkCategoryId });
-            setSelectedProductIds([]);
-            fetchProducts();
-            setIsBulkCategoryOpen(false);
-            setBulkCategoryId("");
-        } catch (err: any) {
-            toast.error("فشل التحديث الجماعي", { description: err.message, id: toastId });
-        }
-    };
-
-    const handleBulkDraft = async (toDraft: boolean) => {
-        if (selectedProductIds.length === 0) return;
-
-        const toastId = toast.loading(toDraft ? "جاري نقل المنتجات للدرافت..." : "جاري استعادة المنتجات...");
-
-        try {
-            const updates = selectedProductIds.map((id) => {
-                const prod = products.find(p => p.id === id);
-                if (!prod) return null;
-                // Remove existing [DRAFT] if any to avoid duplicates
-                let desc = (prod.description || '').replace('[DRAFT]', '').trim();
-                if (toDraft) desc = `${desc} [DRAFT]`.trim();
-                return { id, description: desc };
-            }).filter(u => u !== null);
-
-            if (updates.length === 0) throw new Error("لم يتم العثور على المنتجات المختارة");
-
-            // Perform updates sequentially to maintain database integrity
-            for (const up of updates) {
-                const { error } = await supabase
-                    .from('products')
-                    .update({ description: up!.description })
-                    .eq('id', up!.id);
-                if (error) throw error;
-            }
-
-            toast.success(toDraft ? "تم إخفاء المنتجات في الدرافت" : "تم استعادة المنتجات بنجاح", { id: toastId });
-            logAction(toDraft ? 'bulk_move_to_draft' : 'bulk_restore_from_draft', { count: updates.length, ids: selectedProductIds });
-            setSelectedProductIds([]);
-            fetchProducts();
-        } catch (error: any) {
-            console.error("Bulk Actions Error:", error);
-            toast.error("فشل تنفيذ الإجراء الجماعي", {
-                description: error.message,
-                id: toastId
-            });
-        }
-    };
-
-
-
-    // دالة مطورة لتنظيف النصوص العربية للمطابقة (Shared)
-    const normalize = (text: string) => {
-        if (!text) return '';
-        return String(text).toLowerCase()
-            .trim()
-            .replace(/[أإآ]/g, 'ا')
-            .replace(/ة/g, 'ه')
-            .replace(/[ىيی]/g, 'ي')
-            .replace(/[ؤئ]/g, 'ي')
-            .replace(/[كک]/g, 'ك')
-            .replace(/[\u064B-\u0652\u0640]/g, '') // إزالة التشكيل والتطويل
-            .replace(/جرام/g, 'جم')
-            .replace(/كيلو/g, 'ك')
-            .replace(/[^a-z0-9\u0621-\u064A]/g, ''); // إزالة كل الرموز والمسافات
-    };
-
-    const normalizeBarcode = (code: any) => {
-        if (!code) return '';
-        // تنظيف الباركود من الأصفار الشمال (التي يحذفها الإكسيل) ومن أي مسافات أو رموز
-        const cleaned = String(code).replace(/\D/g, '').replace(/^0+/, '');
-        return cleaned || '0';
-    };
-
-    const [conflictProducts, setConflictProducts] = useState<{ key: string, items: Product[] }[]>([]);
-    const [isConflictResolverOpen, setIsConflictResolverOpen] = useState(false);
-
-    const fetchConflicts = async () => {
-        try {
-            const { data, error } = await supabase.from('products').select('*');
-            if (error) throw error;
-            if (!data) return;
-
-            const barcodeGroups = new Map<string, Product[]>();
-            const nameGroups = new Map<string, Product[]>();
-
-            data.forEach(p => {
-                // 1. استخراج الباركود الصافي (الأرقام فقط)
-                let pureBarcode = null;
-                if (p.description && p.description.includes('باركود:')) {
-                    const match = p.description.match(/باركود:\s*(\d+)/);
-                    if (match) pureBarcode = normalizeBarcode(match[1]);
-                }
-
-                // 2. تجميع بالباركود (الأولوية القصوى)
-                if (pureBarcode && pureBarcode.length > 3) {
-                    const existing = barcodeGroups.get(pureBarcode) || [];
-                    barcodeGroups.set(pureBarcode, [...existing, p]);
-                } else {
-                    // 3. تجميع بالاسم فقط للأصناف التي ليس لها باركود لضمان الدقة
-                    const normName = normalize(p.name);
-                    if (normName && normName.length > 5) {
-                        const existing = nameGroups.get(normName) || [];
-                        nameGroups.set(normName, [...existing, p]);
-                    }
-                }
-            });
-
-            const conflicts: { key: string, items: Product[] }[] = [];
-
-            // إضافة مجموعات الباركود المكررة فعلياً
-            barcodeGroups.forEach((items, code) => {
-                if (items.length > 1) {
-                    conflicts.push({ key: `نفس الباركود: ${code}`, items });
-                }
-            });
-
-            // إضافة تعارضات بالاسم بشرط أن تكون أصناف "تائهة" (بدون باركود)
-            nameGroups.forEach((items, name) => {
-                if (items.length > 1) {
-                    conflicts.push({ key: `اسم متشابه (بدون باركود): ${items[0].name}`, items });
-                }
-            });
-
-            setConflictProducts(conflicts);
-        } catch (err) {
-            console.error("Conflict Fetch Error:", err);
-        }
-    };
-
-    const handleMergeProducts = async (keepId: number, deleteIds: number[]) => {
-        const toastId = toast.loading("جاري دمج المنتجات...");
-        try {
-            const { data: toDeleteData } = await supabase.from('products').select('*').in('id', deleteIds);
-            const { data: keepData } = await supabase.from('products').select('*').eq('id', keepId).single();
-
-            if (!keepData) throw new Error("Product to keep not found");
-
-            let bestImage = keepData.image;
-            const hasRealImage = (img: string) => img && img !== PLACEHOLDER_IMAGE && !img.includes('unsplash.com');
-
-            if (!hasRealImage(bestImage)) {
-                const salvage = toDeleteData?.find(p => hasRealImage(p.image));
-                if (salvage) bestImage = salvage.image;
-            }
-
-            const maxStock = Math.max(keepData.stock || 0, ...(toDeleteData?.map(p => p.stock || 0) || [0]));
-
-            await supabase.from('products').update({
-                image: bestImage,
-                stock: maxStock,
-                updated_at: new Date().toISOString()
-            }).eq('id', keepId);
-
-            await supabase.from('products').delete().in('id', deleteIds);
-
-            toast.success("تم الدمج بنجاح وتصحيح البيانات", { id: toastId });
-            fetchConflicts();
-            fetchProducts();
-        } catch (err: any) {
-            toast.error("فشل الدمج", { description: err.message, id: toastId });
-        }
-    };
-    const handleRestoreLostImages = async () => {
-        if (!confirm("سيتم الآن البحث عن الأصناف التي لها رصيد وبدون صورة، ومحاولة مطابقتها مع الأصناف القديمة (التي لها صور ورصيدها صفر). هل تود البدء؟\n\nنصيحة: استخدم هذا الزر إذا لاحظت وجود أصناف مكررة أو صور مفقودة بعد رفع الطلبية.")) return;
-
-        const toastId = toast.loading("جاري فحص المتجر واستعادة الصور المفقودة...");
-        try {
-            const { data: allProducts, error } = await supabase.from('products').select('*');
-            if (error) throw error;
-
-            // الأصناف التي لها رصيد ولكن ليس لها صورة حقيقية
-            const stockedNoImage = allProducts.filter(p =>
-                (p.stock || 0) > 0 &&
-                (p.image === PLACEHOLDER_IMAGE || !p.image || p.image.includes('unsplash.com'))
-            );
-
-            // الأصناف التي رصيدها صفر ولديها صور حقيقية (الكنز المفقود)
-            const noStockHasImage = allProducts.filter(p =>
-                (p.stock || 0) === 0 &&
-                p.image &&
-                !p.image.includes('unsplash.com') &&
-                p.image !== PLACEHOLDER_IMAGE
-            );
-
-            let fixedCount = 0;
-            const idsToDelete: number[] = [];
-            const toUpdate: { id: number, data: any }[] = [];
-
-            for (const target of stockedNoImage) {
-                const normTarget = normalize(target.name);
-
-                // Extract barcode from target description if available
-                const targetBarcode = target.description?.includes('باركود:') ?
-                    target.description.split('باركود:')[1].trim().replace(/[^0-9]/g, '') : null;
-
-                // البحث عن مطابق في الأصناف المهجورة (رصيدها صفر ولها صورة)
-                const source = noStockHasImage.find(s => {
-                    // Try Barcode Match First (Highest Accuracy)
-                    if (targetBarcode) {
-                        const sBarcode = s.description?.includes('باركود:') ?
-                            s.description.split('باركود:')[1].trim().replace(/[^0-9]/g, '') : null;
-                        if (sBarcode && sBarcode === targetBarcode) return true;
-                    }
-
-                    // Fallback to Name Match
-                    const normSource = normalize(s.name);
-                    return normSource === normTarget ||
-                        (normSource.length > 5 && normTarget.includes(normSource)) ||
-                        (normTarget.length > 5 && normSource.includes(normTarget));
-                });
-
-                if (source) {
-                    toUpdate.push({
-                        id: target.id,
-                        data: {
-                            image: source.image,
-                            category_id: source.category_id,
-                            category_name: source.category_name,
-                            description: target.description || source.description
-                        }
-                    });
-                    idsToDelete.push(source.id);
-                    fixedCount++;
-                }
-            }
-
-            if (fixedCount === 0) {
-                toast.dismiss(toastId);
-                return toast.info("لم يتم العثور على أصناف مكررة تحتاج لدمج أو استعادة صور حالياً.");
-            }
-
-            // تطبيق التحديثات
-            for (const item of toUpdate) {
-                await supabase.from('products').update(item.data).eq('id', item.id);
-            }
-
-            // حذف المكررات التي تم نقل صورها
-            if (idsToDelete.length > 0) {
-                const CHUNK = 50;
-                for (let i = 0; i < idsToDelete.length; i += CHUNK) {
-                    await supabase.from('products').delete().in('id', idsToDelete.slice(i, i + CHUNK));
-                }
-            }
-
-            toast.success(`عملية ناجحة: تم استعادة ${fixedCount} صورة ودمج المكررات بنجاح! المتجر الآن أكثر تنظيماً.`, { id: toastId, duration: 8000 });
-            fetchProducts();
-        } catch (err: any) {
-            console.error("Recovery Error:", err);
-            toast.error("فشل في عملية الاستعادة الذكية", { description: err.message, id: toastId });
-        }
-    };
-
-    useEffect(() => {
-        if (activeTab === "orders") {
-            fetchOrders();
-        } else if (activeTab === "logs") {
-            fetchLogs();
-        } else if (activeTab === "subscribers") {
-            fetchSubscribers();
-        }
-    }, [activeTab]);
-
-    const fetchSubscribers = async () => {
-        setSubscribersLoading(true);
-        try {
-            const { data, error } = await supabase
-                .from("subscribers")
-                .select("*")
-                .order("created_at", { ascending: false });
-
-            if (error) throw error;
-            setSubscribers(data || []);
-        } catch (error: any) {
-            toast.error("خطأ في تحميل المشتركين", {
-                description: error.message,
-                duration: 6000
-            });
-        } finally {
-            setSubscribersLoading(false);
-        }
-    };
-
-    const fetchLogs = async () => {
-        setLogsLoading(true);
-        try {
-            const { data, error } = await supabase
-                .from("admin_logs")
-                .select("*")
-                .order("created_at", { ascending: false })
-                .limit(500);
-
-            if (error) throw error;
-            setLogs(data || []);
-        } catch (error: any) {
-            toast.error("خطأ في تحميل سجل التعديلات", {
-                description: error.message,
-                duration: 6000
-            });
-        } finally {
-            setLogsLoading(false);
-        }
-    };
-
-    const fetchOrders = async () => {
-        setOrdersLoading(true);
-        try {
-            const { data, error } = await supabase
-                .from("orders")
-                .select("*")
-                .order("created_at", { ascending: false });
-
-            if (error) throw error;
-            setOrders(data || []);
-        } catch (error: any) {
-            toast.error("خطأ في تحميل الطلبات", {
-                description: error.message,
-                duration: 6000
-            });
-        } finally {
-            setOrdersLoading(false);
-        }
-    };
-
-    const handleMarkAsReceived = async (orderId: number) => {
-        const toastId = toast.loading("جاري معالجة الطلب وتحديث المخزون...");
-        try {
-            // 1. Fetch order items
-            const { data: items, error: itemsError } = await supabase
-                .from("order_items")
-                .select("*")
-                .eq("order_id", orderId);
-
-            if (itemsError) throw itemsError;
-
-            // 2. Process each item for FEFO stock deduction
-            for (const item of (items || [])) {
-                let remainingToDeduct = item.quantity;
-
-                // Find all product batches for this product (match by name or barcode)
-                // Normalize search for robustness
-                const normName = normalize(item.product_name);
-
-                // Fetch all candidate batches
-                const { data: batches, error: batchError } = await supabase
-                    .from("products")
-                    .select("*")
-                    .or(`name.ilike.%${item.product_name}%`); // Basic match, we will refine in JS
-
-                if (batchError) continue;
-
-                // Refine matches and filter by stock > 0
-                const validBatches = (batches || []).filter(b => {
-                    const bNormName = normalize(b.name);
-                    // Check if name matches or if barcode (in description) matches
-                    const nameMatch = bNormName === normName;
-                    return nameMatch && b.stock > 0;
-                }).sort((a, b) => {
-                    // Sort by expiry_date: ASC (earliest first), nulls last
-                    if (!a.expiry_date) return 1;
-                    if (!b.expiry_date) return -1;
-                    return new Date(a.expiry_date).getTime() - new Date(b.expiry_date).getTime();
-                });
-
-                // Deduct from batches
-                for (const batch of validBatches) {
-                    if (remainingToDeduct <= 0) break;
-
-                    const deduction = Math.min(batch.stock, remainingToDeduct);
-                    const newStock = batch.stock - deduction;
-
-                    const { error: updateError } = await supabase
-                        .from("products")
-                        .update({ stock: newStock })
-                        .eq("id", batch.id);
-
-                    if (!updateError) {
-                        remainingToDeduct -= deduction;
-                        logAction('order_stock_out', {
-                            order_id: orderId,
-                            product_id: batch.id,
-                            quantity: deduction,
-                            type: 'OUT'
-                        }, batch.id);
-
-                        if (newStock === 0) {
-                            logAction('product_out_of_stock', {
-                                product_id: batch.id,
-                                name: batch.name,
-                                reason: 'order_sale'
-                            }, batch.id);
-                        }
-                        console.log(`Deducted ${deduction} from batch ${batch.id} (${batch.expiry_date}) for ${item.product_name}`);
-                    }
-                }
-            }
-
-            // 3. Update order status
-            const { error: orderError } = await supabase
-                .from("orders")
-                .update({
-                    status: 'received'
-                })
-                .eq("id", orderId);
-
-            if (orderError) throw orderError;
-
-            toast.success("تم تأكيد الاستلام وتحديث المخزون (FEFO)", { id: toastId });
-            logAction('order_received_stock_deducted', { order_id: orderId });
-            fetchOrders();
-        } catch (error: any) {
-            console.error("Order processing error:", error);
-            toast.error("فشل معالجة الطلب", {
-                description: error.message,
-                id: toastId
-            });
-        }
-    };
-
-    const handleReturnOrder = async (orderId: number) => {
-        if (!confirm("هل أنت متأكد من عمل مرتجع لهذا الطلب؟ سيتم إعادة الكميات للمخزون بدقة.")) return;
-        const toastId = toast.loading("جاري تنفيذ المرتجع...");
-        try {
-            // 1. فحص سجلات النظام لمعرفة أين ذهب المخزون بالضبط لهذا الطلب
-            const { data: stockLogs, error: logsError } = await supabase
-                .from("admin_logs")
-                .select("*")
-                .eq("action", "order_stock_out");
-
-            if (logsError) throw logsError;
-
-            // فلترة السجلات يدوياً لضمان الدقة في التعامل مع JSON
-            const relevantLogs = (stockLogs || []).filter(log => 
-                log.details && (log.details.order_id === orderId || log.details.order_id === String(orderId))
-            );
-
-            if (relevantLogs.length > 0) {
-                // إعادة المخزون بناءً على السجلات الحقيقية (دقة 100%)
-                for (const log of relevantLogs) {
-                    const { product_id, quantity } = log.details;
-                    
-                    // جلب الرصيد الحالي أولاً
-                    const { data: product } = await supabase
-                        .from("products")
-                        .select("stock")
-                        .eq("id", product_id)
-                        .single();
-
-                    if (product) {
-                        await supabase.from("products")
-                            .update({ stock: (product.stock || 0) + (Number(quantity) || 0) })
-                            .eq("id", product_id);
-                        
-                        logAction('order_return_precise_in', {
-                            order_id: orderId,
-                            product_id,
-                            quantity,
-                            type: 'RETURN_IN'
-                        }, product_id);
-                    }
-                }
-            } else {
-                // Fallback: Logic based on name matching (if logs were not found)
-                const { data: items } = await supabase.from("order_items").select("*").eq("order_id", orderId);
-                for (const item of (items || [])) {
-                    const normName = normalize(item.product_name);
-                    const { data: batches } = await supabase.from("products").select("*").or(`name.ilike.%${item.product_name}%`);
-                    const matchingBatches = (batches || []).filter(b => normalize(b.name) === normName);
-                    if (matchingBatches.length > 0) {
-                        const targetBatch = matchingBatches.sort((a, b) => (new Date(b.expiry_date || 0).getTime() - new Date(a.expiry_date || 0).getTime()))[0];
-                        await supabase.from("products").update({ stock: targetBatch.stock + item.quantity }).eq("id", targetBatch.id);
-                    }
-                }
-            }
-
-            // 3. إعادة الطلب لحالة الانتظار
-            await supabase.from("orders").update({ status: 'pending' }).eq("id", orderId);
-
-            toast.success("تم تنفيذ المرتجع وإعادة الكميات للمخزون بدقة", { id: toastId });
-            logAction('order_returned_complete', { order_id: orderId });
-            fetchOrders();
-        } catch (error: any) {
-            console.error("Return order error:", error);
-            toast.error("فشل تنفيذ المرتجع", { description: error.message, id: toastId });
-        }
-    };
-
-    const handleDeleteOrder = async (orderId: number) => {
-        if (!confirm("هل أنت متأكد من حذف هذا الطلب نهائياً؟")) return;
-        const toastId = toast.loading("جاري حذف الطلب...");
-        try {
-            // we should also delete from order_items but if we have ON DELETE CASCADE it's better
-            // assuming it's structured properly, otherwise we should delete items first
-            const { error: itemsError } = await supabase.from("order_items").delete().eq("order_id", orderId);
-            if (itemsError) throw itemsError;
-
-            const { error: orderError } = await supabase.from("orders").delete().eq("id", orderId);
-            if (orderError) throw orderError;
-
-            toast.success("تم حذف الطلب بنجاح", { id: toastId });
-            logAction('delete_order', { order_id: orderId, processor: user?.username });
-            fetchOrders();
-        } catch (error: any) {
-            console.error("Delete order error:", error);
-            toast.error("فشل حذف الطلب", { description: error.message, id: toastId });
-        }
-    };
-
-    const fetchCoupons = async () => {
-        setCouponsLoading(true);
-        try {
-            const { data, error } = await supabase
-                .from("coupons")
-                .select("*")
-                .order("created_at", { ascending: false });
-            if (error) throw error;
-            setCoupons(data || []);
-        } catch (error: any) {
-            toast.error("خطأ في تحميل الأكواد", { description: error.message });
-        } finally {
-            setCouponsLoading(false);
-        }
-    };
-
-    const handleAddCoupon = async () => {
-        if (!newCoupon.code || newCoupon.discount_value <= 0) {
-            toast.error("يرجى إدخال كود صحيح وقيمة خصم أكبر من صفر");
-            return;
-        }
-        try {
-            const { error } = await supabase
-                .from("coupons")
-                .insert([{
-                    code: newCoupon.code.toUpperCase(),
-                    discount_type: newCoupon.discount_type,
-                    discount_value: newCoupon.discount_value
-                }]);
-            if (error) throw error;
-            toast.success("تم إضافة كود الخصم بنجاح");
-            setIsCouponDialogOpen(false);
-            setNewCoupon({ code: "", discount_type: "percentage", discount_value: 0 });
-            fetchCoupons();
-        } catch (error: any) {
-            toast.error("فشل إضافة الكود", { description: error.message });
-        }
-    };
-
-    const handleDeleteCoupon = async (id: number) => {
-        if (!confirm("هل أنت متأكد من حذف كود الخصم؟")) return;
-        try {
-            const { error } = await supabase.from("coupons").delete().eq("id", id);
-            if (error) throw error;
-            toast.success("تم حذف الكود");
-            fetchCoupons();
-        } catch (error: any) {
-            toast.error("فشل الحذف", { description: error.message });
-        }
-    };
-
-    useEffect(() => {
-        if (activeTab === "coupons") {
-            fetchCoupons();
-        }
-    }, [activeTab]);
-
-    const categories = [
-        { id: "chocolate", label: "الشوكولاتة" },
-        { id: "coffee", label: "القهوة" },
-        { id: "drinks", label: "المشروبات" },
-        { id: "cookies", label: "الكوكيز والبسكويت" },
-        { id: "candy", label: "الكاندي" },
-        { id: "snacks", label: "الاسناكس" },
-        { id: "cosmetics", label: "مستحضرات التجميل" },
-        { id: "gifts", label: "صناديق الهدايا" },
-    ];
-
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            fetchProducts();
-        }, 500); // Debounce search
-        return () => clearTimeout(timer);
-    }, [searchQuery, activeFilter, selectedCategoryLabel]);
-
-    const fetchProducts = async () => {
-        // Silent category check to prevent FK errors for all hardcoded categories
-        try {
-            const missingCats = [];
-            for (const cat of categories) {
-                missingCats.push({ id: cat.id, label: cat.label });
-            }
-            // Include no-tax as well
-            missingCats.push({ id: 'no-tax', label: 'بدون ضريبة' });
-
-            for (const cat of missingCats) {
-                const { data: exists } = await supabase.from('categories').select('id').eq('id', cat.id).single();
-                if (!exists) {
-                    await supabase.from('categories').insert([cat]);
-                }
-            }
-        } catch (e) { }
-
-        setLoading(true);
-        let query = supabase.from("products").select(`
-            *,
-            product_branch_stock !left (
-                stock,
-                branch_id
-            )
-        `);
-
-        if (selectedBranchId) {
-            // We can't easily filter by product_branch_stock.branch_id in a complex select 
-            // across all filters without potentially losing items that aren't yet in that branch.
-            // So we fetch all and handle the mapping in processed.
-        }
-
-        // Server-side Search (Name or Barcode)
-        if (searchQuery) {
-            query = query.or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
-        }
-
-        // Server-side Filters (Always exclude Drafts unless specifically viewing them)
-        if (activeFilter !== "trash") {
-            query = query.not('description', 'ilike', '%[DRAFT]%');
-        }
-
-        if (activeFilter === "low") {
-            // Note: Server-side low stock filter might be inaccurate for branches if based on global stock
-            // For now, we fetch and filter below or accept global as indicator
-            query = query.lt('stock', 10).gt('stock', 0);
-        } else if (activeFilter === "daily") {
-            if (stats.salesProductIds && stats.salesProductIds.length > 0) {
-                query = query.in('id', stats.salesProductIds);
-            } else {
-                // If no sales in session, show nothing rather than all updated today
-                query = query.eq('id', -1);
-            }
-        } else if (activeFilter === "zero") {
-            query = query.eq('stock', 0).not('image', 'ilike', '%unsplash.com%').not('image', 'is', null).neq('image', '').neq('image', PLACEHOLDER_IMAGE);
-        } else if (activeFilter === "draft") {
-            // المنتجات التي تحتاج صور (رصيدها صفر وبدون صورة)
-            query = query.eq('stock', 0).or('image.is.null,image.eq.,image.ilike.%unsplash%');
-        } else if (activeFilter === "trash") {
-            // المنتجات المسودة مانيوال
-            query = query.ilike('description', '%[DRAFT]%');
-        } else if (activeFilter === "published") {
-            query = query.gte('stock', 1).gt('price', 0).not('image', 'ilike', '%unsplash.com%').not('image', 'is', null).neq('image', '').neq('image', PLACEHOLDER_IMAGE);
-        } else if (activeFilter === "value") {
-            query = query.gt('price', 100);
-        } else if (activeFilter === "categories" && selectedCategoryLabel) {
-            query = query.ilike('category_name', `%${selectedCategoryLabel}%`);
-        } else if (activeFilter === "no-tax") {
-            query = query.or('description.ilike.%[TAX_EXEMPT]%,category_id.eq.no-tax');
-        } else if (activeFilter === "ready") {
-            query = query.gte("stock", 1).or('image.is.null,image.eq.,image.ilike.%unsplash%');
-        }
-
-        if (activeFilter === "all") {
-            query = query.order("id", { ascending: false });
-        } else {
-            query = query.order("stock", { ascending: false }).order("id", { ascending: false });
-        }
-
-        const { data, error } = await query.range(0, 1000);
-
-        if (error) {
-            toast.error("خطأ في تحميل المنتجات", {
-                description: error.message,
-                duration: 8000
-            });
-        } else {
-            const processed = (data || []).map(p => {
-                let noTax = p.category_id === 'no-tax';
-                let description = p.description || '';
-                let name = p.name || '';
-                let category_name = p.category_name || '';
-
-                if (description.includes('[TAX_EXEMPT]') || name.includes('[TAX_EXEMPT]') || category_name.includes('[TAX_EXEMPT]')) {
-                    noTax = true;
-                }
-
-                // Extract multi-category IDs if stored in searchable category_name
-                let actualCatId = p.category_id || '';
-                const idMatch = category_name.match(/\[IDS:(.*?)\]/);
-                if (idMatch && idMatch[1]) {
-                    actualCatId = idMatch[1];
-                }
-
-                // Clean display label (remove [IDS:...])
-                const displayCatName = category_name.replace(/\s*\[IDS:.*?\]/, '');
-
-                // USE BRANCH STOCK IF SELECTED
-                let effectiveStock = p.stock || 0;
-                if (selectedBranchId) {
-                    const branchRecord = (p.product_branch_stock || []).find((s: any) => s.branch_id === selectedBranchId);
-                    effectiveStock = branchRecord ? branchRecord.stock : 0;
-                }
-
-                return {
-                    ...p,
-                    stock: effectiveStock,
-                    category_id: actualCatId,
-                    category_name: displayCatName,
-                    no_tax: noTax,
-                    expiry_date: p.expiry_date || null
-                };
-            });
-            setProducts(processed);
-            calculateStats(processed);
-            if (user?.role === 'admin' || user?.username === 'maher' || user?.username === 'h' || user?.username === 'mostafa' || user?.username === 'hesham') fetchConflicts();
-        }
-        setLoading(false);
-    };
-
-    const calculateStats = async (data: Product[]) => {
-        try {
-            const [
-                { count: totalCount },
-                { count: lowStockCount },
-                { count: zeroStockCount },
-                { count: needsPhotoCount },
-                { count: publishedCount },
-                { count: noTaxCount },
-                { count: readyToShotCount },
-                { count: trashCount },
-                { data: allProducts }
-            ] = await Promise.all([
-                supabase.from('products').select('*', { count: 'exact', head: true }).not('description', 'ilike', '%[DRAFT]%'),
-                supabase.from('products').select('*', { count: 'exact', head: true }).lt('stock', 10).gte('stock', 1).not('description', 'ilike', '%[DRAFT]%'),
-                supabase.from('products').select('*', { count: 'exact', head: true }).eq('stock', 0).not('image', 'ilike', '%unsplash.com%').not('image', 'is', null).neq('image', '').neq('image', PLACEHOLDER_IMAGE).not('description', 'ilike', '%[DRAFT]%'),
-                supabase.from('products').select('*', { count: 'exact', head: true }).eq('stock', 0).or('image.is.null,image.eq.,image.ilike.%unsplash%').not('description', 'ilike', '%[DRAFT]%'),
-                supabase.from('products').select('*', { count: 'exact', head: true }).gte('stock', 1).gt('price', 0).not('image', 'ilike', '%unsplash.com%').not('image', 'is', null).neq('image', '').neq('image', PLACEHOLDER_IMAGE).not('description', 'ilike', '%[DRAFT]%'),
-                supabase.from('products').select('*', { count: 'exact', head: true }).or('description.ilike.%[TAX_EXEMPT]%,category_id.eq.no-tax'),
-                supabase.from('products').select('*', { count: 'exact', head: true }).gte('stock', 1).or('image.is.null,image.eq.,image.ilike.%unsplash%').not('description', 'ilike', '%[DRAFT]%'),
-                supabase.from('products').select('*', { count: 'exact', head: true }).ilike('description', '%[DRAFT]%'),
-                supabase.from('products').select('price, stock, updated_at'),
-            ]);
-
-            const total = totalCount || 0;
-            const low = lowStockCount || 0;
-            const zero = zeroStockCount || 0;
-            const draft = needsPhotoCount || 0;
-            const published = publishedCount || 0;
-            const noTax = noTaxCount || 0;
-            const trash = trashCount || 0;
-
-            const value = (allProducts || []).reduce((acc, p) => acc + (p.price * (p.stock ?? 0)), 0);
-
-            let dailyChanges = 0;
-            let dailyValue = 0;
-            let salesProductIds: number[] = [];
-            let salesQuantities: Record<number, number> = {};
-
-            // PURE SESSION LOGIC: Only show results from the ACTIVE session's sync
-            const activeOverride = sessionSalesOverrideRef.current || sessionSalesOverride;
-            
-            if (activeOverride) {
-                dailyChanges = activeOverride.count;
-                dailyValue = activeOverride.value;
-                salesProductIds = activeOverride.ids;
-                salesQuantities = activeOverride.quantities;
-            }
-
-            setStats({
-                totalProducts: total,
-                lowStock: low,
-                totalValue: value,
-                categories: categories.length,
-                zeroStock: zero,
-                needsPhoto: draft,
-                published: published,
-                noTax: noTax,
-                readyToShot: readyToShotCount || 0,
-                trash: trash,
-                dailyChanges,
-                dailyValue,
-                salesProductIds,
-                salesQuantities
-            });
-        } catch (err) {
-            console.error("Error calculating stats:", err);
-        }
-    };
-
-    const handleEdit = (product: Product) => {
-        setCurrentProduct({ ...product, no_tax: product.description?.includes('[TAX_EXEMPT]') });
-        setIsEditDialogOpen(true);
-    };
-
-    const fetchProductLifecycle = async (product: Product) => {
-        setLifecycleProduct(product);
-        setIsLifecycleOpen(true);
-        setLifecycleLoading(true);
-        try {
-            // 1. Fetch Sales from order_items
-            const { data: sales, error: salesError } = await supabase
-                .from('order_items')
-                .select('*, orders(customer_name, status)')
-                .eq('product_id', product.id);
-
-            // 2. Fetch Logs from admin_logs
-            // We search by product_id in JSON or name match
-            const { data: adminLogs, error: logsError } = await supabase
-                .from('admin_logs')
-                .select('*')
-                .or(`details->>product_id.eq.${product.id},details->>name.ilike.%${product.name}%`);
-
-            if (salesError || logsError) throw salesError || logsError;
-
-            // Combine and format
-            const history = [
-                ...(sales || []).map(s => ({
-                    type: 'SALE',
-                    date: s.created_at,
-                    quantity: s.quantity,
-                    label: `خروج: مبيعات (${s.quantity} قطعة)`,
-                    note: `طلب رقم ${s.order_id} - ${s.orders?.customer_name || 'عميل'}`,
-                    status: s.orders?.status === 'received' ? 'تم التسليم' : 'قيد التنفيذ'
-                })),
-                ...(adminLogs || []).map(l => {
-                    let label = 'تعديل بيانات';
-                    let note = `بواسطة: ${l.username}`;
-                    if (l.action === 'add_product') label = 'دخول: إنشاء صنف جديد';
-                    if (l.action === 'excel_sync_stock') {
-                        const change = l.details?.change || 0;
-                        label = change > 0 ? `دخول: توريد (+${change} قطعة)` : `تعديل: تحديث مخزون (${change})`;
-                        note = `مزامنة إكسيل بواسطة ${l.username}`;
-                    }
-                    if (l.action === 'order_stock_out') {
-                        label = `خروج: تسليم طلب (-${l.details?.quantity || 0} قطعة)`;
-                        note = `تلقائي عند استلام الطلب #${l.details?.order_id}`;
-                    }
-                    if (l.action === 'product_out_of_stock') {
-                        label = `نفاد المخزون (صِفر)`;
-                        note = `أصبح الرصيد صفراً بسبب ${l.details?.reason === 'order_sale' ? 'مبيعات' : 'تحديث إكسيل'}`;
-                    }
-
-                    return {
-                        type: l.action === 'product_out_of_stock' ? 'ALERT' : 'ADMIN',
-                        date: l.created_at,
-                        label,
-                        note,
-                        details: l.details
-                    };
-                }),
-                {
-                    type: 'BIRTH',
-                    date: product.created_at,
-                    label: 'بداية القصة: دخول الفرع',
-                    note: `تم تسجيل الصنف في النظام لأول مرة`
-                }
-            ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-            setLifecycleData(history);
-        } catch (err) {
-            console.error("Failed to fetch lifecycle:", err);
-            toast.error("فشل تحميل تاريخ المنتج");
-        } finally {
-            setLifecycleLoading(false);
-        }
-    };
-
-    const handleAddNew = () => {
-        setCurrentProduct({
-            name: "",
-            price: 0,
-            stock: 0,
-            category_id: "",
-            category_name: "",
-            image: PLACEHOLDER_IMAGE,
-            is_featured: false,
-            is_new: false,
-            is_on_sale: false,
-            discount: 0,
-            no_tax: false,
-            expiry_date: ""
-        });
-        setIsEditDialogOpen(true);
-    };
-
-    const handleDelete = async (id: number) => {
-        if (!confirm("هل أنت متأكد من حذف هذا المنتج؟")) return;
-        const { error } = await supabase.from("products").delete().eq("id", id);
-        if (error) {
-            toast.error("فشل الحذف", {
-                description: error.message,
-                duration: 6000
-            });
-        } else {
-            toast.success("تم الحذف بنجاح");
-            logAction('delete_product', { id });
-            fetchProducts();
-        }
-    };
-
-    const handleDeleteAllReadyToShot = async () => {
-        if (stats.readyToShot === 0) {
-            toast.info("لا توجد أصناف في هذه القائمة لحذفها");
-            return;
-        }
-
-        if (!confirm(`تحذير: أنت على وشك حذف ${stats.readyToShot} صنف نهائياً. هذه الأصناف لها رصيد ولكن ليس لها صور حقيقية. هل تود الاستمرار؟`)) return;
-
-        const toastId = toast.loading("جاري تنظيف الأصناف المعلقة...");
-        try {
-            // نحصل على قائمة الـ IDs أولاً لضمان الدقة
-            const { data, error: fetchError } = await supabase
-                .from('products')
-                .select('id')
-                .gte('stock', 1)
-                .or(`image.ilike.%unsplash.com%,image.is.null,image.eq.""`);
-
-            if (fetchError) throw fetchError;
-
-            if (data && data.length > 0) {
-                const ids = data.map(p => p.id);
-                const { error: deleteError } = await supabase
-                    .from('products')
-                    .delete()
-                    .in('id', ids);
-
-                if (deleteError) throw deleteError;
-
-                toast.success(`تم حذف ${ids.length} صنف بنجاح. المتجر الآن نظيف تماماً.`, { id: toastId });
-                logAction('delete_all_ready_to_shot', { count: ids.length, ids });
-                fetchProducts();
-            } else {
-                toast.info("لم يتم العثور على أصناف", { id: toastId });
-            }
-        } catch (err: any) {
-            console.error("Bulk delete error:", err);
-            toast.error("حدث خطأ أثناء الحذف الجماعي", {
-                description: err.message,
-                id: toastId
-            });
-        }
-    };
-
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-            setTempImageUrl(reader.result as string);
-            setIsCropperOpen(true);
-        };
-        reader.readAsDataURL(file);
-    };
-
-    const handleCropComplete = async (croppedBlob: Blob) => {
-        setIsUploading(true);
-        try {
-            const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.webp`;
-            const filePath = `product-images/${fileName}`;
-            const { error: uploadError } = await supabase.storage.from('products').upload(filePath, croppedBlob, { contentType: 'image/webp', upsert: true });
-            if (uploadError) throw uploadError;
-            const { data: { publicUrl } } = supabase.storage.from('products').getPublicUrl(filePath);
-            const updatedProduct = { ...currentProduct, image: publicUrl };
-            setCurrentProduct(updatedProduct);
-            if (currentProduct.id) {
-                await supabase.from("products").update({ image: publicUrl }).eq("id", currentProduct.id as number);
-                fetchProducts();
-            }
-            setIsCropperOpen(false);
-            
-            // Invalidate caches to show updated image everywhere
-            queryClient.invalidateQueries({ queryKey: ['products'] });
-            if (currentProduct.id) {
-                queryClient.invalidateQueries({ queryKey: ['product', currentProduct.id] });
-                setUpdatedSessionIds(prev => [...new Set([...prev, currentProduct.id as number])]);
-            }
-            
-            toast.success("تم تجهيز الصورة وحفظها تلقائياً");
-        } catch (error: any) {
-            toast.error("خطأ في الرفع", {
-                description: error.message,
-                duration: 8000
-            });
-        } finally {
-            setIsUploading(false);
-            setTempImageUrl(null);
-        }
-    };
-
-    const handleSkip = async () => {
-        if (!tempImageUrl) return;
-        setIsUploading(true);
-        try {
-            let blob: Blob;
-            if (tempImageUrl.startsWith('data:')) {
-                const response = await fetch(tempImageUrl);
-                blob = await response.blob();
-            } else throw new Error("الصورة غير صالحة");
-            const fileName = `${Date.now()}-original.webp`;
-            const filePath = `product-images/${fileName}`;
-            const { error: uploadError } = await supabase.storage.from('products').upload(filePath, blob, { contentType: 'image/webp', upsert: true });
-            if (uploadError) throw uploadError;
-            const { data: { publicUrl } } = supabase.storage.from('products').getPublicUrl(filePath);
-            setCurrentProduct({ ...currentProduct, image: publicUrl });
-            if (currentProduct.id) {
-                await supabase.from("products").update({ image: publicUrl }).eq("id", currentProduct.id as number);
-                fetchProducts();
-            }
-            setIsCropperOpen(false);
-            
-            // Invalidate caches to show updated image everywhere
-            queryClient.invalidateQueries({ queryKey: ['products'] });
-            if (currentProduct.id) {
-                queryClient.invalidateQueries({ queryKey: ['product', currentProduct.id] });
-                setUpdatedSessionIds(prev => [...new Set([...prev, currentProduct.id as number])]);
-            }
-            
-            toast.success("تم رفع الصورة الأصلية");
-        } catch (error: any) {
-            toast.error("فشل الرفع", {
-                description: error.message,
-                duration: 8000
-            });
-        } finally {
-            setIsUploading(false);
-            setTempImageUrl(null);
-        }
-    };
-
-    const handleSave = async () => {
-        const isNew = !currentProduct.id;
-        
-        // Handle Multiple Categories Mapping
-        const catIds = (currentProduct.category_id || '').split(',').filter(Boolean);
-        const catLabels = catIds.map(id => categories.find(c => c.id === id)?.label).filter(Boolean).join(', ');
-        
-        const { id, created_at, product_branch_stock, ...updateFields } = currentProduct as any;
-
-        let finalDescription = (updateFields.description || '').replace('[TAX_EXEMPT]', '').trim();
-        if (currentProduct.no_tax) {
-            finalDescription = `${finalDescription} [TAX_EXEMPT]`.trim();
-        }
-
-        const { no_tax, ...cleanUpdateFields } = updateFields;
-        
-        // Use a searchable format that includes labels and hidden IDs to bypass FK constraint while allowing multi-category filtering
-        const searchableCategoryName = `${catLabels} [IDS:${catIds.join(',')}]`;
-        
-        const productData = {
-            ...cleanUpdateFields,
-            description: finalDescription,
-            price: Number(Number(updateFields.price).toFixed(2)),
-            category_id: catIds[0] || null, // Only store the first ID to satisfy the FK constraint
-            category_name: searchableCategoryName
-        };
-        let error;
-        if (isNew) {
-            const { id: _, ...insertData } = productData as any;
-            const { error: insError } = await supabase.from("products").insert([insertData]);
-            error = insError;
-        } else {
-            const { error: updError } = await supabase.from("products").update(productData).eq("id", id as number);
-            error = updError;
-        }
-        if (error) {
-            toast.error("فشل الحفظ", {
-                description: error.message,
-                duration: 8000
-            });
-        } else {
-            toast.success(isNew ? "تمت الإضافة بنجاح" : "تم التحديث بنجاح");
-            
-            const savedId = currentProduct.id || id;
-            if (savedId) {
-                setUpdatedSessionIds(prev => [...new Set([...prev, savedId as number])]);
-                queryClient.invalidateQueries({ queryKey: ['product', savedId] });
-            }
-            queryClient.invalidateQueries({ queryKey: ['products'] });
-
-            logAction(isNew ? 'add_product' : 'edit_product', { id: savedId, name: productData.name }, savedId as number);
-            setIsEditDialogOpen(false);
-            fetchProducts();
-        }
-    };
-
-    const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        setSessionSalesOverride(null);
-        sessionSalesOverrideRef.current = null;
-        const reader = new FileReader();
-        reader.onload = async (evt) => {
-            const barcodeMap = new Map<string, number>();
-            const categoryMap = new Map<string, number>();
-            const dbProductMap = new Map<number, any>();
-            try {
-                const dataArray = evt.target?.result;
-                const wb = XLSX.read(dataArray, { type: 'array' });
-                const data = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-                if (data.length === 0) return toast.error("المحتوى فارغ");
-
-                // Ensure 'no-tax' exists before processing
-                if (isExemptImport) {
-                    try {
-                        const { data: catCheck } = await supabase.from('categories').select('id').eq('id', 'no-tax').single();
-                        if (!catCheck) {
-                            await supabase.from('categories').insert([{ id: 'no-tax', label: 'بدون ضريبة' }]);
-                        }
-                    } catch (e) { }
-                }
-
-                const fetchAllDbProducts = async () => {
-                    let allData: any[] = [];
-                    let from = 0;
-                    const lmt = 1000;
-                    let hasMore = true;
-
-                    while (hasMore) {
-                        const { data, error } = await supabase
-                            .from('products')
-                            .select('id, name, description, stock, price, product_branch_stock(stock, branch_id)')
-                            .range(from, from + lmt - 1);
-
-                        if (error) {
-                            console.error("Fetch DB error:", error);
-                            break;
-                        }
-                        if (data && data.length > 0) {
-                            allData = [...allData, ...data];
-                            if (data.length < lmt) hasMore = false;
-                            else from += lmt;
-                        } else {
-                            hasMore = false;
-                        }
-                    }
-                    return allData;
-                };
-
-                const dbProducts = await fetchAllDbProducts();
-
-                dbProducts.forEach(p => {
-                    dbProductMap.set(p.id, p);
-
-                    const normName = normalize(p.name);
-                    let pureBarcode = "";
-
-                    // استخراج الباركود بشكل ذكي باستخدام Regex (أرقام فقط)
-                    if (p.description) {
-                        const codeMatch = p.description.match(/باركود:\s*([A-Za-z0-9-]+)/i) || p.description.match(/(\d{6,15})/);
-                        if (codeMatch) pureBarcode = normalizeBarcode(codeMatch[1]);
-                    }
-
-                    const hasImage = p.image && p.image !== PLACEHOLDER_IMAGE && !p.image.includes('unsplash.com');
-
-                    // إذا وجدنا مكررات، نحفظ دائماً الـ ID الخاص بالنسخة التي لها صورة
-                    if (pureBarcode) {
-                        const existingId = barcodeMap.get(pureBarcode);
-                        if (!existingId || hasImage) {
-                            barcodeMap.set(pureBarcode, p.id);
-                        }
-                    }
-
-                    if (normName) {
-                        const existingId = categoryMap.get(normName);
-                        if (!existingId || hasImage) {
-                            categoryMap.set(normName, p.id);
-                        }
+    const detectAndSetNearestBranch = useCallback(() => {
+        if (!("geolocation" in navigator) || branches.length === 0) return;
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                let nearest = branches[0];
+                let minDist = Infinity;
+
+                branches.forEach((b: any) => {
+                    const dist = calculateDistance(latitude, longitude, b.latitude, b.longitude);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        nearest = b;
                     }
                 });
 
-                let successCount = 0;
-                let failCount = 0;
-                let addedCount = 0;
-                let duplicateCount = 0;
-                let junkCount = 0;
-                let barcodeMatches = 0;
-                const CHUNK_SIZE = 50;
-                const importedIds = new Set<number>();
-
-                const total = data.length;
-                setImportProgress({ current: 0, total });
-
-                const toUpdate: any[] = [];
-                const toInsert: any[] = [];
-                const toUpdateBranchStock: any[] = [];
-                const toLog: any[] = [];
-
-                const categoryLabels = new Set(categories.map(c => normalize(c.label)));
-                const processedInBatch = new Set();
-
-                // دالة مساعدة لتنظيف القيم بشكل أفضل (خاصة الباركود والأسعار)
-                const getRowValue = (row: any, key: string | null) => {
-                    if (!key) return null;
-                    const val = row[key];
-                    if (val === null || val === undefined) return null;
-
-                    // تحويل القيم الرقمية الكبيرة (مثل الباركود) لمنع التنسيق العلمي
-                    if (typeof val === 'number' && val > 100000) {
-                        return val.toLocaleString('fullwide', { useGrouping: false });
-                    }
-                    return String(val).trim();
-                };
-
-                for (let i = 0; i < data.length; i++) {
-                    const row = data[i] as any;
-
-                    // Update progress state every 50 items to avoid UI bottleneck
-                    if (i % 50 === 0) {
-                        setImportProgress({ current: i, total });
-                    }
-
-                    const rowKeys = Object.keys(row);
-
-                    const findKey = (keywords: string[]) => {
-                        const normalizedKeywords = keywords.map(kw => normalize(kw).replace(/^ال/, ''));
-                        return rowKeys.find(k => {
-                            const nK = normalize(k).replace(/^ال/, '');
-                            return normalizedKeywords.includes(nK);
-                        }) || null;
-                    };
-
-                    const idKey = findKey(['id', 'ID', 'م', 'مسلسل']);
-                    const nameKey = findKey(['name_ar', 'name_en', 'الاسم', 'Name', 'المنتج', 'Product']);
-                    const priceKey = findKey(['sale_price', 'السعر', 'Price', 'cost', 'سعر', 'sell_price']);
-                    const codeKey = findKey(['barcode', 'باركود', 'Barcode', 'كود', 'Code']);
-                    const catKey = findKey(['category', 'القسم', 'التصنيف', 'نوع', 'Category']);
-
-                    const totalStockKey = findKey(['total_quantity', 'total_quan', 'الكمية', 'Quantity', 'المخزون', 'الرصيد', 'الجرد']);
-                    const expiryKey = findKey(['expiry', 'صلاحية', 'تاريخ', 'Expiry']);
-                    const branchKeywords = ['صناع السعاده', 'سان ستيفانو'];
-                    const foundBranchKeys = branchKeywords.filter(bk => rowKeys.some(rk => normalize(rk) === normalize(bk)));
-
-                    const excelId = getRowValue(row, idKey);
-                    const excelName = getRowValue(row, nameKey);
-                    const excelCode = getRowValue(row, codeKey);
-                    const priceValue = getRowValue(row, priceKey);
-
-                    let stockValue: number | null = null;
-                    if (totalStockKey) {
-                        const val = parseFloat(String(row[totalStockKey]).replace(/[^0-9.]/g, ''));
-                        if (!isNaN(val)) stockValue = Math.floor(val);
-                    } else if (foundBranchKeys.length > 0) {
-                        let sum = 0;
-                        foundBranchKeys.forEach(bk => {
-                            const actualKey = rowKeys.find(rk => normalize(rk) === normalize(bk));
-                            const val = parseFloat(String(row[actualKey!]).replace(/[^0-9.]/g, ''));
-                            if (!isNaN(val)) sum += val;
+                if (nearest) {
+                    handleBranchChange(String(nearest.id));
+                    // Show toast with distance
+                    const distText = minDist < 1 ? `${Math.round(minDist * 1000)} م` : `${minDist.toFixed(1)} كم`;
+                    import('sonner').then(({ toast }) => {
+                        toast.success(`تم تحديد الفرع الأقرب`, {
+                            description: `📍 ${nearest.name} (${distText})`,
+                            duration: 4000
                         });
-                        stockValue = Math.floor(sum);
-                    }
-
-                    if (!excelName && !excelCode && !excelId) {
-                        junkCount++;
-                        continue;
-                    }
-
-                    // تجاهل الصفوف التي هي أسماء أقسام أو كلمات إجمالية
-                    const junkNamesArr = ['الاجمالي', 'مجموع', 'العدد', 'الصافي', 'الخصم', 'قيمة', 'فاتورة', 'المتبقي', 'صناع السعاده', 'سان ستيفانو', 'الفرع'];
-                    if (excelName && (categoryLabels.has(normalize(excelName)) || junkNamesArr.some(j => excelName.includes(j)))) {
-                        junkCount++;
-                        continue;
-                    }
-                    if (excelName && excelName.length < 2) {
-                        junkCount++;
-                        continue;
-                    }
-
-                    const normName = excelName ? normalize(excelName) : null;
-                    const normCode = excelCode ? normalizeBarcode(excelCode) : null;
-
-                    const uniqueKey = excelId || normCode || normName;
-                    if (uniqueKey && processedInBatch.has(uniqueKey)) {
-                        duplicateCount++;
-                        continue;
-                    }
-                    if (uniqueKey) processedInBatch.add(uniqueKey);
-
-                    // --- MATCHING LOGIC (The Barcode Fortress) ---
-                    let productId = null;
-
-                    // المطابقة تتم حصراً بالباركود لضمان الدقة وتجنب تداخل الأسماء المعدلة يدوياً
-                    if (normCode && barcodeMap.has(normCode)) {
-                        productId = barcodeMap.get(normCode);
-                        barcodeMatches++;
-                    }
-
-                    if (!productId && normName && categoryMap.has(normName)) {
-                        // الاسم موجود سابقاً
-                    }
-
-                    const dbProduct = productId ? dbProductMap.get(productId) : null;
-
-                    const excelCat = getRowValue(row, catKey);
-                    let excelCatId: string | null = null;
-                    if (excelCat) {
-                        const normExcelCat = normalize(excelCat).replace(/^ال/, '');
-                        const match = categories.find(c => {
-                            const nLabel = normalize(c.label).replace(/^ال/, '');
-                            return nLabel === normExcelCat;
-                        });
-                        if (match) excelCatId = match.id;
-                    }
-
-                    let guessedCatId: string | null = null;
-                    if (!excelCatId && excelName) {
-                        const n = normalize(excelName);
-                        if (n.includes('كاندي') || n.includes('جيلي') || n.includes('تويبوكس') || n.includes('مصاصه') || n.includes('مارشميلو')) {
-                            guessedCatId = 'candy';
-                        }
-                        else if (n.includes('بدونضريبه')) guessedCatId = 'no-tax';
-                        else if (n.includes('شوكولاته') || n.includes('نوتيلا') || n.includes('ميلكا') || n.includes('كيندر')) guessedCatId = 'chocolate';
-                        else if (n.includes('قهوه')) guessedCatId = 'coffee';
-                        else if (n.includes('بسكويت') || n.includes('بسكوت') || n.includes('كوكيز')) guessedCatId = 'cookies';
-                        else if (n.includes('عصير') || n.includes('بيبسي') || n.includes('مشروب')) guessedCatId = 'drinks';
-                        else if (n.includes('كوزمتك') || n.includes('تجميل')) guessedCatId = 'cosmetics';
-                        else if (n.includes('هدايا') || n.includes('بوكس')) guessedCatId = 'gifts';
-                    }
-
-                    const finalCatId = excelCatId || guessedCatId;
-                    const effectiveId = productId || dbProduct?.id;
-
-                    if (dbProduct && effectiveId) {
-                        importedIds.add(effectiveId);
-                        const updateData: any = { id: effectiveId };
-                        let hasChanges = false;
-
-                        const currentCatId = excelCatId || dbProduct.category_id;
-                        const currentCatName = dbProduct.category_name || '';
-                        
-                        const isExempt = isExemptImport || 
-                            (currentCatId === 'no-tax') ||
-                            (excelCatId === 'no-tax') ||
-                            (currentCatName.includes('بدون ضريبة')) ||
-                            (dbProduct.description?.includes('[TAX_EXEMPT]'));
-
-                        const isOldDraft = dbProduct?.description?.includes('[DRAFT]');
-                        const branchRecord = (dbProduct.product_branch_stock || []).find((s: any) => s.branch_id === selectedBranchId);
-                        const currentStock = branchRecord ? branchRecord.stock : 0;
-                        const currentPrice = dbProduct?.price || 0;
-                        const currentDesc = dbProduct?.description || '';
-
-                        if (stockValue !== null && stockValue !== currentStock) {
-                            toUpdateBranchStock.push({
-                                product_id: effectiveId,
-                                branch_id: selectedBranchId,
-                                stock: stockValue
-                            });
-                            hasChanges = true;
-
-                            if (isOldDraft && stockValue > 0) {
-                                updateData.description = currentDesc.replace('[DRAFT]', '').trim();
-                            }
-                        }
-
-                        if (priceValue !== null) {
-                            let excelPrice = parseFloat(String(priceValue).replace(/[^0-9.]/g, ''));
-                            if (!isNaN(excelPrice) && excelPrice > 0) {
-                                let finalCalculatedPrice = excelPrice;
-                                if (!isExempt) finalCalculatedPrice = Number((excelPrice * 1.14).toFixed(2));
-
-                                if (Math.abs(finalCalculatedPrice - currentPrice) > 0.01 || isExemptImport) {
-                                    updateData.price = finalCalculatedPrice;
-                                    hasChanges = true;
-                                }
-                            }
-                        }
-
-                        if (isExemptImport) {
-                            const desc = updateData.description !== undefined ? updateData.description : currentDesc;
-                            if (!desc.includes('[TAX_EXEMPT]')) {
-                                updateData.description = `${desc} [TAX_EXEMPT]`.trim();
-                                hasChanges = true;
-                            }
-                        }
-
-                        const excelExpiry = getRowValue(row, expiryKey);
-                        if (excelExpiry && excelExpiry !== dbProduct?.expiry_date) {
-                            updateData.expiry_date = excelExpiry;
-                            hasChanges = true;
-                        }
-
-                        if (excelCatId && excelCatId !== dbProduct?.category_id) {
-                            updateData.category_id = excelCatId;
-                            const catObj = categories.find(c => c.id === excelCatId);
-                            updateData.category_name = catObj ? catObj.label : 'الاسناكس';
-                            hasChanges = true;
-                        }
-
-                        const finalBranchStock = stockValue !== null ? stockValue : currentStock;
-                        const finalDesc = updateData.description !== undefined ? updateData.description : currentDesc;
-                        const hasRealImage = dbProduct?.image && dbProduct.image !== PLACEHOLDER_IMAGE && !dbProduct.image.includes('unsplash.com');
-
-                        if (finalBranchStock <= 0 && !hasRealImage && !finalDesc.includes('[DRAFT]')) {
-                            updateData.description = `${finalDesc} [DRAFT]`.trim();
-                            hasChanges = true;
-                        }
-
-                        if (hasChanges) {
-                            updateData.updated_at = new Date().toISOString();
-                            toUpdate.push(updateData);
-
-                            if (stockValue !== null && stockValue !== currentStock) {
-                                toLog.push({
-                                    username: user?.username || 'system',
-                                    action: 'excel_sync_stock_branch',
-                                    details: {
-                                        product_id: effectiveId,
-                                        branch_id: selectedBranchId,
-                                        old_stock: currentStock,
-                                        new_stock: stockValue,
-                                        change: stockValue - currentStock
-                                    }
-                                });
-                            }
-                        }
-                    } else if (excelName && (excelCode || (priceValue !== null && parseFloat(String(priceValue)) > 0))) {
-                        let price = priceValue ? parseFloat(String(priceValue).replace(/[^0-9.]/g, '')) : 0;
-                        const newCatId = (finalCatId || 'snacks');
-                        if (price > 0) {
-                            const isExempt = isExemptImport || (newCatId === 'no-tax');
-                            if (!isExempt) price = price * 1.14;
-
-                            const isDraft = (stockValue || 0) <= 0;
-                            const catObj = categories.find(c => c.id === newCatId);
-                            const finalItemPrice = Number(price.toFixed(2));
-                            const finalItemBranchStock = stockValue || 0;
-
-                            let description = excelCode ? (isDraft ? `باركود: ${excelCode} [DRAFT]` : `باركود: ${excelCode}`) : (isDraft ? '[DRAFT]' : '');
-                            if (isExempt && !description.includes('[TAX_EXEMPT]')) description = `${description} [TAX_EXEMPT]`.trim();
-
-                            const excelExpiry = getRowValue(row, expiryKey);
-                            toInsert.push({
-                                name: excelName.trim(),
-                                price: finalItemPrice,
-                                stock: 0,
-                                category_id: newCatId,
-                                category_name: catObj ? catObj.label : 'الاسناكس',
-                                description: description,
-                                image: PLACEHOLDER_IMAGE,
-                                is_featured: false,
-                                is_new: true,
-                                expiry_date: excelExpiry || null,
-                                _initialBranchStock: finalItemBranchStock
-                            });
-                        }
-                    }
-                }
-
-                let firstUpdateError: any = null;
-                let firstInsertError: any = null;
-                const finalTotal = toUpdate.length + toInsert.length;
-
-                let sessionSalesCount = 0;
-                let sessionSalesValue = 0;
-                let sessionSalesProductIds: number[] = [];
-                let sessionSalesQuantities: Record<number, number> = {};
-                
-                toUpdateBranchStock.forEach(item => {
-                    const dbProd = dbProductMap.get(item.product_id);
-                    if (dbProd) {
-                        const branchRecord = (dbProd.product_branch_stock || []).find((s: any) => s.branch_id === selectedBranchId);
-                        const oldStock = branchRecord ? branchRecord.stock : 0;
-                        const stockDiff = oldStock - item.stock;
-                        if (stockDiff > 0) {
-                            sessionSalesCount++;
-                            sessionSalesProductIds.push(dbProd.id);
-                            sessionSalesQuantities[dbProd.id] = stockDiff;
-                            const updateFields = toUpdate.find(u => u.id === dbProd.id);
-                            const salePrice = updateFields?.price !== undefined ? updateFields.price : dbProd.price;
-                            sessionSalesValue += (stockDiff * salePrice);
-                        }
-                    }
-                });
-
-                // PHASE 1: Products Update
-                const UPDATE_BATCH_SIZE = 15;
-                for (let i = 0; i < toUpdate.length; i += UPDATE_BATCH_SIZE) {
-                    const chunk = toUpdate.slice(i, i + UPDATE_BATCH_SIZE);
-                    setImportProgress({ current: i, total: finalTotal });
-                    await Promise.all(chunk.map(async (p) => {
-                        const { id, ...updateFields } = p;
-                        const { error } = await supabase.from('products').update(updateFields).eq('id', id);
-                        if (error) {
-                            failCount++;
-                            if (!firstUpdateError) firstUpdateError = error;
-                        } else {
-                            successCount++;
-                            importedIds.add(id);
-                        }
-                    }));
-                }
-
-                // PHASE 1.5: Branch Stock Upsert
-                if (toUpdateBranchStock.length > 0) {
-                    const BRANCH_BATCH_SIZE = 50;
-                    for (let i = 0; i < toUpdateBranchStock.length; i += BRANCH_BATCH_SIZE) {
-                        const chunk = toUpdateBranchStock.slice(i, i + BRANCH_BATCH_SIZE);
-                        // Using explicit onConflict to ensure it updates the correct row per branch
-                        const { error } = await supabase
-                            .from('product_branch_stock')
-                            .upsert(chunk, { onConflict: 'product_id,branch_id' });
-                        
-                        if (error) {
-                            console.error("Branch Stock Upsert failed:", error);
-                            failCount += chunk.length;
-                            if (!firstUpdateError) firstUpdateError = error;
-                        } else {
-                            // Only if the branch stock was actually updated do we consider it a success
-                            // We don't double count successCount globally as Products table already did,
-                            // but we MUST track failure here.
-                        }
-                    }
-                }
-
-                // PHASE 2: Inserts
-                const INSERT_BATCH_SIZE = 100;
-                for (let i = 0; i < toInsert.length; i += INSERT_BATCH_SIZE) {
-                    const chunk = toInsert.slice(i, i + INSERT_BATCH_SIZE);
-                    setImportProgress({ current: toUpdate.length + i, total: finalTotal });
-                    const insertChunk = chunk.map(({ _initialBranchStock, ...rest }) => rest);
-                    const { data: insertedRows, error } = await supabase.from('products').insert(insertChunk).select('id');
-                    if (!error && insertedRows) {
-                        addedCount += insertedRows.length;
-                        const newInitialStock = insertedRows.map((row, idx) => ({
-                            product_id: row.id,
-                            branch_id: selectedBranchId,
-                            stock: chunk[idx]._initialBranchStock || 0
-                        }));
-                        if (newInitialStock.length > 0) await supabase.from('product_branch_stock').insert(newInitialStock);
-                        insertedRows.forEach(row => importedIds.add(row.id));
-                    } else {
-                        failCount += chunk.length;
-                        if (!firstInsertError) firstInsertError = error;
-                    }
-                }
-
-                // PHASE 3: Sync
-                let toZeroStockIds: number[] = [];
-                let toDeleteIds: number[] = [];
-                const isFullSync = isExemptImport ? false : confirm("هل تود تصفير مخزون أي صنف غير موجود في ملف الإكسيل؟ (مزامنة كاملة للمتجر)");
-                if (isFullSync) {
-                    const untouchedProducts = dbProducts.filter(p => !importedIds.has(p.id));
-                    untouchedProducts.forEach(p => {
-                        const hasRealImage = p.image && p.image !== PLACEHOLDER_IMAGE && !String(p.image).includes('unsplash.com');
-                        if (hasRealImage) toZeroStockIds.push(p.id);
-                        else toDeleteIds.push(p.id);
                     });
-                    if (toZeroStockIds.length > 0) {
-                        for (let i = 0; i < toZeroStockIds.length; i += CHUNK_SIZE) {
-                            const batch = toZeroStockIds.slice(i, i + CHUNK_SIZE);
-                            await supabase.from('products').update({ stock: 0 }).in('id', batch);
-                        }
-                    }
-                    if (toDeleteIds.length > 0) {
-                        for (let i = 0; i < toDeleteIds.length; i += CHUNK_SIZE) {
-                            const batch = toDeleteIds.slice(i, i + CHUNK_SIZE);
-                            await supabase.from('products').delete().in('id', batch);
-                        }
-                    }
                 }
-                setImportProgress(null);
-                
-                // FORCE UI UPDATE (Even if 0)
-                setSessionSalesOverride({
-                    count: sessionSalesCount,
-                    value: sessionSalesValue,
-                    ids: sessionSalesProductIds,
-                    quantities: sessionSalesQuantities
-                });
-
-                if (successCount > 0 || addedCount > 0) {
-                    toast.success("تمت المزامنة بنجاح");
-                    await logAction('excel_sync_summary', {
-                        updated: successCount,
-                        added: addedCount,
-                        deleted: (toDeleteIds || []).length,
-                        zeroed: (toZeroStockIds || []).length,
-                        sales_count: sessionSalesCount,
-                        sales_value: sessionSalesValue,
-                        sales_product_ids: sessionSalesProductIds,
-                        sales_quantities: sessionSalesQuantities
+            },
+            (error) => {
+                console.error("Geolocation error:", error);
+                import('sonner').then(({ toast }) => {
+                    toast.error('تعذر تحديد موقعك', {
+                        description: 'يرجى السماح بصلاحية الموقع أو اختيار الفرع يدوياً'
                     });
-                } else {
-                    toast.info("تمت المزامنة: بيانات الملف مطابقة تماماً للمتجر");
-                }
-
-                // DIAGNOSTIC TOAST: Show raw session calculation
-                toast(`📊 نتيجة الجرد: ${sessionSalesCount} صنف مبيع - إجمالي: ${sessionSalesValue} ج.م`, {
-                    description: "هذه الأرقام تمثل الفرق بين الملف المرفوع وحالة المتجر الحالية فقط.",
-                    duration: 10000
                 });
-
-                const currentSessionStats = {
-                    count: sessionSalesCount,
-                    value: sessionSalesValue,
-                    ids: sessionSalesProductIds,
-                    quantities: sessionSalesQuantities
-                };
-
-                setIsExemptImport(false);
-                setSessionSalesOverride(currentSessionStats);
-                sessionSalesOverrideRef.current = currentSessionStats;
-                
-                // AUTO-FOCUS: Switch to daily sales view immediately to show only items that changed
-                if (sessionSalesCount > 0) {
-                    setActiveFilter("daily");
-                    setSelectedCategoryLabel(null);
-                }
-                
-                fetchProducts();
-            } catch (err: any) {
-                console.error("Excel Import Error:", err);
-                toast.error("خطأ في قراءة ملف الإكسيل أو تحديث البيانات");
             }
-        };
-        reader.readAsArrayBuffer(file);
-        e.target.value = '';
-    };
+        );
+    }, [branches, handleBranchChange, calculateDistance]);
 
-
+    // Auto-detect on first load if no branch is saved
+    useEffect(() => {
+        if (isAuthenticated && branches.length > 0 && !selectedBranchId) {
+            detectAndSetNearestBranch();
+        }
+    }, [isAuthenticated, branches.length]);
 
     if (!isAuthenticated) {
         return (
             <div className="min-h-screen bg-saada-brown flex items-center justify-center p-4 font-tajawal rtl" dir="rtl">
-                <Card className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl">
-                    <CardHeader className="bg-saada-red text-white p-8 text-center">
-                        <div className="h-24 w-24 bg-black rounded-2xl flex items-center justify-center mx-auto mb-4 rotate-3 group-hover:rotate-0 transition-transform overflow-hidden shadow-xl">
-                            <img src="/logo.png" className="h-full w-full object-cover" alt="Logo" />
+                <Card className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl border-none">
+                    <CardHeader className="bg-saada-red text-white p-10 text-center relative overflow-hidden">
+                        <div className="absolute inset-0 bg-black/10 backdrop-blur-sm -rotate-6 scale-150"></div>
+                        <div className="relative z-10 h-28 w-28 bg-black rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl transform hover:rotate-6 transition-transform">
+                            <img src="/logo.png" className="h-[120%] w-[120%] object-cover" alt="Logo" />
                         </div>
-                        <CardTitle className="text-2xl font-black italic">دخول لوحة التحكم</CardTitle>
+                        <CardTitle className="text-3xl font-black italic relative z-10">دخول لوحة التحكم</CardTitle>
                     </CardHeader>
-                    <CardContent className="p-8 space-y-6">
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <Label className="text-saada-brown font-bold">اسم المستخدم</Label>
+                    <CardContent className="p-10 space-y-8">
+                        <div className="space-y-6">
+                            <div className="space-y-3">
+                                <Label className="text-saada-brown font-black text-lg">اسم المستخدم</Label>
                                 <Input
-                                    className="h-12 rounded-xl"
-                                    value={authData.username}
-                                    onChange={(e) => setAuthData({ ...authData, username: e.target.value })}
+                                    className="h-14 rounded-2xl bg-gray-50/50 border-none focus:ring-2 ring-saada-brown transition-all text-lg font-bold"
+                                    id="username"
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <Label className="text-saada-brown font-bold">كلمة المرور</Label>
+                            <div className="space-y-3">
+                                <Label className="text-saada-brown font-black text-lg">كلمة المرور</Label>
                                 <Input
+                                    className="h-14 rounded-2xl bg-gray-50/50 border-none focus:ring-2 ring-saada-brown transition-all text-lg font-bold"
                                     type="password"
-                                    className="h-12 rounded-xl"
-                                    value={authData.password}
-                                    onChange={(e) => setAuthData({ ...authData, password: e.target.value })}
+                                    id="password"
                                 />
                             </div>
                         </div>
-                        <Button
-                            className="w-full h-14 bg-saada-brown hover:bg-black text-white rounded-xl font-bold text-lg shadow-xl transition-all"
-                            onClick={async () => {
-                                const result = await login(authData.username, authData.password);
-                                if (!result.success) {
-                                    toast.error("فشل تسجيل الدخول", {
-                                        description: result.error || "تأكد من بيانات الدخول"
-                                    });
-                                } else {
-                                    toast.success("مرحباً بك مجدداً");
-                                }
+                        <Button 
+                            className="w-full h-16 bg-saada-brown hover:bg-black text-white rounded-2xl font-black text-xl shadow-2xl shadow-saada-brown/30 transition-all hover:scale-[1.02] active:scale-95"
+                            onClick={() => {
+                                const u = (document.getElementById('username') as HTMLInputElement).value;
+                                const p = (document.getElementById('password') as HTMLInputElement).value;
+                                login(u, p);
                             }}
                         >
-                            تسجيل الدخول
+                            دخول آمن
                         </Button>
-
-
                     </CardContent>
                 </Card>
             </div>
         );
     }
 
-    const handleRepairTaxTags = async () => {
-        const toastId = toast.loading("جاري فحص وإصلاح أرصدة الضرائب...");
-        try {
-            const { data, error } = await supabase
-                .from('products')
-                .select('id, name, description, category_id')
-                .eq('category_id', 'no-tax');
-            
-            if (error) throw error;
-            
-            let repairedCount = 0;
-            const updates = (data || []).map(p => {
-                const desc = p.description || '';
-                if (!desc.includes('[TAX_EXEMPT]')) {
-                    repairedCount++;
-                    return { id: p.id, description: `${desc} [TAX_EXEMPT]`.trim() };
-                }
-                return null;
-            }).filter(u => u !== null);
-            
-            if (updates.length > 0) {
-                for (const up of updates) {
-                    await supabase.from('products').update({ description: up!.description }).eq('id', up!.id);
-                }
-                toast.success(`تم إصلاح ${repairedCount} صنف وإعادتهم لقائمة "بدون ضريبة"`, { id: toastId });
-                fetchProducts();
-            } else {
-                toast.info("جميع الأصناف في هذه الفئة سليمة ولها العلامة البرمجية", { id: toastId });
-            }
-        } catch (err: any) {
-            toast.error("فشل الإصلاح التلقائي", { description: err.message, id: toastId });
-        }
-    };
+    // SECURITY GUARD: Only staff roles can access the dashboard
+    if (!isStaff) {
+        return (
+            <div className="min-h-screen bg-[#FDFCFB] flex items-center justify-center p-8 font-tajawal rtl" dir="rtl">
+                <Card className="w-full max-w-lg bg-white rounded-[2.5rem] overflow-hidden shadow-2xl border-none text-center">
+                    <CardContent className="p-12 space-y-8">
+                        <div className="h-24 w-24 bg-red-100 rounded-[2rem] flex items-center justify-center mx-auto">
+                            <svg className="h-12 w-12 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                            </svg>
+                        </div>
+                        <div className="space-y-3">
+                            <h1 className="text-3xl font-black text-saada-brown">غير مصرح بالدخول</h1>
+                            <p className="text-gray-500 font-medium text-lg">عذراً، هذه الصفحة متاحة فقط للمديرين والمسؤولين.</p>
+                        </div>
+                        <div className="flex flex-col gap-3">
+                            <Button onClick={() => window.location.href = '/'} className="h-14 bg-saada-brown hover:bg-black text-white rounded-2xl font-black text-lg">العودة للرئيسية</Button>
+                            <Button variant="ghost" onClick={() => logout()} className="h-12 text-gray-400 font-bold rounded-2xl">تسجيل الخروج</Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
-    const handleCleanupDuplicates = async () => {
-        if (!confirm("هل أنت متأكد من حذف المنتجات المكررة؟ سيتم استخدام نظام 'المطابقة الذكية' الذي يكتشف المكررات حتى لو اختلف ترتيب الكلمات أو أضيفت أوزان وأحجام مختلفة.")) return;
+    const username = user?.username?.toLowerCase() || '';
+    const isOwner = userRole === 'owner';
 
-        const toastId = toast.loading("جاري فحص ودمج المكررات ذكياً...");
-        try {
-            const fetchAllDbProducts = async () => {
-                let allData: any[] = [];
-                let from = 0;
-                const lmt = 1000;
-                let hasMore = true;
-                while (hasMore) {
-                    const { data, error } = await supabase.from('products').select('*').range(from, from + lmt - 1);
-                    if (error) break;
-                    if (data && data.length > 0) {
-                        allData = [...allData, ...data];
-                        if (data.length < lmt) hasMore = false;
-                        else from += lmt;
-                    } else hasMore = false;
-                }
-                return allData;
-            };
-
-            const allProducts = await fetchAllDbProducts();
-
-            // دالة مطورة جداً للمطابقة الذكية
-            const getSmartKey = (p: any) => {
-                // 1. إذا كان فيه باركود، نعتبره المفتاح الأساسي
-                const barcodeMatch = p.description?.match(/باركود\s*:\s*(\d+)/);
-                if (barcodeMatch) return `barcode_${barcodeMatch[1]} `;
-
-                // 2. إذا مفيش باركود، نعتمد على الاسم بشروط قاسية
-                if (!p.name) return '';
-
-                return String(p.name).toLowerCase()
-                    .replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/[ىيی]/g, 'ي').replace(/[ؤئ]/g, 'ي').replace(/[كک]/g, 'ك')
-                    .replace(/[\u064B-\u0652\u0640]/g, '')
-                    .replace(/[0-9\.]+/g, '') // إزالة الأرقام
-                    .replace(/(جم|جرام|كيلو|ك|مل|ق|ع|قطعة|علبة|جرام)/g, ' ') // إزالة الوحدات
-                    .replace(/[^a-z\u0621-\u064A]/g, ' ') // إزالة الرموز
-                    .split(' ')
-                    .filter(word => word.length > 1)
-                    .sort()
-                    .join('');
-            };
-
-            const productGroups = new Map<string, any[]>();
-            allProducts.forEach(p => {
-                const key = getSmartKey(p);
-                if (!key) return;
-                if (!productGroups.has(key)) productGroups.set(key, []);
-                productGroups.get(key)?.push(p);
-            });
-
-            const idsToDelete: number[] = [];
-            const updatesToPerform: { id: number, stock: number }[] = [];
-            let mergedStockCount = 0;
-
-            productGroups.forEach((group) => {
-                if (group.length <= 1) return;
-
-                const maxStock = Math.max(...group.map(p => p.stock || 0));
-
-                group.sort((a, b) => {
-                    const aHasImage = a.image && !a.image.includes('unsplash');
-                    const bHasImage = b.image && !b.image.includes('unsplash');
-                    if (aHasImage && !bHasImage) return -1;
-                    if (!aHasImage && bHasImage) return 1;
-                    if (a.stock > b.stock) return -1;
-                    if (a.stock < b.stock) return 1;
-                    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-                });
-
-                const toKeep = group[0];
-                if ((toKeep.stock || 0) < maxStock) {
-                    updatesToPerform.push({ id: toKeep.id, stock: maxStock });
-                    mergedStockCount++;
-                }
-
-                for (let i = 1; i < group.length; i++) {
-                    idsToDelete.push(group[i].id);
-                }
-            });
-
-            if (idsToDelete.length === 0 && updatesToPerform.length === 0) {
-                toast.dismiss(toastId);
-                return toast.info("لم يتم العثور على مكررات إضافية بالنظام الذكي");
-            }
-
-            for (const upd of updatesToPerform) {
-                await supabase.from('products').update({ stock: upd.stock }).eq('id', upd.id);
-            }
-
-            const CHUNK = 50;
-            for (let i = 0; i < idsToDelete.length; i += CHUNK) {
-                const chunk = idsToDelete.slice(i, i + CHUNK);
-                await supabase.from('products').delete().in('id', chunk);
-            }
-
-            let msg = `تم دمج وحذف ${idsToDelete.length} منتج مكرر ذكياً`;
-            if (mergedStockCount > 0) msg += ` ودمج أرصدة ${mergedStockCount} منتج`;
-
-            toast.success(msg, { id: toastId, duration: 5000 });
-            fetchProducts();
-        } catch (err) {
-            console.error(err);
-            toast.error("فشل التنظيف الذكي", { id: toastId });
-        }
-    };
-
-    const isEditor = user?.role === 'editor';
+    // Get selected branch name for display
+    const selectedBranchName = branches.find((b: any) => b.id === selectedBranchId)?.name || 'كل الفروع';
 
     return (
-        <div className="min-h-screen bg-gray-50/50 p-4 md:p-8 font-tajawal rtl" dir="rtl">
-            <div className="max-w-7xl mx-auto space-y-8">
-
-                {/* Import Progress Overlay */}
+        <div className="min-h-screen bg-[#FDFCFB] p-4 md:p-10 font-tajawal rtl selection:bg-saada-brown selection:text-white" dir="rtl">
+            <div className="max-w-[1600px] mx-auto space-y-10">
+                
                 {importProgress && (
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-                        <Card className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-                            <CardContent className="p-8 text-center space-y-6">
-                                <div className="h-20 w-20 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mx-auto animate-bounce">
-                                    <RefreshCw className="h-10 w-10 animate-spin" />
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+                        <Card className="w-full max-w-md bg-white rounded-3xl p-8 text-center space-y-6 shadow-2xl animate-in zoom-in-95">
+                            <RefreshCw className="h-12 w-12 text-saada-red animate-spin mx-auto" strokeWidth={3} />
+                            <h3 className="text-2xl font-black text-saada-brown">جاري معالجة البيانات...</h3>
+                            <div className="space-y-2">
+                                <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
+                                    <div 
+                                        className="h-full bg-saada-red transition-all duration-300" 
+                                        style={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
+                                    />
                                 </div>
-                                <div className="space-y-2">
-                                    <h3 className="text-2xl font-bold text-saada-brown">جاري معالجة البيانات...</h3>
-                                    <p className="text-gray-500">من فضلك انتظر حتى يتم تحديث كافة المنتجات</p>
+                                <div className="flex justify-between text-sm font-bold text-gray-400">
+                                    <span>{importProgress.current} من {importProgress.total}</span>
+                                    <span>{Math.round((importProgress.current / importProgress.total) * 100)}%</span>
                                 </div>
-                                <div className="space-y-2">
-                                    <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-emerald-500 transition-all duration-300"
-                                            style={{ width: `${(importProgress.current / importProgress.total) * 100}% ` }}
-                                        />
-                                    </div>
-                                    <div className="flex justify-between text-sm font-bold text-gray-400">
-                                        <span>{importProgress.current} من {importProgress.total}</span>
-                                        <span>{Math.round((importProgress.current / importProgress.total) * 100)}%</span>
-                                    </div>
-                                </div>
-                            </CardContent>
+                            </div>
                         </Card>
                     </div>
                 )}
 
-                {/* Header */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl md:text-3xl font-bold text-saada-brown flex items-center gap-2">
-                            <BarChart className="h-6 w-6 md:h-8 md:h-8 text-saada-red" />
-                            لوحة تحكم صناع السعادة ({username === 'fikry' ? 'الموظف فكري' : (isAdmin ? 'المدير' : (username.includes('mostafa') ? 'الموظف مصطفى' : (username.includes('hesham') ? 'الموظف هشام' : `الموظف ${user?.username || ''}`)))})
-                            <span className="bg-emerald-100 text-emerald-700 text-[10px] px-2 py-0.5 rounded-full border border-emerald-200 animate-pulse flex items-center gap-1">
-                                <CheckCircle className="h-3 w-3" />
-                                درع الثبات نشط
-                            </span>
-                        </h1>
-                        <p className="text-gray-500 mt-1 flex items-center gap-1.5 font-bold">
-                            {isRestrictedStaff ? `إدارة مخزون فرع: ${branches.find(b => b.id === selectedBranchId)?.name || '...'}` : (isAdmin ? 'إدارة كاملة للمتجر والمنتجات' : 'صلاحية محدودة لتعديل الصور والأسماء')}
-                        </p>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-row gap-2 md:gap-3 w-full md:w-auto items-end">
-                        {isSpecial && (
-                            <div className="flex flex-col gap-1 min-w-[150px] w-full lg:w-48 order-2 lg:order-none">
-                                <Label className="text-xs font-bold text-emerald-800 pr-2">إدارة مخزون فرع:</Label>
-                                <Select value={String(selectedBranchId || "")} onValueChange={handleBranchChange}>
-                                    <SelectTrigger className="h-10 md:h-12 border-emerald-200 bg-emerald-50/50 text-emerald-700 font-black rounded-xl">
-                                        <SelectValue placeholder="اختر الفرع" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {branches.map(b => (
-                                            <SelectItem key={b.id} value={String(b.id)}>{b.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                {/* Header Section */}
+                <header className="flex flex-col xl:flex-row xl:items-center justify-between gap-8 pb-8 border-b border-gray-100">
+                    <div className="flex items-center gap-6 group">
+                        <div className="h-24 w-24 bg-saada-brown rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-saada-brown/20 rotate-3 group-hover:rotate-0 transition-transform duration-500 overflow-hidden">
+                            <img src="/logo.png" className="h-[120%] w-[120%] object-cover" alt="Logo" />
+                        </div>
+                        <div>
+                            <h1 className="text-5xl font-black text-saada-brown leading-tight tracking-tighter">
+                                لوحة التحكم <span className="text-saada-red italic">الذكية</span>
+                            </h1>
+                            <div className="flex items-center gap-3 mt-2">
+                                <span className="h-3 w-3 bg-emerald-500 rounded-full animate-pulse shadow-lg shadow-emerald-500/50" />
+                                <span className="text-gray-400 font-bold text-lg">
+                                    أهلاً بك يا <span className="text-saada-brown">{user?.username}</span>
+                                </span>
+                                <Badge className={`${ROLE_COLORS[userRole]} font-bold rounded-lg px-3 py-1 text-xs`}>
+                                    {ROLE_LABELS[userRole]}
+                                </Badge>
+                                {selectedBranchId && (
+                                    <span className="flex items-center gap-1.5 text-gray-400 font-medium text-sm bg-gray-50 px-3 py-1 rounded-lg">
+                                        <MapPin className="h-3.5 w-3.5 text-saada-red" />
+                                        {selectedBranchName}
+                                    </span>
+                                )}
                             </div>
-                        )}
-                        {isAdmin && (
+                        </div>
+                    </div>
+                    
+                    <div className="flex flex-wrap items-center gap-4">
+                        <Button 
+                            variant="outline"
+                            onClick={() => logout()}
+                            className="h-16 px-8 border-2 border-saada-brown text-saada-brown hover:bg-saada-brown hover:text-white rounded-3xl gap-3 font-black text-lg transition-all hover:scale-[1.02] active:scale-95 shadow-xl shadow-saada-brown/5"
+                        >
+                            <LogOut className="h-6 w-6" />
+                            تسجيل الخروج
+                        </Button>
+
+                        {hasPermission(user, 'import') && (
                             <>
-                                <Button
-                                    onClick={() => { setIsExemptImport(false); document.getElementById('excel-import')?.click(); }}
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-10 md:h-12 px-4 md:px-6 text-base md:text-lg rounded-xl shadow-lg shadow-emerald-200 transition-all font-bold w-full"
+                                <input id="excel-import" type="file" className="hidden" accept=".xlsx, .xls, .csv" onChange={handleExcelImport} />
+                                <Button 
+                                    onClick={() => document.getElementById('excel-import')?.click()}
+                                    className="h-16 px-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-3xl gap-3 font-black text-lg shadow-2xl shadow-emerald-200 transition-all hover:scale-[1.02] active:scale-95"
                                 >
-                                    <FileSpreadsheet className="h-4 w-4 md:h-5 md:w-5" />
-                                    رفع طلبية
-                                </Button>
-                                <Button
-                                    onClick={() => { setIsExemptImport(true); document.getElementById('excel-import')?.click(); }}
-                                    className="bg-amber-600 hover:bg-amber-700 text-white gap-2 h-10 md:h-12 px-4 md:px-6 text-base md:text-lg rounded-xl shadow-lg shadow-amber-200 transition-all font-bold w-full"
-                                >
-                                    <Percent className="h-4 w-4 md:h-5 md:w-5" />
-                                    رفع شيت (بدون ضريبة)
-                                </Button>
-                                <input
-                                    id="excel-import"
-                                    type="file"
-                                    accept=".xlsx, .xls, .csv"
-                                    className="hidden"
-                                    onChange={handleExcelImport}
-                                />
-                                <Button
-                                    onClick={handleCleanupDuplicates}
-                                    variant="outline"
-                                    className="h-10 md:h-12 border-red-200 text-red-600 hover:bg-red-50 rounded-xl font-bold flex gap-2 transition-all active:scale-95 w-full order-3 sm:order-none"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                    حل التعارضات
-                                </Button>
-                                <Button
-                                    onClick={handleRepairTaxTags}
-                                    variant="outline"
-                                    className="h-10 md:h-12 border-orange-200 text-orange-600 hover:bg-orange-50 rounded-xl font-bold flex gap-2 transition-all active:scale-95 w-full order-3 sm:order-none"
-                                >
-                                    <Percent className="h-4 w-4" />
-                                    إصلاح الضرائب
+                                    <Upload className="h-6 w-6" />
+                                    رفع الرصيد
                                 </Button>
                             </>
                         )}
-                            {isSpecial && (
-                            <Button onClick={handleAddNew} className="bg-saada-red hover:bg-red-700 text-white gap-2 h-10 md:h-12 px-4 md:px-6 text-base md:text-lg rounded-xl shadow-lg shadow-red-200 transition-all font-bold w-full">
-                                <Plus className="h-4 w-4 md:h-5 md:w-5" />
-                                إضافة صنف
-                            </Button>
-                        )}
-                        <div className="flex flex-col gap-2 w-full lg:w-72">
-                            <Button
-                                variant="outline"
-                                onClick={toggleNotifications}
-                                className={`h-11 md:h-12 border-2 rounded-xl font-black w-full flex items-center justify-center gap-2 transition-all ${isNotificationsEnabled ? 'bg-emerald-50 border-emerald-500 text-emerald-600 animate-pulse' : 'border-gray-200 text-gray-400 opacity-60'}`}
+
+                        {hasPermission(user, 'products.write') && (
+                            <Button 
+                                onClick={handleAddNew}
+                                className="h-16 px-8 bg-saada-red hover:bg-black text-white rounded-3xl gap-3 font-black text-lg shadow-2xl shadow-saada-red/20 transition-all hover:scale-[1.02] active:scale-95"
                             >
-                                {isNotificationsEnabled ? <Bell className="h-5 w-5" /> : <BellOff className="h-5 w-5" />}
-                                {isNotificationsEnabled ? 'جرس التنبيه (نشط الآن)' : 'تفعيل جرس التنبيه'}
+                                <Plus className="h-6 w-6" />
+                                إضافة منتج
                             </Button>
-                            {isNotificationsEnabled && (
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={handleTestNotification}
-                                    className="h-8 text-[10px] font-bold text-saada-red hover:bg-red-50"
-                                >
-                                    ⚡ تجربة إرسال تنبيه وهمي (للفحص)
+                        )}
+
+                        {isOwner && (
+                            <div className="flex items-center bg-white p-2 rounded-3xl border border-gray-100 shadow-xl h-16">
+                                <Button variant="ghost" onClick={handleCleanupDuplicates} className="h-12 px-6 rounded-2xl text-amber-600 font-black hover:bg-amber-50 gap-2 transition-all">
+                                    <Trash2 className="h-4 w-4" />
+                                    تنظيف المكررات
                                 </Button>
-                            )}
-                        </div>
-                        <Button
-                            variant="outline"
-                            onClick={logout}
-                            className="h-11 md:h-12 border-saada-brown text-saada-brown hover:bg-saada-brown hover:text-white rounded-xl font-black w-full lg:w-40"
-                        >
-                            تسجيل الخروج
-                        </Button>
+                                <div className="w-px h-10 bg-gray-100 mx-2" />
+                                <Button variant="ghost" onClick={handleRestoreLostImages} className="h-12 px-6 rounded-2xl text-indigo-600 font-black hover:bg-indigo-50 gap-2 transition-all">
+                                    <RefreshCw className="h-4 w-4" />
+                                    استعادة الصور
+                                </Button>
+                            </div>
+                        )}
                     </div>
-                </div>
+                </header>
 
-                <div className="flex gap-2 md:gap-4 border-b border-gray-200 overflow-x-auto no-scrollbar pb-1 -mx-4 px-4 md:mx-0 md:px-0">
-                    <button
-                        onClick={() => setActiveTab("products")}
-                        className={`pb-4 px-3 md:px-4 font-bold text-base md:text-lg transition-all border-b-2 whitespace-nowrap ${activeTab === "products" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
-                    >
-                        إدارة المنتجات
-                    </button>
-                    {(isAdmin || isRestrictedStaff) && (
-                        <button
-                            onClick={() => setActiveTab("orders")}
-                            className={`pb-4 px-3 md:px-4 font-bold text-base md:text-lg transition-all border-b-2 whitespace-nowrap ${activeTab === "orders" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
-                        >
-                            إدارة الطلبات
-                        </button>
-                    )}
-                    {(isAdmin || isRestrictedStaff) && (
-                        <button
-                            onClick={() => setActiveTab("analytics")}
-                            className={`pb-4 px-3 md:px-4 font-bold text-base md:text-lg transition-all border-b-2 whitespace-nowrap ${activeTab === "analytics" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
-                        >
-                            التقارير والإحصائيات
-                        </button>
-                    )}
-                    {isAdmin && (
-                        <button
-                            onClick={() => setActiveTab("coupons")}
-                            className={`pb-4 px-3 md:px-4 font-bold text-base md:text-lg transition-all border-b-2 whitespace-nowrap ${activeTab === "coupons" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
-                        >
-                            أكواد الخصم
-                        </button>
-                    )}
-                    {isSuperAdmin && (
-                        <button
-                            onClick={() => setActiveTab("logs")}
-                            className={`pb-4 px-3 md:px-4 font-bold text-base md:text-lg transition-all border-b-2 whitespace-nowrap ${activeTab === "logs" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
-                        >
-                            سجل التعديلات
-                        </button>
-                    )}
-                    {isSuperAdmin && (
-                        <button
-                            onClick={() => setActiveTab("subscribers")}
-                            className={`pb-4 px-3 md:px-4 font-bold text-base md:text-lg transition-all border-b-2 whitespace-nowrap ${activeTab === "subscribers" ? "border-saada-red text-saada-red" : "border-transparent text-gray-400"}`}
-                        >
-                            قائمة المشتركين
-                        </button>
-                    )}
-                </div>
+                <AdminStats 
+                    stats={stats} 
+                    activeFilter={activeFilter} 
+                    setActiveFilter={setActiveFilter} 
+                    formatPrice={formatPrice} 
+                />
 
-                {activeTab === "products" ? (
-                    <>
-                        {/* Stats Grid - Hidden for limited Editors but shown to special staff */}
-                        {(isAdmin || isRestrictedStaff) && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 cursor-pointer">
-                                <Card
-                                    onClick={() => { setActiveFilter("all"); setSelectedCategoryLabel(null); }}
-                                    className={`border-none shadow-md bg-white overflow-hidden group hover:shadow-xl transition-all border-r-4 ${activeFilter === "all" ? "ring-2 ring-blue-500 border-r-blue-600" : "border-r-blue-500 opacity-80"}`}
-                                >
-                                    <CardContent className="p-4">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-xs font-medium text-gray-500">إجمالي المنتجات</p>
-                                                <h3 className="text-2xl font-bold mt-1 text-blue-600">{stats.totalProducts}</h3>
-                                            </div>
-                                            <div className="h-10 w-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
-                                                <Package className="h-5 w-5" />
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                <AdminTabs 
+                    activeTab={activeTab} 
+                    setActiveTab={setActiveTab} 
+                    searchQuery={searchQuery} 
+                    setSearchQuery={setSearchQuery}
+                    handleExportData={handleExportData}
+                    handleBranchChange={handleBranchChange}
+                    branches={branches}
+                    selectedBranchId={selectedBranchId}
+                    isNotificationsEnabled={isNotificationsEnabled}
+                    toggleNotifications={toggleNotifications}
+                    userRole={userRole}
+                    user={user}
+                    onDetectLocation={detectAndSetNearestBranch}
+                />
 
-                                <Card
-                                    onClick={() => { setActiveFilter("published"); setSelectedCategoryLabel(null); }}
-                                    className={`border-none shadow-md bg-white overflow-hidden group hover:shadow-xl transition-all border-r-4 ${activeFilter === "published" ? "ring-2 ring-emerald-500 border-r-emerald-600" : "border-r-emerald-500 opacity-80"}`}
-                                >
-                                    <CardContent className="p-4">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-xs font-medium text-gray-500">منشورة للعملاء</p>
-                                                <h3 className="text-2xl font-bold mt-1 text-emerald-600">{stats.published}</h3>
-                                            </div>
-                                            <div className="h-10 w-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-500 group-hover:scale-110 transition-transform">
-                                                <CheckCircle2 className="h-5 w-5" />
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
+                <main className="animate-in fade-in slide-in-from-bottom-6 duration-700">
+                    {/* Status Sections and Filters are now handled via the Stat Cards above */}
 
-                                <Card
-                                    onClick={() => { setActiveFilter("daily"); setSelectedCategoryLabel(null); }}
-                                    className={`border-none shadow-md bg-white overflow-hidden group hover:shadow-xl transition-all border-r-4 ${activeFilter === "daily" ? "ring-2 ring-indigo-500 border-r-indigo-600" : "border-r-indigo-500 opacity-80"}`}
-                                >
-                                    <CardContent className="p-4">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-xs font-medium text-gray-500">أصناف مبيعات (آخر جرد)</p>
-                                                <h3 className="text-2xl font-bold mt-1 text-indigo-600">{stats.dailyChanges}</h3>
-                                            </div>
-                                            <div className="h-10 w-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform">
-                                                <RefreshCw className="h-5 w-5" />
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                <Card
-                                    onClick={() => { setActiveFilter("daily"); setSelectedCategoryLabel(null); }}
-                                    className={`border-none shadow-md bg-white overflow-hidden group hover:shadow-xl transition-all border-r-4 ${activeFilter === "daily" ? "ring-2 ring-violet-500 border-r-violet-600" : "border-r-violet-500 opacity-80"}`}
-                                >
-                                    <CardContent className="p-4">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-xs font-medium text-gray-500">قيمة مبيعات (آخر جرد)</p>
-                                                <h3 className="text-2xl font-bold mt-1 text-violet-600">{Number(stats.dailyValue).toLocaleString()} ج.م</h3>
-                                            </div>
-                                            <div className="h-10 w-10 bg-violet-50 rounded-xl flex items-center justify-center text-violet-500 group-hover:scale-110 transition-transform">
-                                                <TrendingUp className="h-5 w-5" />
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                <Card
-                                    onClick={() => { setActiveFilter("zero"); setSelectedCategoryLabel(null); }}
-                                    className={`border-none shadow-md bg-white overflow-hidden group hover:shadow-xl transition-all border-r-4 ${activeFilter === "zero" ? "ring-2 ring-red-500 border-r-red-600" : "border-r-red-500 opacity-80"}`}
-                                >
-                                    <CardContent className="p-4">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-xs font-medium text-gray-500">صنف منتهي (له صورة)</p>
-                                                <h3 className="text-2xl font-bold mt-1 text-red-600">{stats.zeroStock}</h3>
-                                            </div>
-                                            <div className="h-10 w-10 bg-red-50 rounded-xl flex items-center justify-center text-red-500 group-hover:scale-110 transition-transform">
-                                                <Trash2 className="h-5 w-5" />
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                <Card
-                                    onClick={() => { setActiveFilter("draft"); setSelectedCategoryLabel(null); }}
-                                    className={`border-none shadow-md bg-white overflow-hidden group hover:shadow-xl transition-all border-r-4 ${activeFilter === "draft" ? "ring-2 ring-purple-500 border-r-purple-600" : "border-r-purple-500 opacity-80"}`}
-                                >
-                                    <CardContent className="p-4">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-xs font-medium text-gray-500">مسودة (بدون صورة)</p>
-                                                <h3 className="text-2xl font-bold mt-1 text-purple-600">{stats.needsPhoto}</h3>
-                                            </div>
-                                            <div className="h-10 w-10 bg-purple-50 rounded-xl flex items-center justify-center text-purple-500 group-hover:scale-110 transition-transform">
-                                                <ImageIcon className="h-5 w-5" />
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                <Card
-                                    onClick={() => { setActiveFilter("no-tax"); setSelectedCategoryLabel(null); }}
-                                    className={`border-none shadow-md bg-white overflow-hidden group hover:shadow-xl transition-all border-r-4 ${activeFilter === "no-tax" ? "ring-2 ring-orange-500 border-r-orange-600" : "border-r-orange-500 opacity-80"}`}
-                                >
-                                    <CardContent className="p-4">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-xs font-medium text-gray-500">بدون ضريبة</p>
-                                                <h3 className="text-2xl font-bold mt-1 text-orange-600">{stats.noTax}</h3>
-                                            </div>
-                                            <div className="h-10 w-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-500 group-hover:scale-110 transition-transform">
-                                                <Percent className="h-5 w-5" />
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                <Card
-                                    onClick={() => { setActiveFilter("trash"); setSelectedCategoryLabel(null); }}
-                                    className={`border-none shadow-md bg-white overflow-hidden group hover:shadow-xl transition-all border-r-4 ${activeFilter === "trash" ? "ring-2 ring-gray-600 border-r-gray-800" : "border-r-gray-500 opacity-80"}`}
-                                >
-                                    <CardContent className="p-4">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-xs font-medium text-gray-500">قسم الدرافت (مخفي)</p>
-                                                <h3 className="text-2xl font-bold mt-1 text-gray-800">{stats.trash || 0}</h3>
-                                            </div>
-                                            <div className="h-10 w-10 bg-gray-100 rounded-xl flex items-center justify-center text-gray-600 group-hover:scale-110 transition-transform">
-                                                <Trash2 className="h-5 w-5" />
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        )}
-
-                        {/* Top Priority Section for Products needing photos but have stock */}
-                        {isSpecial && stats.readyToShot > 0 && (
-                            <div className="mt-6 animate-in fade-in slide-in-from-right-4 duration-700">
-                                <Card
-                                    onClick={() => setActiveFilter("ready")}
-                                    className={`border-none shadow-lg overflow-hidden cursor-pointer transition-all hover:scale-[1.01] ${activeFilter === "ready" ? "ring-2 ring-saada-red" : "bg-gradient-to-r from-emerald-600 to-teal-700 text-white"} `}
-                                >
-                                    <CardContent className="p-4 md:p-6 flex flex-col md:flex-row items-center md:items-center justify-between gap-4">
-                                        <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 text-center md:text-right">
-                                            <div className="h-12 w-12 md:h-16 md:w-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
-                                                <Camera className="h-6 w-6 md:h-8 md:w-8 text-white" />
-                                            </div>
-                                            <div>
-                                                <h3 className={`text-lg md:text-xl font-black ${activeFilter === "ready" ? "text-saada-brown" : "text-white"}`}>أصناف متوفرة وبانتظار التصوير</h3>
-                                                <p className={`${activeFilter === "ready" ? "text-gray-500" : "text-white/80"} text-sm md:text-base font-medium mt-1`}>يوجد {stats.readyToShot} صنف متاح للبيع حالياً ولكنهم مخفيين لعدم وجود صور.</p>
-                                            </div>
-                                        </div>
-                                        <div className="text-right flex flex-col items-end gap-2">
-                                            <div className="flex items-center gap-3">
-                                                <span className={`text-4xl font-black ${activeFilter === "ready" ? "text-saada-red" : "text-white"}`}>{stats.readyToShot}</span>
-                                                {activeFilter === "ready" && (
-                                                    <div className="flex flex-col gap-2">
-                                                        <Button
-                                                            size="sm"
-                                                            variant="secondary"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleRestoreLostImages();
-                                                            }}
-                                                            className="h-8 px-3 rounded-lg bg-white text-emerald-600 hover:bg-emerald-50 flex gap-2 font-bold shadow-lg"
-                                                        >
-                                                            <SparklesIcon className="h-4 w-4" />
-                                                            استعادة الصور تلقائياً
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="destructive"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleDeleteAllReadyToShot();
-                                                            }}
-                                                            className="h-8 px-3 rounded-lg bg-red-600 hover:bg-red-700 flex gap-2 font-bold shadow-lg"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                            حذف الكل نهائياً
-                                                        </Button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${activeFilter === "ready" ? "text-gray-400" : "text-white/60"}`}>Items to shoot</p>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        )}
-
-                        {/* Conflict Monitoring Section */}
-                        {isSpecial && conflictProducts.length > 0 && (
-                            <div className="mt-4 animate-in fade-in slide-in-from-left-4 duration-700">
-                                <Card
-                                    onClick={() => setIsConflictResolverOpen(true)}
-                                    className="border-none shadow-lg overflow-hidden cursor-pointer transition-all hover:scale-[1.01] bg-gradient-to-r from-amber-500 to-orange-600 text-white"
-                                >
-                                    <CardContent className="p-4 md:p-6 flex flex-col md:flex-row items-center justify-between gap-4">
-                                        <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6 text-center md:text-right">
-                                            <div className="h-12 w-12 md:h-16 md:w-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
-                                                <AlertCircle className="h-6 w-6 md:h-8 md:w-8 text-white" />
-                                            </div>
-                                            <div>
-                                                <h3 className="text-lg md:text-xl font-black text-white">يوجد أصناف مكررة (نفس الباركود)</h3>
-                                                <p className="text-white/80 text-sm md:text-base font-medium mt-1">وجدنا {conflictProducts.length} مجموعة مكررة تحتاج للدمج.</p>
-                                            </div>
-                                        </div>
-                                        <div className="text-center md:text-right w-full md:w-auto">
-                                            <div className="flex flex-col md:flex-row items-center gap-3 justify-center md:justify-end">
-                                                <span className="text-3xl md:text-4xl font-black text-white">{conflictProducts.length}</span>
-                                                <Button
-                                                    size="sm"
-                                                    variant="secondary"
-                                                    className="h-10 bg-white text-orange-600 hover:bg-orange-50 font-bold px-6 rounded-xl shadow-lg w-full md:w-auto"
-                                                >
-                                                    حل التعارضات الآن
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        )}
-
-
-                        {/* Sub-Filters for Categories */}
-                        {activeFilter === "categories" && (
-                            <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-top-4 duration-500 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6">
-                                <Button
-                                    variant={selectedCategoryLabel === null ? "default" : "outline"}
-                                    onClick={() => setSelectedCategoryLabel(null)}
-                                    className={`rounded - full px - 8 h - 10 font - bold transition - all ${selectedCategoryLabel === null ? 'bg-saada-brown text-white' : ''} `}
-                                >
-                                    كل الأقسام
-                                </Button>
-                                {categories.map(cat => (
-                                    <Button
-                                        key={cat.id}
-                                        variant={selectedCategoryLabel === cat.label ? "default" : "outline"}
-                                        onClick={() => setSelectedCategoryLabel(cat.label)}
-                                        className={`rounded - full px - 8 h - 10 font - bold transition - all ${selectedCategoryLabel === cat.label ? 'bg-saada-brown text-white' : ''} `}
-                                >
-                                        {cat.label}
-                                    </Button>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Product List Card */}
-                        <Card className="border-none shadow-xl bg-white overflow-hidden">
-                            <CardHeader className="border-b border-gray-100 bg-white p-6">
-                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                    <CardTitle className="text-xl font-bold text-saada-brown flex items-center gap-3">
-                                        قائمة المنتجات
-                                        {selectedProductIds.length > 0 && (
-                                            <div className="flex items-center gap-2 animate-in zoom-in-95 duration-200">
-                                                <span className="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full border border-blue-200">
-                                                    تم اختيار ({selectedProductIds.length})
-                                                </span>
-                                                <Button size="sm" variant="destructive" className="h-7 px-3 text-[10px]" onClick={canDelete ? handleBulkDelete : undefined} disabled={!canDelete}>
-                                                    حذف الجماعي
-                                                </Button>
-                                                {activeFilter !== "trash" ? (
-                                                    <Button size="sm" variant="outline" className="h-7 px-3 text-[10px] border-gray-300" onClick={() => handleBulkDraft(true)}>
-                                                        نقل للدرافت
-                                                    </Button>
-                                                ) : (
-                                                    <Button size="sm" variant="outline" className="h-7 px-3 text-[10px] border-gray-300" onClick={() => handleBulkDraft(false)}>
-                                                        استعادة للنشط
-                                                    </Button>
-                                                )}
-                                                <Button size="sm" variant="outline" className="h-7 px-3 text-[10px] border-indigo-300 text-indigo-700 bg-indigo-50 hover:bg-indigo-100" onClick={() => setIsBulkCategoryOpen(true)}>
-                                                    تعديل القسم
-                                                </Button>
-                                            </div>
-                                        )}
-                                        {updatedSessionIds.length > 0 && selectedProductIds.length === 0 && (
-                                            <span className="text-xs bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full animate-pulse border border-emerald-200">
-                                                تم تحديث ({updatedSessionIds.length}) منتجات الآن
-                                            </span>
-                                        )}
+                    {activeTab === 'products' ? (
+                        <ProductTable 
+                            products={products}
+                            loading={loading}
+                            activeFilter={activeFilter}
+                            searchQuery={searchQuery}
+                            selectedProductIds={selectedProductIds}
+                            setSelectedProductIds={setSelectedProductIds}
+                            handleEdit={handleEdit}
+                            handleDelete={handleDelete}
+                            fetchProductLifecycle={fetchProductLifecycle}
+                            formatPrice={formatPrice}
+                            isSpecial={isOwner}
+                        />
+                    ) : activeTab === 'category-tree' ? (
+                        <CategoryTreeManager 
+                            categories={categories}
+                            products={products}
+                            onRefresh={fetchProducts}
+                            onRefreshCategories={fetchCategories}
+                        />
+                    ) : activeTab === 'orders' ? (
+                        <OrderList 
+                            orders={orders}
+                            loading={ordersLoading}
+                            handleMarkAsReceived={handleMarkAsReceived}
+                            handleReturnOrder={handleReturnOrder}
+                            handleDeleteOrder={handleDeleteOrder}
+                            formatPrice={formatPrice}
+                        />
+                    ) : activeTab === 'analytics' ? (
+                        <AnalyticsDashboard />
+                    ) : activeTab === 'payment-settings' ? (
+                        <PaymentSettings />
+                    ) : activeTab === 'users' ? (
+                        <UserManagement />
+                    ) : activeTab === 'coupons' ? (
+                        <Card className="border-none shadow-2xl bg-white/70 backdrop-blur-xl rounded-[2.5rem] overflow-hidden">
+                            <CardHeader className="p-8 border-b border-gray-100 flex flex-row items-center justify-between">
+                                <div>
+                                    <CardTitle className="text-2xl font-black text-saada-brown flex items-center gap-3">
+                                        <Ticket className="h-7 w-7 text-saada-red" />
+                                        أكواد الخصم
                                     </CardTitle>
-                                    <div className="flex flex-col md:flex-row md:items-center gap-3 w-full md:w-auto">
-                                        {(isAdmin || isRestrictedStaff) && (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={handleExportData}
-                                                className="h-11 px-4 border-emerald-500 text-emerald-600 hover:bg-emerald-50 font-bold rounded-xl flex items-center gap-2"
-                                            >
-                                                <FileSpreadsheet className="h-5 w-5" />
-                                                تصدير للأكسيل
-                                            </Button>
+                                    <CardDescription className="font-bold mt-1">إدارة العروض والخصومات النشطة</CardDescription>
+                                </div>
+                                <Button className="bg-saada-red hover:bg-black rounded-2xl h-12 px-6 font-black gap-2 transition-all">
+                                    <Plus className="h-5 w-5" />
+                                    إنشاء كود جديد
+                                </Button>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                <Table>
+                                    <TableHeader className="bg-gray-50/10">
+                                        <TableRow>
+                                            <TableHead className="text-right py-6 font-black text-saada-brown">الكود</TableHead>
+                                            <TableHead className="text-right py-6 font-black text-saada-brown">القيمة</TableHead>
+                                            <TableHead className="text-right py-6 font-black text-saada-brown">الاستخدامات</TableHead>
+                                            <TableHead className="text-right py-6 font-black text-saada-brown">الحالة</TableHead>
+                                            <TableHead className="text-center py-6 font-black text-saada-brown">الإجراءات</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {coupons.length === 0 ? (
+                                            <TableRow><TableCell colSpan={5} className="text-center py-20 text-gray-400 font-bold">لا توجد أكواد خصم متاحة حالياً</TableCell></TableRow>
+                                        ) : (
+                                            coupons.map(c => (
+                                                <TableRow key={c.id}>
+                                                    <TableCell className="font-black text-lg text-saada-red">{c.code}</TableCell>
+                                                    <TableCell className="font-bold">{c.discount_value}{c.discount_type === 'percentage' ? '%' : ' ج.م'}</TableCell>
+                                                    <TableCell className="font-medium text-gray-500">{c.usage_count || 0}</TableCell>
+                                                    <TableCell><Badge className="bg-emerald-100 text-emerald-700 font-bold">نشط</Badge></TableCell>
+                                                    <TableCell className="text-center"><Button variant="ghost" size="icon" className="text-red-500"><Trash2 className="h-4 w-4" /></Button></TableCell>
+                                                </TableRow>
+                                            ))
                                         )}
-                                        <div className="relative w-full md:w-96">
-                                            <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                            <Input
-                                                placeholder="ابحث بالاسم، القسم، أو الباركود..."
-                                                className="pr-10 h-11 bg-gray-50 border-gray-200 focus:bg-white transition-all rounded-xl"
-                                                value={searchQuery}
-                                                onChange={(e) => setSearchQuery(e.target.value)}
-                                            />
-                                        </div>
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    ) : activeTab === 'subscribers' ? (
+                        <Card className="border-none shadow-2xl bg-white/70 backdrop-blur-xl rounded-[2.5rem] overflow-hidden">
+                            <CardHeader className="p-8 border-b border-gray-100">
+                                <CardTitle className="text-2xl font-black text-saada-brown flex items-center gap-3">
+                                    <Users className="h-7 w-7 text-indigo-600" />
+                                    المشتركون في النشرة
+                                </CardTitle>
+                                <CardDescription className="font-bold mt-1">قائمة العملاء المهتمين بالعروض</CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="text-right py-6 font-black text-saada-brown">البريد الإلكتروني</TableHead>
+                                            <TableHead className="text-right py-6 font-black text-saada-brown">تاريخ الاشتراك</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {subscribers.length === 0 ? (
+                                            <TableRow><TableCell colSpan={2} className="text-center py-20 text-gray-400 font-bold">لا يوجد مشتركون حالياً</TableCell></TableRow>
+                                        ) : (
+                                            subscribers.map(s => (
+                                                <TableRow key={s.id}>
+                                                    <TableCell className="font-bold flex items-center gap-2"><Mail className="h-4 w-4 text-gray-400" /> {s.email}</TableCell>
+                                                    <TableCell className="text-gray-500 font-medium">{new Date(s.created_at).toLocaleDateString('ar-EG')}</TableCell>
+                                                </TableRow>
+                                            ))
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    ) : activeTab === 'logs' ? (
+                        <Card className="border-none shadow-2xl bg-white/70 backdrop-blur-xl rounded-[2.5rem] overflow-hidden">
+                            <CardHeader className="p-8 border-b border-gray-100">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <CardTitle className="text-2xl font-black text-saada-brown flex items-center gap-3">
+                                            <List className="h-7 w-7 text-saada-brown" />
+                                            سجل العمليات (Logs)
+                                        </CardTitle>
+                                        <CardDescription className="font-bold mt-1">متابعة كافة تحركات المديرين على النظام</CardDescription>
                                     </div>
+                                    <Badge variant="outline" className="border-saada-brown text-saada-brown font-black px-4 h-9 rounded-full">آخر 200 عملية</Badge>
                                 </div>
                             </CardHeader>
-                                <CardContent className="p-0">
-                                    <div className="overflow-x-auto">
-                                        <Table>
-                                            <TableHeader className="bg-gray-50/50">
-                                                <TableRow>
-                                                    <TableHead className="w-10 py-4 text-center">
-                                                        <input
-                                                            type="checkbox"
-                                                            className="h-4 w-4 rounded"
-                                                            checked={selectedProductIds.length === filteredProducts.length && filteredProducts.length > 0}
-                                                            onChange={(e) => {
-                                                                if (e.target.checked) setSelectedProductIds(filteredProducts.map(p => p.id));
-                                                                else setSelectedProductIds([]);
-                                                            }}
-                                                        />
-                                                    </TableHead>
-                                                    <TableHead className="text-right py-4 font-bold text-saada-brown">المنتج</TableHead>
-                                                    <TableHead className="text-right py-4 font-bold text-saada-brown">الباركود</TableHead>
-                                                    <TableHead className="text-right py-4 font-bold text-saada-brown">القسم</TableHead>
-                                                    <TableHead className="text-right py-4 font-bold text-saada-brown">السعر</TableHead>
-                                                    <TableHead className="text-right py-4 font-bold text-saada-brown">المخزون</TableHead>
-                                                    {activeFilter === "daily" && (
-                                                        <TableHead className="text-right py-4 font-bold text-saada-red bg-red-50/50">تم بيعه (الفرق)</TableHead>
-                                                    )}
-                                                    {isSpecial && (
-                                                        <TableHead className="text-right py-4 font-bold text-saada-brown">الصلاحية</TableHead>
-                                                    )}
-                                                    <TableHead className="text-center py-4 font-bold text-saada-brown">الإجراءات</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {loading ? (
-                                                    <TableRow>
-                                                        <TableCell colSpan={6} className="text-center py-20 text-gray-500">جاري التحميل...</TableCell>
-                                                    </TableRow>
-                                                ) : filteredProducts.length === 0 ? (
-                                                    <TableRow>
-                                                        <TableCell colSpan={6} className="text-center py-20 text-gray-500">لا توجد منتجات مطابقة لـ "{searchQuery}"</TableCell>
-                                                    </TableRow>
-                                                ) : (
-                                                    filteredProducts.map((p) => {
-                                                        // Failsafe: Hide items with 0 movement in daily filter
-                                                        if (activeFilter === "daily" && !(stats.salesQuantities[p.id] > 0)) {
-                                                            return null;
-                                                        }
-                                                        
-                                                        return (
-                                                            <TableRow
-                                                                key={p.id}
-                                                                className={`group hover:bg-gray-50/80 transition-colors border-b border-gray-100 ${updatedSessionIds.includes(p.id) ? 'bg-emerald-50/40 hover:bg-emerald-50/60' : ''} ${selectedProductIds.includes(p.id) ? 'bg-blue-50/50' : ''}`}
-                                                            >
-                                                                <TableCell className="w-10 text-center">
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        className="h-4 w-4 rounded"
-                                                                        checked={selectedProductIds.includes(p.id)}
-                                                                        onChange={(e) => {
-                                                                            if (e.target.checked) setSelectedProductIds([...selectedProductIds, p.id]);
-                                                                            else setSelectedProductIds(selectedProductIds.filter(id => id !== p.id));
-                                                                        }}
-                                                                    />
-                                                                </TableCell>
-                                                                <TableCell className="py-4">
-                                                                    <div className="flex items-center gap-3">
-                                                                        <div className="h-10 w-10 rounded-lg bg-gray-100 overflow-hidden border border-gray-200 relative">
-                                                                            <img src={p.image} alt={p.name} className="h-full w-full object-cover" />
-                                                                            {updatedSessionIds.includes(p.id) && (
-                                                                                <div className="absolute inset-0 bg-emerald-500/10 flex items-center justify-center">
-                                                                                    <Check className="h-4 w-4 text-emerald-600 drop-shadow-sm" />
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                        <div className="flex flex-col">
-                                                                            <span className="font-medium text-gray-900 group-hover:text-saada-red transition-colors flex items-center gap-2">
-                                                                                {p.name.replace(/\[TAX_EXEMPT\]/g, '').replace(/\[DRAFT\]/g, '').trim()}
-                                                                                {updatedSessionIds.includes(p.id) && (
-                                                                                    <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.5 rounded font-bold">مُلحق</span>
-                                                                                )}
-                                                                                {p.created_at && (new Date().getTime() - new Date(p.created_at).getTime() < 48 * 60 * 60 * 1000) && (
-                                                                                    <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded font-bold">جديد</span>
-                                                                                )}
-                                                                                {p.description?.includes('[DRAFT]') && (
-                                                                                    <span className="text-[10px] bg-gray-800 text-white px-1.5 py-0.5 rounded font-bold">درافت (مخفي)</span>
-                                                                                )}
-                                                                            </span>
-                                                                        </div>
-                                                                    </div>
-                                                                </TableCell>
-                                                                <TableCell className="py-4">
-                                                                    <span className="text-xs font-mono text-gray-500 bg-gray-50 px-2 py-1 rounded border border-gray-100">
-                                                                        {p.description?.includes('باركود:') ? p.description.split('باركود:')[1].replace('[TAX_EXEMPT]', '').replace('[DRAFT]', '').trim() : '-'}
-                                                                    </span>
-                                                                </TableCell>
-                                                                <TableCell className="py-4">
-                                                                    <div className="flex flex-wrap gap-1">
-                                                                        {(p.category_name || '').split(',').map((cat, idx) => (
-                                                                            <span key={idx} className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-lg text-[10px] font-bold">
-                                                                                {cat.trim()}
-                                                                            </span>
-                                                                        ))}
-                                                                    </div>
-                                                                </TableCell>
-                                                                <TableCell className="py-4 font-bold text-gray-900">{formatPrice(p.price)}</TableCell>
-                                                                <TableCell className="py-4">
-                                                                    <span className={`font-bold ${(p.stock ?? 0) < 10 ? 'text-orange-600' : 'text-gray-600'}`}>
-                                                                        {p.stock ?? "-"}
-                                                                    </span>
-                                                                </TableCell>
-                                                                {activeFilter === "daily" && (
-                                                                    <TableCell className="py-4 bg-red-50/30">
-                                                                        <span className="font-black text-saada-red bg-white px-2 py-1 rounded-md border border-red-100 shadow-sm">
-                                                                            -{stats.salesQuantities[p.id] || 0}
-                                                                        </span>
-                                                                    </TableCell>
-                                                                )}
-                                                                {isSpecial && (
-                                                                    <TableCell className="py-4">
-                                                                        <span className={`text-[10px] font-bold ${p.expiry_date ? (new Date(p.expiry_date).getTime() < new Date().getTime() ? 'text-red-600 bg-red-50' : 'text-blue-600 bg-blue-50') : 'text-gray-400'} px-2 py-1 rounded-lg`}>
-                                                                            {p.expiry_date || "-"}
-                                                                        </span>
-                                                                    </TableCell>
-                                                                )}
-                                                                <TableCell className="py-4">
-                                                                    <div className="flex items-center justify-center gap-2">
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            onClick={() => fetchProductLifecycle(p)}
-                                                                            title="تاريخ المنتج"
-                                                                            className="h-9 w-9 text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded-lg"
-                                                                        >
-                                                                            <Clock className="h-4 w-4" />
-                                                                        </Button>
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            onClick={() => handleEdit(p)}
-                                                                            className="h-9 w-9 text-blue-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-                                                                        >
-                                                                            <Edit className="h-4 w-4" />
-                                                                        </Button>
-                                                                        {(isAdmin || isSuperAdmin) && (
-                                                                            <Button
-                                                                                variant="ghost"
-                                                                                size="icon"
-                                                                                onClick={() => handleDelete(p.id)}
-                                                                                className="h-9 w-9 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                                                                            >
-                                                                                <Trash2 className="h-4 w-4" />
-                                                                            </Button>
-                                                                        )}
-                                                                    </div>
-                                                                </TableCell>
-                                                            </TableRow>
-                                                        );
-                                                    })}
-                                                )
-                                            )
-                                        )
-                                    )}
-                                </TableBody>
-                                        </Table>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </>
-
-                ) : activeTab === "orders" ? (
-                    <Card className="border-none shadow-xl bg-white overflow-hidden">
-                        <CardHeader className="border-b border-gray-100 bg-white p-6 flex flex-row items-center justify-between">
-                            <CardTitle className="text-xl font-bold text-saada-brown">قائمة الطلبات (الواتساب والموقع)</CardTitle>
-                            <Button onClick={fetchOrders} variant="ghost" size="icon">
-                                <RefreshCw className={`h - 4 w - 4 ${ordersLoading ? 'animate-spin' : ''} `} />
-                            </Button>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                            <div className="overflow-x-auto">
+                            <CardContent className="p-0">
                                 <Table>
-                                    <TableHeader className="bg-gray-50/50">
+                                    <TableHeader>
                                         <TableRow>
-                                            <TableHead className="text-right py-4 font-bold text-saada-brown">رقم الطلب</TableHead>
-                                            <TableHead className="text-right py-4 font-bold text-saada-brown">العميل</TableHead>
-                                            <TableHead className="text-right py-4 font-bold text-saada-brown">التاريخ</TableHead>
-                                            <TableHead className="text-right py-4 font-bold text-saada-brown">الإجمالي</TableHead>
-                                            <TableHead className="text-right py-4 font-bold text-saada-brown">الحالة</TableHead>
-                                            <TableHead className="text-center py-4 font-bold text-saada-brown">الإجراءات</TableHead>
+                                            <TableHead className="text-right py-6 font-black text-saada-brown">المسؤول</TableHead>
+                                            <TableHead className="text-right py-6 font-black text-saada-brown">الإجراء</TableHead>
+                                            <TableHead className="text-right py-6 font-black text-saada-brown">التفاصيل</TableHead>
+                                            <TableHead className="text-right py-6 font-black text-saada-brown">التوقيت</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {ordersLoading ? (
-                                            <TableRow>
-                                                <TableCell colSpan={6} className="text-center py-20 text-gray-500">جاري تحميل الطلبات...</TableCell>
+                                        {logs.map(log => (
+                                            <TableRow key={log.id} className="hover:bg-saada-brown/5 transition-colors">
+                                                <TableCell className="font-black text-saada-brown">{log.username}</TableCell>
+                                                <TableCell><Badge className="bg-indigo-50 text-indigo-700 border-indigo-100 font-bold">{log.action}</Badge></TableCell>
+                                                <TableCell className="text-sm font-medium text-gray-500 max-w-xs truncate">{JSON.stringify(log.details)}</TableCell>
+                                                <TableCell className="text-xs font-bold text-gray-400">{new Date(log.created_at).toLocaleString('ar-EG')}</TableCell>
                                             </TableRow>
-                                        ) : orders.length === 0 ? (
-                                            <TableRow>
-                                                <TableCell colSpan={6} className="text-center py-20 text-gray-500">لا توجد طلبات مسجلة حالياً</TableCell>
-                                            </TableRow>
-                                        ) : (
-                                            orders.map((order) => (
-                                                <TableRow key={order.id} className="group hover:bg-gray-50/80 transition-colors border-b border-gray-100">
-                                                    <TableCell className="py-4 font-bold">#{order.id}</TableCell>
-                                                    <TableCell className="py-4">
-                                                        <div className="flex flex-col">
-                                                            <span className="font-bold text-saada-brown">
-                                                                {["طلب واتساب مباشر", "عميل واتساب (استفسار منتج)", "عميل واتساب سريع (سلة)"].includes(order.customer_name) ? "عميل عبر الواتساب" : order.customer_name}
-                                                            </span>
-                                                            <span className="text-xs text-gray-500" dir="ltr">
-                                                                {["201050663539", "01000000000", "01050663539"].includes(order.customer_phone) ? "يُرجى مراجعة رسالة الواتس اب" : order.customer_phone}
-                                                            </span>
-                                                            {order.coupon_code && (
-                                                                <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full mt-1 w-fit font-bold">
-                                                                    🎟️ {order.coupon_code}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell className="py-4 text-sm text-gray-500">
-                                                        {new Date(order.created_at).toLocaleDateString('ar-EG')}
-                                                    </TableCell>
-                                                    <TableCell className="py-4 font-black text-saada-red">{formatPrice(order.total_price)}</TableCell>
-                                                    <TableCell className="py-4">
-                                                        <span className={`px - 3 py - 1 rounded - full text - xs font - bold ${order.status === 'received' ? 'bg-green-100 text-green-700' : 'bg-saada-red/10 text-saada-red'
-                                                            } `}>
-                                                            {order.status === 'received' ? 'تم الاستلام' : 'قيد الانتظار'}
-                                                        </span>
-                                                    </TableCell>
-                                                    <TableCell className="py-4 text-center">
-                                                        <div className="flex items-center justify-center gap-2">
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => window.open(`/order-preview/${order.tracking_code || order.id}`, '_blank')}
-                                                                className="h-9 gap-1 border-saada-brown text-saada-brown hover:bg-saada-brown hover:text-white"
-                                                            >
-                                                                <ExternalLink className="h-4 w-4" />
-                                                                معاينة
-                                                            </Button>
-                                                            {order.status !== 'received' && (
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    onClick={() => handleMarkAsReceived(order.id)}
-                                                                    className="h-9 gap-1 border-green-600 text-green-600 hover:bg-green-600 hover:text-white"
-                                                                >
-                                                                    <CheckCircle2 className="h-4 w-4" />
-                                                                    تم الاستلام
-                                                                </Button>
-                                                            )}
-                                                            {(order.status === 'received' || isSuperAdmin) && (
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="sm"
-                                                                    onClick={() => handleReturnOrder(order.id)}
-                                                                    className="h-9 gap-1 border-amber-600 text-amber-600 hover:bg-amber-600 hover:text-white"
-                                                                    title="إرجاع المخزون"
-                                                                >
-                                                                    <RotateCcw className="h-4 w-4" />
-                                                                    مرتجع
-                                                                </Button>
-                                                            )}
-                                                            {isSuperAdmin && (
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    onClick={() => handleDeleteOrder(order.id)}
-                                                                    className="h-9 w-9 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                                                                    title="حذف الطلب"
-                                                                >
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </Button>
-                                                            )}
-                                                        </div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
-                                        )}
+                                        ))}
                                     </TableBody>
                                 </Table>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ) : activeTab === "coupons" ? (
-                    <div className="space-y-6">
-                        <div className="flex justify-between items-center bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
-                            <div>
-                                <h2 className="text-xl font-bold text-saada-brown">إدارة أكواد الخصم</h2>
-                                <p className="text-gray-500 text-sm">أنشئ أكواد خصم لزبائنك لزيادة المبيعات</p>
-                            </div>
-                            <Button
-                                onClick={() => setIsCouponDialogOpen(true)}
-                                className="bg-saada-brown text-white h-12 px-6 rounded-xl font-bold flex gap-2"
-                            >
-                                <Plus className="h-5 w-5" />
-                                كود خصم جديد
-                            </Button>
-                        </div>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <Card className="border-none shadow-xl bg-white/70 backdrop-blur-md rounded-3xl p-20 text-center">
+                            <div className="text-2xl font-black text-gray-300">هذا القسم قيد التطوير بلمساتنا السحرية...</div>
+                        </Card>
+                    )}
+                </main>
 
-                        {couponsLoading ? (
-                            <div className="text-center py-20">
-                                <RefreshCw className="h-10 w-10 animate-spin text-saada-red mx-auto mb-4" />
-                                <p className="font-bold text-gray-400">جاري تحميل الأكواد...</p>
+                {/* Floating Bulk Action Bar */}
+                {selectedProductIds.length > 0 && activeTab === 'products' && (
+                    <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-bottom-10 duration-500">
+                        <div className="bg-black/90 backdrop-blur-2xl px-8 py-4 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.4)] border border-white/10 flex items-center gap-8">
+                            <div className="flex flex-col">
+                                <span className="text-saada-red font-black text-xl leading-none">{selectedProductIds.length}</span>
+                                <span className="text-white/40 text-[10px] font-bold uppercase tracking-widest mt-1">منتج مختار</span>
                             </div>
-                        ) : coupons.length === 0 ? (
-                            <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-100">
-                                <Ticket className="h-16 w-16 text-gray-200 mx-auto mb-4" />
-                                <h3 className="text-xl font-bold text-gray-400">لا توجد أكواد خصم حالياً</h3>
-                                <p className="text-gray-500 mt-2">ابدأ بإضافة أول كود للترحيب بزبائنك!</p>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {coupons.map((coupon) => (
-                                    <Card key={coupon.id} className="border-none shadow-md overflow-hidden relative group">
-                                        <div className="absolute top-0 right-0 p-4">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleDeleteCoupon(coupon.id)}
-                                                className="text-gray-300 hover:text-red-600 hover:bg-red-50 rounded-xl"
-                                            >
-                                                <Trash2 className="h-5 w-5" />
-                                            </Button>
-                                        </div>
-                                        <CardContent className="p-6">
-                                            <div className="flex flex-col items-center text-center space-y-4">
-                                                <div className="h-16 w-16 bg-saada-red/10 text-saada-red rounded-2xl flex items-center justify-center">
-                                                    <Ticket className="h-8 w-8" />
-                                                </div>
-                                                <div>
-                                                    <h3 className="text-2xl font-black text-saada-brown tracking-widest">{coupon.code}</h3>
-                                                    <div className="flex items-center justify-center gap-2 mt-2">
-                                                        <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold">
-                                                            {coupon.discount_type === 'percentage' ? `${coupon.discount_value}% خصم` : `${coupon.discount_value} ج.م خصم`}
-                                                        </span>
-                                                        <span className="bg-saada-brown/5 text-saada-brown/60 px-3 py-1 rounded-full text-[10px] font-bold">
-                                                            تم الاستخدام: {coupon.used_count || 0}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
-                            </div>
-                        )}
-
-                        <Dialog open={isCouponDialogOpen} onOpenChange={setIsCouponDialogOpen}>
-                            <DialogContent className="max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl">
-                                <DialogHeader className="p-8 bg-saada-brown text-white">
-                                    <DialogTitle className="text-2xl font-black flex items-center gap-3">
-                                        <Ticket className="h-7 w-7" />
-                                        إضافة كود خصم جديد
-                                    </DialogTitle>
-                                </DialogHeader>
-                                <div className="p-8 space-y-6">
-                                    <div className="space-y-2">
-                                        <Label className="font-bold text-saada-brown">كود الخصم (مثلاً SAADA20)</Label>
-                                        <Input
-                                            placeholder="اكتب الكود هنا..."
-                                            className="h-12 rounded-xl text-center uppercase font-black text-xl tracking-widest"
-                                            value={newCoupon.code}
-                                            onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value })}
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label className="font-bold text-saada-brown">نوع الخصم</Label>
-                                            <Select
-                                                value={newCoupon.discount_type}
-                                                onValueChange={(val) => setNewCoupon({ ...newCoupon, discount_type: val })}
-                                            >
-                                                <SelectTrigger className="h-12 rounded-xl">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="percentage">نسبة مئوية (%)</SelectItem>
-                                                    <SelectItem value="fixed">مبلغ ثابت (ج.م)</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label className="font-bold text-saada-brown">قيمة الخصم</Label>
-                                            <Input
-                                                type="number"
-                                                className="h-12 rounded-xl text-center font-bold"
-                                                value={newCoupon.discount_value}
-                                                onChange={(e) => setNewCoupon({ ...newCoupon, discount_value: Number(e.target.value) })}
-                                            />
-                                        </div>
-                                    </div>
-                                    <Button
-                                        onClick={handleAddCoupon}
-                                        className="w-full h-14 bg-saada-red hover:bg-black text-white rounded-xl font-bold text-lg shadow-xl transition-all"
-                                    >
-                                        حفظ كود الخصم
-                                    </Button>
-                                </div>
-                            </DialogContent>
-                        </Dialog>
-                    </div>
-                ) : activeTab === "analytics" ? (
-                    <AnalyticsDashboard />
-                ) : activeTab === "subscribers" ? (
-                    <Card className="border-none shadow-xl bg-white overflow-hidden">
-                        <CardHeader className="border-b border-gray-100 bg-white p-6 flex flex-row items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <CardTitle className="text-xl font-bold text-saada-brown">قائمة المشتركين في النشرة البريدية</CardTitle>
-                                <span className="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold">{subscribers.length} مشترك</span>
-                            </div>
-                            <div className="flex gap-2">
-                                <Button
-                                    onClick={() => {
-                                        const now = new Date();
-                                        const dateStr = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}-${now.getMinutes().toString().padStart(2, '0')}`;
-
-                                        const ws = XLSX.utils.json_to_sheet(subscribers.map(s => ({ "الإيميل": s.email, "تاريخ الاشتراك": new Date(s.created_at).toLocaleString('ar-EG') })));
-                                        const wb = XLSX.utils.book_new();
-                                        XLSX.utils.book_append_sheet(wb, ws, "المشتركين");
-                                        XLSX.writeFile(wb, `subscribers_${dateStr}.xlsx`);
-                                    }}
-                                    className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-10 rounded-xl"
+                            
+                            <div className="w-px h-10 bg-white/10" />
+                            
+                            <div className="flex items-center gap-3">
+                                <Button 
+                                    onClick={() => setIsBulkCategoryOpen(true)}
+                                    className="h-12 px-6 bg-white hover:bg-saada-red hover:text-white text-black font-black rounded-2xl gap-2 transition-all shadow-xl"
                                 >
-                                    <FileSpreadsheet className="h-4 w-4" />
-                                    تصدير للقائمة
+                                    <Package className="h-5 w-5" />
+                                    نقل لقسم آخـر
                                 </Button>
-                                <Button onClick={fetchSubscribers} variant="ghost" size="icon">
-                                    <RefreshCw className={`h-4 w-4 ${subscribersLoading ? 'animate-spin' : ''}`} />
+                                
+                                <Button 
+                                    variant="ghost"
+                                    onClick={() => setSelectedProductIds([])}
+                                    className="h-12 px-6 text-white/60 hover:text-white hover:bg-white/5 font-bold rounded-2xl transition-all"
+                                >
+                                    إلغاء التحديد
+                                </Button>
+
+                                <Button 
+                                    variant="ghost"
+                                    onClick={() => {
+                                        if(confirm(`حذف ${selectedProductIds.length} منتج نهائياً؟`)) {
+                                            selectedProductIds.forEach(id => handleDelete(id));
+                                            setSelectedProductIds([]);
+                                        }
+                                    }}
+                                    className="h-12 w-12 p-0 text-red-500 hover:bg-red-500/10 rounded-2xl transition-all"
+                                >
+                                    <Trash2 className="h-5 w-5" />
                                 </Button>
                             </div>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                            <div className="overflow-x-auto">
-                                <Table>
-                                    <TableHeader className="bg-gray-50/50">
-                                        <TableRow>
-                                            <TableHead className="text-right py-4 font-bold text-saada-brown">الإيميل</TableHead>
-                                            <TableHead className="text-right py-4 font-bold text-saada-brown">تاريخ الاشتراك</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {subscribersLoading ? (
-                                            <TableRow>
-                                                <TableCell colSpan={2} className="text-center py-20 text-gray-500">جاري تحميل المشتركين...</TableCell>
-                                            </TableRow>
-                                        ) : subscribers.length === 0 ? (
-                                            <TableRow>
-                                                <TableCell colSpan={2} className="text-center py-20 text-gray-500">لا يوجد مشتركين حالياً</TableCell>
-                                            </TableRow>
-                                        ) : (
-                                            subscribers.map((s) => (
-                                                <TableRow key={s.id} className="hover:bg-gray-50/80 border-b border-gray-100">
-                                                    <TableCell className="py-4 font-bold text-saada-brown">{s.email}</TableCell>
-                                                    <TableCell className="py-4 text-xs text-gray-500 font-medium font-outfit">
-                                                        {new Date(s.created_at).toLocaleString('ar-EG')}
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    <Card className="border-none shadow-xl bg-white overflow-hidden">
-                        <CardHeader className="border-b border-gray-100 bg-white p-6 flex flex-row items-center justify-between">
-                            <CardTitle className="text-xl font-bold text-saada-brown">سجل تعديلات النظام (Audit Log)</CardTitle>
-                            <Button onClick={fetchLogs} variant="ghost" size="icon">
-                                <RefreshCw className={`h-4 w-4 ${logsLoading ? 'animate-spin' : ''}`} />
-                            </Button>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                            <div className="overflow-x-auto">
-                                <Table>
-                                    <TableHeader className="bg-gray-50/50">
-                                        <TableRow>
-                                            <TableHead className="text-right py-4 font-bold text-saada-brown">التاريخ والوقت</TableHead>
-                                            <TableHead className="text-right py-4 font-bold text-saada-brown">المسؤول</TableHead>
-                                            <TableHead className="text-right py-4 font-bold text-saada-brown">الإجراء</TableHead>
-                                            <TableHead className="text-right py-4 font-bold text-saada-brown">التفاصيل</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {logsLoading ? (
-                                            <TableRow>
-                                                <TableCell colSpan={4} className="text-center py-20 text-gray-500">جاري تحميل السجلات...</TableCell>
-                                            </TableRow>
-                                        ) : logs.length === 0 ? (
-                                            <TableRow>
-                                                <TableCell colSpan={4} className="text-center py-20 text-gray-500">لا توجد سجلات تعديل حالياً</TableCell>
-                                            </TableRow>
-                                        ) : (
-                                            logs.map((log) => (
-                                                <TableRow key={log.id} className="hover:bg-gray-50/80 border-b border-gray-100">
-                                                    <TableCell className="py-4 text-xs">
-                                                        {new Date(log.created_at).toLocaleString('ar-EG')}
-                                                    </TableCell>
-                                                    <TableCell className="py-4">
-                                                        <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${
-                                                            log.username === 'elhanafy' ? 'bg-saada-red text-white' : 
-                                                            log.username.includes('mostafa') ? 'bg-blue-600 text-white' :
-                                                            log.username.includes('hesham') ? 'bg-emerald-600 text-white' :
-                                                            log.username.includes('fikry') ? 'bg-amber-600 text-white' :
-                                                            'bg-gray-100 text-gray-600'
-                                                        }`}>
-                                                            {log.username}
-                                                        </span>
-                                                    </TableCell>
-                                                    <TableCell className="py-4 font-bold text-saada-brown text-sm">
-                                                        {log.action === 'add_product' ? '➕ إضافة صنف' :
-                                                            log.action === 'edit_product' ? '📝 تعديل صنف' :
-                                                                log.action === 'delete_product' ? '🗑️ حذف صنف' :
-                                                                    log.action === 'bulk_delete_products' ? '🧹 حذف جماعي' :
-                                                                        log.action === 'bulk_move_to_draft' ? '👁️ إخفاء (درافت)' :
-                                                                            log.action === 'bulk_restore_from_draft' ? '♻️ استعادة' :
-                                                                                log.action === 'excel_sync' ? '📊 مزامنة Excel' :
-                                                                                    log.action === 'cleanup_duplicates' ? '🧼 تنظيف مكررات' : log.action}
-                                                    </TableCell>
-                                                    <TableCell className="py-4 text-xs text-gray-500 max-w-xs truncate">
-                                                        {JSON.stringify(log.details)}
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 )}
-            </div>
 
-            {/* Edit/Add Dialog */}
-            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogContent className="max-w-2xl bg-white rounded-3xl p-0 overflow-hidden font-tajawal rtl max-h-[90vh] flex flex-col" dir="rtl">
-                    <DialogHeader className="p-6 bg-saada-brown text-white">
-                        <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-                            {currentProduct.id ? <Edit className="h-6 w-6" /> : <Plus className="h-6 w-6" />}
-                            {currentProduct.id ? "تعديل منتج" : "إضافة منتج جديد"}
-                        </DialogTitle>
-                    </DialogHeader>
-
-                    <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto flex-grow">
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="name">اسم المنتج</Label>
-                                <Input
-                                    id="name"
-                                    value={currentProduct.name}
-                                    onChange={(e) => setCurrentProduct({ ...currentProduct, name: e.target.value })}
-                                    className="h-11 rounded-xl"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="price">السعر (ج.م)</Label>
-                                    <Input
-                                        id="price"
-                                        type="number"
-                                        disabled={!canEditPrice}
-                                        value={currentProduct.price}
-                                        onChange={(e) => setCurrentProduct({ ...currentProduct, price: parseFloat(e.target.value) })}
-                                        className="h-11 rounded-xl"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label htmlFor="stock">المخزون</Label>
-                                    <Input
-                                        id="stock"
-                                        type="number"
-                                        value={currentProduct.stock}
-                                        onChange={(e) => setCurrentProduct({ ...currentProduct, stock: parseInt(e.target.value) })}
-                                        className="h-11 rounded-xl"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Expiry Date Field - Special Users only */}
-                            {isSpecial && (
-                                <div className="space-y-2 p-4 bg-blue-50/50 rounded-2xl border border-blue-100">
-                                    <Label htmlFor="expiry" className="text-blue-700 font-bold flex items-center gap-2">
-                                        <Clock className="h-4 w-4" />
-                                        تاريخ الصلاحية (اختياري)
-                                    </Label>
-                                    <Input
-                                        id="expiry"
-                                        type="date"
-                                        value={currentProduct.expiry_date || ""}
-                                        onChange={(e) => setCurrentProduct({ ...currentProduct, expiry_date: e.target.value })}
-                                        className="h-11 rounded-xl bg-white"
-                                    />
-                                    <p className="text-[10px] text-blue-600 font-medium">اترك فارغاً للأصناف التي لا تملك تاريخ انتهاء محدد</p>
-                                </div>
-                            )}
-
-                             <div className="space-y-3">
-                                <Label className="text-saada-brown font-bold">تعدد الأقسام (يمكنك اختيار أكثر من قسم)</Label>
-                                <div className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                                    {categories.map(cat => {
-                                        const isSelected = (currentProduct.category_id || '').split(',').map(s => s.trim()).filter(Boolean).includes(cat.id);
-                                        return (
-                                            <Button
-                                                key={cat.id}
-                                                type="button"
-                                                variant={isSelected ? "default" : "outline"}
-                                                size="sm"
-                                                onClick={() => {
-                                                    let ids = (currentProduct.category_id || '').split(',').map(s => s.trim()).filter(Boolean);
-                                                    if (isSelected) {
-                                                        ids = ids.filter(id => id !== cat.id);
-                                                    } else {
-                                                        ids.push(cat.id);
-                                                    }
-                                                    setCurrentProduct({ ...currentProduct, category_id: ids.join(',') });
-                                                }}
-                                                className={`h-9 rounded-full px-4 text-xs font-bold transition-all ${isSelected ? 'bg-saada-brown text-white shadow-md' : 'bg-white hover:bg-saada-brown/5'}`}
-                                            >
-                                                {isSelected && <Check className="h-3 w-3 mr-1 -ml-1" />}
-                                                {cat.label}
-                                            </Button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-
-                            <div
-                                className={`p-5 rounded-[1.5rem] border-2 transition-all cursor-pointer select-none flex items-center justify-between group ${currentProduct.no_tax ? "bg-orange-50/50 border-orange-400/30 shadow-[0_8px_20px_rgba(249,115,22,0.08)]" : "bg-gray-50/50 border-gray-100 hover:border-gray-200"}`}
-                                onClick={() => setCurrentProduct({ ...currentProduct, no_tax: !currentProduct.no_tax })}
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center transition-all duration-300 ${currentProduct.no_tax ? "bg-orange-600 text-white shadow-lg shadow-orange-200" : "bg-gray-200 text-gray-400 group-hover:bg-gray-300 group-hover:text-gray-600"}`}>
-                                        <Percent className="h-6 w-6" />
-                                    </div>
-                                    <div className="space-y-0.5">
-                                        <h4 className={`text-base font-black transition-colors ${currentProduct.no_tax ? "text-orange-900" : "text-gray-900"}`}>صنف بدون ضريبة</h4>
-                                        <p className={`text-[11px] font-bold transition-colors ${currentProduct.no_tax ? "text-orange-600/80" : "text-gray-400"}`}>سيتم استثناء هذا الصنف من زيادة الـ 14%</p>
-                                    </div>
-                                </div>
-                                <div className="scale-110">
-                                    <Switch
-                                        id="no-tax-switch"
-                                        checked={currentProduct.no_tax}
-                                        onCheckedChange={(val) => setCurrentProduct({ ...currentProduct, no_tax: val })}
-                                        className="data-[state=checked]:bg-orange-600 shadow-sm"
-                                        onClick={(e) => e.stopPropagation()}
-                                    />
-                                </div>
-                            </div>
-
-                            <div
-                                className={`p-5 rounded-[1.5rem] border-2 transition-all cursor-pointer select-none flex items-center justify-between group ${currentProduct.description?.includes('[DRAFT]') ? "bg-gray-200 border-gray-400 shadow-inner" : "bg-gray-50 border-gray-100 hover:border-gray-200"}`}
-                                onClick={() => {
-                                    const isDraft = currentProduct.description?.includes('[DRAFT]');
-                                    let newDesc = (currentProduct.description || '').replace('[DRAFT]', '').trim();
-                                    if (!isDraft) newDesc = `${newDesc} [DRAFT]`.trim();
-                                    setCurrentProduct({ ...currentProduct, description: newDesc });
-                                }}
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center transition-all duration-300 ${currentProduct.description?.includes('[DRAFT]') ? "bg-gray-800 text-white shadow-lg" : "bg-gray-200 text-gray-400 group-hover:bg-gray-600 group-hover:text-white"}`}>
-                                        <Trash2 className="h-6 w-6" />
-                                    </div>
-                                    <div className="space-y-0.5">
-                                        <h4 className={`text-base font-black transition-colors ${currentProduct.description?.includes('[DRAFT]') ? "text-gray-900" : "text-gray-900"}`}>وضع الدرافت (إخفاء)</h4>
-                                        <p className={`text-[11px] font-bold transition-colors ${currentProduct.description?.includes('[DRAFT]') ? "text-red-600" : "text-gray-400"}`}>
-                                            {currentProduct.description?.includes('[DRAFT]') ? "هذا الصنف الآن في قسم الدرافت فقط وغير ظاهر للعملاء" : "إرسال هذا الصنف لقسم الدرافت لإخفائه مؤقتاً"}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="scale-110">
-                                    <Switch
-                                        checked={currentProduct.description?.includes('[DRAFT]')}
-                                        onCheckedChange={(val) => {
-                                            let newDesc = (currentProduct.description || '').replace('[DRAFT]', '').trim();
-                                            if (val) newDesc = `${newDesc} [DRAFT]`.trim();
-                                            setCurrentProduct({ ...currentProduct, description: newDesc });
-                                        }}
-                                        className="data-[state=checked]:bg-gray-800 shadow-sm"
-                                        onClick={(e) => e.stopPropagation()}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="image">الصورة</Label>
-                                <div className="flex flex-col gap-3">
-                                    <Input
-                                        id="image"
-                                        value={currentProduct.image}
-                                        onChange={(e) => setCurrentProduct({ ...currentProduct, image: e.target.value })}
-                                        className="h-11 rounded-xl"
-                                        placeholder="رابط الصورة المباشر"
-                                    />
-                                    <Button
-                                        type="button"
-                                        disabled={isUploading}
-                                        onClick={() => document.getElementById('camera-upload')?.click()}
-                                        className="w-full bg-saada-brown hover:bg-black text-white h-12 rounded-xl flex items-center justify-center gap-2 group transition-all"
-                                    >
-                                        <Camera className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                                        <span>تعديل الصورة (من الجهاز أو الكاميرا)</span>
-                                    </Button>
-                                    <input
-                                        id="camera-upload"
-                                        type="file"
-                                        accept="image/*"
-                                        capture="environment"
-                                        className="hidden"
-                                        onChange={handleImageUpload}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className={`aspect-video w-full bg-gray-100 rounded-2xl overflow-hidden border-2 border-dashed border-gray-200 flex items-center justify-center relative group ${isUploading ? 'animate-pulse' : ''}`}>
-                                {isUploading ? (
-                                    <div className="flex flex-col items-center gap-2 text-saada-brown">
-                                        <Upload className="h-8 w-8 animate-bounce" />
-                                        <p className="text-xs font-bold">جاري الرفع...</p>
-                                    </div>
-                                ) : currentProduct.image ? (
-                                    <img src={currentProduct.image} alt="Preview" className="h-full w-full object-cover" />
-                                ) : (
-                                    <ImageIcon className="h-12 w-12 text-gray-300" />
-                                )}
-                                {!isUploading && (
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                                        <p className="text-white text-sm font-medium">معاينة الصورة</p>
-                                    </div>
-                                )}
-                            </div>
-
-                            <div className="flex items-center gap-6 py-2">
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="checkbox"
-                                        id="is_featured"
-                                        disabled={!isAdmin}
-                                        className="h-4 w-4 rounded text-saada-red"
-                                        checked={currentProduct.is_featured}
-                                        onChange={(e) => setCurrentProduct({ ...currentProduct, is_featured: e.target.checked })}
-                                    />
-                                    <Label htmlFor="is_featured" className="cursor-pointer">مميز</Label>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="checkbox"
-                                        id="is_new"
-                                        disabled={!isAdmin}
-                                        className="h-4 w-4 rounded text-saada-red"
-                                        checked={currentProduct.is_new}
-                                        onChange={(e) => setCurrentProduct({ ...currentProduct, is_new: e.target.checked })}
-                                    />
-                                    <Label htmlFor="is_new" className="cursor-pointer">جديد</Label>
-                                </div>
-                            </div>
-                        </div>
+                <footer className="pt-20 pb-10 text-center">
+                    <div className="inline-flex items-center gap-3 px-10 py-5 bg-white rounded-[3rem] shadow-xl border border-gray-50 text-gray-400 font-black text-lg transition-all hover:scale-105 active:scale-95 group cursor-default">
+                        صمم بكل <Heart className="h-5 w-5 fill-saada-red text-saada-red group-hover:scale-125 transition-transform" /> بواسطة فريق التقنية في صناع السعادة &copy; {new Date().getFullYear()}
                     </div>
+                </footer>
 
-                    <DialogFooter className="p-6 bg-gray-50 flex gap-3 sm:justify-end">
-                        <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="h-11 px-6 rounded-xl border-gray-300">
-                            <X className="h-4 w-4 ml-2" />
-                            إلغاء
-                        </Button>
-                        {isSpecial && currentProduct.id && (
-                            <Button
-                                type="button"
-                                onClick={() => {
-                                    const { id, created_at, ...newData } = currentProduct;
-                                    setCurrentProduct({ ...newData, stock: 0, expiry_date: "" });
-                                    toast.info("تم البدء في إضافة صلاحية جديدة لنفس المنتج. أدخل الرصيد وتاريخ الصلاحية ثم اضغط حفظ.");
-                                }}
-                                variant="outline"
-                                className="h-11 px-6 rounded-xl border-blue-300 text-blue-600 hover:bg-blue-50"
-                            >
-                                <Plus className="h-4 w-4 ml-2" />
-                                إضافة صلاحية/باتش جديد
-                            </Button>
-                        )}
-                        <Button 
-                            onClick={handleSave} 
-                            disabled={isUploading}
-                            className={`h-11 px-8 rounded-xl bg-saada-brown hover:bg-saada-brown/90 text-white shadow-lg ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                            <Check className="h-4 w-4 ml-2" />
-                            {isUploading ? "جاري الحفظ..." : "حفظ التعديلات"}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-            {/* Conflict Resolver Dialog */}
-            <Dialog open={isConflictResolverOpen} onOpenChange={setIsConflictResolverOpen}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white p-0 rounded-3xl overflow-hidden shadow-2xl">
-                    <DialogHeader className="p-8 bg-gradient-to-r from-orange-500 to-amber-600 text-white">
-                        <DialogTitle className="text-2xl font-black flex items-center gap-3">
-                            <Merge className="h-7 w-7" />
-                            حل تعارضات الباركود والأسماء المكررة
-                        </DialogTitle>
-                        <p className="text-white/80 text-sm mt-2">
-                            بناءً على طلبك، نمنع تكرار الباركود. اختر النسخة الصحيحة التي تريد الاحتفاظ بها وسيتم دمج البيانات وحذف المكررات.
-                        </p>
-                    </DialogHeader>
-
-                    <div className="p-8 space-y-8">
-                        {conflictProducts.length === 0 ? (
-                            <div className="text-center py-20 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
-                                <CheckCircle className="h-16 w-16 text-emerald-500 mx-auto mb-4" />
-                                <h3 className="text-xl font-bold text-gray-700">لا يوجد تعارضات حالياً!</h3>
-                                <p className="text-gray-500">متجرك نظيف تماماً من البيانات المكررة.</p>
-                            </div>
-                        ) : (
-                            conflictProducts.map((conflict, idx) => (
-                                <div key={idx} className="bg-gray-50 rounded-3xl p-6 border border-gray-200 shadow-sm">
-                                    <div className="flex items-center gap-3 mb-6">
-                                        <div className="h-10 w-10 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center font-black">
-                                            {idx + 1}
-                                        </div>
-                                        <h3 className="text-lg font-black text-saada-brown">{conflict.key}</h3>
-                                        <span className="text-xs bg-orange-100 text-orange-700 px-3 py-1 rounded-full">{conflict.items.length} نسخ مكررة</span>
-                                    </div>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-                                        {conflict.items.map(item => {
-                                            const isPlaceholder = !item.image || item.image === PLACEHOLDER_IMAGE || item.image.includes('unsplash.com');
-                                            return (
-                                                <div
-                                                    key={item.id}
-                                                    className={`relative bg-white p-4 rounded-2xl border-2 transition-all hover:shadow-md ${!isPlaceholder ? 'border-emerald-200 bg-emerald-50/20' : 'border-gray-100'}`}
-                                                >
-                                                    <div className="flex gap-4">
-                                                        <div className="h-20 w-20 rounded-xl overflow-hidden bg-gray-100 border border-gray-100 flex-shrink-0">
-                                                            <img src={item.image} className="h-full w-full object-cover" alt="" />
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <h4 className="font-bold text-saada-brown truncate">{item.name}</h4>
-                                                            <p className="text-xs text-gray-500 mt-1 truncate">{item.description || 'بدون وصف'}</p>
-                                                            <div className="flex items-center gap-3 mt-2">
-                                                                <span className="text-xs font-black text-saada-red">رصيد: {item.stock}</span>
-                                                                <span className="text-xs text-saada-brown font-bold">{formatPrice(item.price)}</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="mt-4 flex gap-2">
-                                                        <Button
-                                                            size="sm"
-                                                            className="flex-1 bg-saada-brown hover:bg-black text-white h-9 rounded-xl font-bold text-xs"
-                                                            onClick={() => {
-                                                                const others = conflict.items.filter(i => i.id !== item.id).map(i => i.id);
-                                                                handleMergeProducts(item.id, others);
-                                                            }}
-                                                        >
-                                                            <CheckCircle className="h-3 w-3 ml-1" />
-                                                            احتفظ بهذا واحذف الباقي
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            className="h-9 w-9 p-0 rounded-xl"
-                                                            onClick={() => handleEdit(item)}
-                                                        >
-                                                            <Edit className="h-4 w-4" />
-                                                        </Button>
-                                                    </div>
-                                                    {!isPlaceholder && (
-                                                        <div className="absolute -top-2 -left-2 bg-emerald-500 text-white p-1 rounded-full shadow-lg">
-                                                            <SparklesIcon className="h-3 w-3" />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-
-                    <DialogFooter className="p-8 bg-gray-50 flex justify-center">
-                        <Button
-                            variant="outline"
-                            onClick={() => setIsConflictResolverOpen(false)}
-                            className="px-10 h-12 rounded-2xl border-gray-300 font-bold"
-                        >
-                            إغلاق النافذة
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Image Cropper Dialog */}
-            {tempImageUrl && (
-                <ImageCropper
-                    image={tempImageUrl}
-                    open={isCropperOpen}
-                    onClose={() => {
-                        setIsCropperOpen(false);
-                        setTempImageUrl(null);
-                    }}
-                    onCropComplete={handleCropComplete}
-                    onSkip={handleSkip}
+                <DashboardDialogs 
+                    isEditDialogOpen={isEditDialogOpen}
+                    setIsEditDialogOpen={setIsEditDialogOpen}
+                    currentProduct={currentProduct}
+                    setCurrentProduct={setCurrentProduct}
+                    handleSave={handleSave}
+                    handleImageUpload={handleImageUpload}
+                    isUploading={isUploading}
+                    categories={categories}
+                    isCropperOpen={isCropperOpen}
+                    setIsCropperOpen={setIsCropperOpen}
+                    tempImageUrl={tempImageUrl}
+                    handleCropComplete={handleCropComplete}
+                    handleSkip={handleSkip}
+                    isLifecycleOpen={isLifecycleOpen}
+                    setIsLifecycleOpen={setIsLifecycleOpen}
+                    lifecycleProduct={lifecycleProduct}
+                    lifecycleData={lifecycleData}
+                    lifecycleLoading={lifecycleLoading}
+                    isBulkCategoryOpen={isBulkCategoryOpen}
+                    setIsBulkCategoryOpen={setIsBulkCategoryOpen}
+                    bulkCategoryId={bulkCategoryId}
+                    setBulkCategoryId={setBulkCategoryId}
+                    handleBulkCategoryUpdate={handleBulkCategoryUpdate}
                 />
-            )}
-            {/* Product Lifecycle Dialog */}
-            <Dialog open={isLifecycleOpen} onOpenChange={setIsLifecycleOpen}>
-                <DialogContent className="max-w-2xl bg-white rounded-3xl overflow-hidden p-0 border-none shadow-2xl font-tajawal rtl" dir="rtl">
-                    <div className="bg-gradient-to-r from-amber-600 to-orange-700 p-6 text-white">
-                        <DialogHeader>
-                            <div className="flex items-center gap-4">
-                                <div className="h-16 w-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-md">
-                                    <Clock className="h-8 w-8" />
-                                </div>
-                                <div>
-                                    <DialogTitle className="text-2xl font-black">قصة حياة المنتج</DialogTitle>
-                                    <p className="text-white/80 font-medium mt-1">{lifecycleProduct?.name}</p>
-                                </div>
-                            </div>
-                        </DialogHeader>
-                    </div>
-
-                    <div className="p-6 max-h-[70vh] overflow-y-auto">
-                        {lifecycleLoading ? (
-                            <div className="flex flex-col items-center justify-center py-12 gap-4">
-                                <RefreshCw className="h-8 w-8 text-amber-600 animate-spin" />
-                                <p className="text-gray-500 font-bold">جاري استرجاع ذكريات المنتج...</p>
-                            </div>
-                        ) : lifecycleData.length === 0 ? (
-                            <div className="text-center py-12">
-                                <p className="text-gray-400 font-bold text-lg">لم نعثر على سجلات قديمة لهذا المنتج</p>
-                            </div>
-                        ) : (
-                            <div className="relative space-y-6 before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-300 before:to-transparent">
-                                {lifecycleData.map((item, idx) => (
-                                    <div key={idx} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                                        <div className={`flex items-center justify-center w-10 h-10 rounded-full border border-white shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 ${item.type === 'ALERT' ? 'bg-red-600 text-white' :
-                                                (item.label.includes('دخول') ? 'bg-emerald-600 text-white' :
-                                                    (item.label.includes('خروج') ? 'bg-orange-600 text-white' : 'bg-slate-100 text-slate-500'))
-                                            }`}>
-                                            {item.type === 'SALE' || item.label.includes('خروج') ? <TrendingUp className="h-4 w-4" /> :
-                                                item.type === 'ALERT' ? <AlertTriangle className="h-4 w-4" /> :
-                                                    item.type === 'ADMIN' ? <Edit className="h-4 w-4" /> :
-                                                        <SparklesIcon className="h-4 w-4" />}
-                                        </div>
-                                        <div className={`w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] p-4 rounded-2xl border bg-white shadow-sm transition-all hover:shadow-md ${item.type === 'ALERT' ? 'border-red-200 bg-red-50/30' : 'border-slate-200'
-                                            }`}>
-                                            <div className="flex items-center justify-between space-x-2 mb-1">
-                                                <div className="font-bold text-slate-900">{item.label}</div>
-                                                <div className="flex flex-col items-end gap-1">
-                                                    <time className="text-[10px] font-tajawal font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-lg whitespace-nowrap">
-                                                        {new Date(item.date).toLocaleDateString('ar-EG', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                                    </time>
-                                                    <time className="text-[10px] font-bold text-gray-400">
-                                                        {new Date(item.date).toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' })}
-                                                    </time>
-                                                </div>
-                                            </div>
-                                            <div className="text-slate-500 text-sm">{item.note}</div>
-                                            {item.type === 'SALE' && (
-                                                <div className="mt-2 flex items-center gap-2">
-                                                    <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-bold border border-emerald-100">
-                                                        {item.status}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </DialogContent>
-            </Dialog>
-
-            {/* Bulk Category Update Dialog */}
-            <Dialog open={isBulkCategoryOpen} onOpenChange={setIsBulkCategoryOpen}>
-                <DialogContent className="sm:max-w-md bg-white rounded-3xl p-6 overflow-hidden">
-                    <DialogHeader>
-                        <DialogTitle className="text-2xl font-bold text-saada-brown flex items-center gap-2 text-right" dir="rtl">
-                            <Merge className="h-6 w-6 text-indigo-600" />
-                            تعديل القسم جماعياً
-                        </DialogTitle>
-                        <p className="text-gray-500 mt-2 text-right">
-                            سيتم نقل ({selectedProductIds.length}) منتجات مختارة إلى القسم الجديد.
-                        </p>
-                    </DialogHeader>
-                    <div className="py-6 space-y-4" dir="rtl">
-                        <Label className="font-bold block text-right">اختر الأقسام الجديدة (يمكنك اختيار أكثر من واحد)</Label>
-                        <div className="flex flex-wrap gap-2 justify-end">
-                            {categories.map(cat => {
-                                const isSelected = (bulkCategoryId || '').split(',').map(s => s.trim()).filter(Boolean).includes(cat.id);
-                                return (
-                                    <Button
-                                        key={cat.id}
-                                        variant={isSelected ? "default" : "outline"}
-                                        onClick={() => {
-                                            let ids = (bulkCategoryId || '').split(',').map(s => s.trim()).filter(Boolean);
-                                            if (isSelected) {
-                                                ids = ids.filter(id => id !== cat.id);
-                                            } else {
-                                                ids.push(cat.id);
-                                            }
-                                            setBulkCategoryId(ids.join(','));
-                                        }}
-                                        className={`h-10 rounded-xl px-4 text-xs font-bold transition-all ${isSelected ? 'bg-indigo-600 text-white shadow-md' : 'bg-white hover:bg-indigo-50'}`}
-                                    >
-                                        {isSelected && <Check className="h-3 w-3 ml-1" />}
-                                        {cat.label}
-                                    </Button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                    <DialogFooter className="gap-2 sm:gap-0 flex-row-reverse">
-                        <Button variant="outline" onClick={() => setIsBulkCategoryOpen(false)} className="rounded-xl h-12 font-bold flex-1">إلغاء</Button>
-                        <Button onClick={handleBulkCategoryUpdate} disabled={!bulkCategoryId} className="rounded-xl h-12 bg-indigo-600 hover:bg-indigo-700 font-bold flex-1 shadow-lg shadow-indigo-200">تحديث الآن</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            </div>
         </div>
-    </div>
     );
 };
+
 
 export default AdminDashboard;

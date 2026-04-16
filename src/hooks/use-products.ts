@@ -102,7 +102,9 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean, branchId?
             }
 
             if (categoryId && categoryId !== 'all') {
-                query = query.or(`category_id.ilike.%${categoryId}%,category_name.ilike.%${categoryId}%`);
+                // SMART FILTER: Search by category ID, category name, OR if the product name contains the category name
+                // To avoid too many matches, we use a simple keyword match
+                query = query.or(`category_id.ilike.%${categoryId}%,category_name.ilike.%${categoryId}%,name.ilike.%${categoryId}%`);
             }
 
             if (isFeatured) {
@@ -125,110 +127,116 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean, branchId?
                 return { ...p, stock: effectiveStock };
             });
 
-            if (!isAdmin) {
-                // Grouping logic for the store facade
-                const groupedMap = new Map<string, Product>();
+    // THE UNBREAKABLE CUSTOMER RULES (GUARDRAILS)
+    const isVisibleToCustomer = (p: any, totalStock: number) => {
+        const price = Number(p.price) || 0;
+        const stock = totalStock;
+        const isDraft = (p.description || '').includes('[DRAFT]');
+        const hasImage = p.image && 
+                         p.image.trim() !== "" && 
+                         !p.image.includes('unsplash.com') && 
+                         p.image !== SITE_CONFIG.placeholderImage;
 
-                processedData.forEach(p => {
-                    const price = Number(p.price);
-                    const stock = Number(p.stock);
-                    const isDraft = p.description?.includes('[DRAFT]');
-                    const hasValidImage = p.image &&
-                        p.image.trim() !== "" &&
-                        !p.image.includes('unsplash.com') &&
-                        p.image !== SITE_CONFIG.placeholderImage;
+        // RULE: No Stock -> Hidden. No Price -> Hidden. No Image -> Hidden. Draft -> Hidden.
+        return stock >= 1 && price > 0 && hasImage && !isDraft;
+    };
 
-                    if (stock >= 1 && price > 0 && hasValidImage && !isDraft) {
-                        const processed = processProduct(p, false);
-                        const key = processed.name.toLowerCase().trim();
+    if (!isAdmin) {
+        // Grouping logic for the store facade
+        const groupedMap = new Map<string, Product>();
 
-                        if (groupedMap.has(key)) {
-                            const existing = groupedMap.get(key)!;
-                            existing.stock += processed.stock;
-                        } else {
-                            groupedMap.set(key, processed);
-                        }
-                    }
-                });
-
-                return Array.from(groupedMap.values());
+        processedData.forEach(p => {
+            const processed = processProduct(p, false);
+            if (isVisibleToCustomer(p, p.stock)) {
+                const key = processed.name.toLowerCase().trim();
+                if (groupedMap.has(key)) {
+                    const existing = groupedMap.get(key)!;
+                    existing.stock += processed.stock;
+                } else {
+                    groupedMap.set(key, processed);
+                }
             }
+        });
 
-            return processedData.map(p => processProduct(p, true));
-        },
-    });
+        return Array.from(groupedMap.values());
+    }
+
+    return processedData.map(p => processProduct(p, true));
+},
+});
 };
 
 export const useProduct = (id: number, branchId?: number) => {
-    const { user } = useAuth();
-    const isAdmin = user?.role === 'admin' || user?.role === 'editor';
+const { user } = useAuth();
+const isAdmin = user?.role === 'admin' || user?.role === 'editor';
 
-    return useQuery({
-        queryKey: ['product', id, isAdmin, branchId],
-        queryFn: async () => {
-            const { data: product, error } = await supabase
-                .from('products')
-                .select(`
-                    *,
-                    product_branch_stock !left (
-                        stock,
-                        branch_id
-                    )
-                `)
-                .eq('id', id)
-                .single();
+return useQuery({
+queryKey: ['product', id, isAdmin, branchId],
+queryFn: async () => {
+    const { data: product, error } = await supabase
+        .from('products')
+        .select(`
+            *,
+            product_branch_stock !left (
+                stock,
+                branch_id
+            )
+        `)
+        .eq('id', id)
+        .single();
 
-            if (error) throw error;
-            if (!product) return null;
+    if (error) throw error;
+    if (!product) return null;
 
-            let effectiveStock = product.stock || 0;
-            if (branchId) {
-                const branchStockRecord = (product.product_branch_stock || []).find((s: any) => s.branch_id === branchId);
-                effectiveStock = branchStockRecord ? branchStockRecord.stock : 0;
-            }
-            const pWithStock = { ...product, stock: effectiveStock };
+    let effectiveStock = product.stock || 0;
+    if (branchId) {
+        const branchStockRecord = (product.product_branch_stock || []).find((s: any) => s.branch_id === branchId);
+        effectiveStock = branchStockRecord ? branchStockRecord.stock : 0;
+    }
+    const pWithStock = { ...product, stock: effectiveStock };
 
-            if (isAdmin) {
-                return processProduct(pWithStock, true);
-            }
+    if (isAdmin) return processProduct(pWithStock, true);
 
-            // Customer View: Show aggregate stock for all batches of this name IN THIS BRANCH
-            const { data: allBatches } = await supabase
-                .from('products')
-                .select(`
-                    *,
-                    product_branch_stock !left (
-                        stock,
-                        branch_id
-                    )
-                `)
-                .eq('name', product.name);
+    // CUSTOMER VIEW ENFORCEMENT
+    const { data: allBatches } = await supabase
+        .from('products')
+        .select(`
+            *,
+            product_branch_stock !left (
+                stock,
+                branch_id
+            )
+        `)
+        .eq('name', product.name);
 
-            const filteredBatches = (allBatches || []).map(b => {
-                let bStock = b.stock || 0;
-                if (branchId) {
-                    const bBranchRecord = (b.product_branch_stock || []).find((s: any) => s.branch_id === branchId);
-                    bStock = bBranchRecord ? bBranchRecord.stock : 0;
-                }
-                return { ...b, stock: bStock };
-            });
+    const filteredBatches = (allBatches || []).map(b => {
+        let bStock = b.stock || 0;
+        if (branchId) {
+            const bBranchRecord = (b.product_branch_stock || []).find((s: any) => s.branch_id === branchId);
+            bStock = bBranchRecord ? bBranchRecord.stock : 0;
+        }
+        return { ...b, stock: bStock };
+    });
 
-            const totalBranchStock = filteredBatches.reduce((sum, b) => sum + (b.stock || 0), 0);
-            const processed = processProduct(pWithStock, false);
-            processed.stock = totalBranchStock;
+    const totalBranchStock = filteredBatches.reduce((sum, b) => sum + (b.stock || 0), 0);
+    const processed = processProduct(pWithStock, false);
+    processed.stock = totalBranchStock;
 
-            const isDraft = product.description?.includes('[DRAFT]');
-            const hasValidImage = product.image &&
-                product.image.trim() !== "" &&
-                !product.image.includes('unsplash.com') &&
-                product.image !== SITE_CONFIG.placeholderImage;
+    // THE GUARDRAIL CHECK
+    const isVisibleToCustomer = (p: any, tStock: number) => {
+        const pr = Number(p.price) || 0;
+        const dr = (p.description || '').includes('[DRAFT]');
+        const img = p.image && p.image.trim() !== "" && !p.image.includes('unsplash.com') && p.image !== SITE_CONFIG.placeholderImage;
+        return tStock >= 1 && pr > 0 && img && !dr;
+    };
 
-            if (!(totalBranchStock >= 1 && Number(product.price) > 0 && hasValidImage && !isDraft)) {
-                return null;
-            }
+    if (!isVisibleToCustomer(product, totalBranchStock)) {
+        console.warn(`Product ${id} blocked by Customer Guardrails`);
+        return null;
+    }
 
-            return processed;
-        },
+    return processed;
+},
         enabled: !!id,
     });
 };

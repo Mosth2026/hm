@@ -1,0 +1,9 @@
+{
+  "appId": "com.saada.store",
+  "appName": "صناع السعادة",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}

@@ -4,18 +4,57 @@
 -- 1. Create Categories Table
 CREATE TABLE IF NOT EXISTS categories (
     id TEXT PRIMARY KEY,
-    label TEXT NOT NULL
+    label TEXT NOT NULL,
+    parent_id TEXT REFERENCES categories(id) ON DELETE SET NULL,
+    icon TEXT,
+    index INTEGER DEFAULT 0
 );
 
--- 2. Insert Categories
-INSERT INTO categories (id, label) VALUES
-('chocolate', 'الشوكولاتة'),
-('coffee', 'القهوة'),
-('cookies', 'الكوكيز'),
-('candy', 'الكاندي'),
-('snacks', 'الاسناكس'),
-('gifts', 'الهدايا')
-ON CONFLICT (id) DO NOTHING;
+-- 2. Insert Categories (Hierarchy)
+INSERT INTO categories (id, label, icon, parent_id, index) VALUES
+-- Main Categories
+('chocolate', 'الشوكولاتة', '🍫', NULL, 1),
+('coffee', 'القهوة', '☕', NULL, 2),
+('dietary', 'الدايت والصحة', '🌱', NULL, 3),
+('cookies', 'الكوكيز', '🍪', NULL, 4),
+('snacks', 'الاسناكس', '🥨', NULL, 5),
+('candy', 'الكاندي', '🍬', NULL, 6),
+('cosmetics', 'لمسات الجمال', '💄', NULL, 7),
+('gifts', 'بوكسات الهدايا', '🎁', NULL, 8),
+
+-- Chocolate Subcategories
+('milk-chocolate', 'ميلك', '🥛', 'chocolate', 1),
+('dark-chocolate', 'دارك', '🌑', 'chocolate', 2),
+('white-chocolate', 'وايت', '☁️', 'chocolate', 3),
+('stevia-chocolate', 'ستيفيا', '🌿', 'chocolate', 4),
+('kunafa-chocolate', 'كنافة', '🧁', 'chocolate', 5),
+('nuts-chocolate', 'مكسرات', '🥜', 'chocolate', 6),
+
+-- Milk Chocolate Sub-subcategories
+('milk-fruits', 'فواكه', '🍓', 'milk-chocolate', 1),
+('milk-nuts', 'مكسرات', '🥜', 'milk-chocolate', 2),
+('milk-fruits-nuts', 'فواكه ومكسرات', '🍓🥜', 'milk-chocolate', 3),
+
+-- Coffee Subcategories
+('instant-coffee', 'سريعة التحضير', '⚡', 'coffee', 1),
+('turkish-coffee', 'قهوة تركية', '🫖', 'coffee', 2),
+('espresso', 'اسبريسو', '☕', 'coffee', 3),
+('decaf', 'ديكاف', '💤', 'coffee', 4),
+
+-- Dietary Subcategories
+('free-sugar', 'فري شوجر', '🚫🍬', 'dietary', 1),
+('free-gluten', 'فري جلوتين', '🌾❌', 'dietary', 2),
+
+-- Cosmetics Subcategories
+('skincare', 'العناية بالبشرة', '🧴', 'cosmetics', 1),
+('haircare', 'العناية بالشعر', '💇', 'cosmetics', 2),
+('car', 'السيارة', '🚗', 'cosmetics', 3)
+
+ON CONFLICT (id) DO UPDATE SET 
+    label = EXCLUDED.label, 
+    icon = EXCLUDED.icon, 
+    parent_id = EXCLUDED.parent_id,
+    index = EXCLUDED.index;
 
 -- 3. Create Products Table
 CREATE TABLE IF NOT EXISTS products (

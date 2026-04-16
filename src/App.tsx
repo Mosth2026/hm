@@ -43,7 +43,9 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
     this.state = { hasError: false };
   }
   static getDerivedStateFromError() { return { hasError: true }; }
-  componentDidCatch() {
+  componentDidCatch(error: any, errorInfo: any) {
+    // Log error for debugging — in production, send to a monitoring service
+    console.error('ErrorBoundary caught:', error, errorInfo);
   }
   render() {
     if (this.state.hasError) {
@@ -123,7 +125,25 @@ const ScrollToTop = () => {
   return null;
 };
 
+import MobileBottomNav from "./components/MobileBottomNav";
+import AppSplashScreen from "./components/AppSplashScreen";
+
 const App = () => {
+  const [showSplash, setShowSplash] = React.useState(true);
+
+  useEffect(() => {
+    // Check if session has splash shown
+    const splashShown = sessionStorage.getItem('saada_splash_shown');
+    if (splashShown) {
+      setShowSplash(false);
+    }
+  }, []);
+
+  const handleSplashFinish = () => {
+    setShowSplash(false);
+    sessionStorage.setItem('saada_splash_shown', 'true');
+  };
+
   useEffect(() => {
     try {
       const CURRENT_VERSION = "4.0.0-shield-stable";
@@ -158,6 +178,7 @@ const App = () => {
         <HelmetProvider>
           <QueryClientProvider client={queryClient}>
             <TooltipProvider>
+              {showSplash && <AppSplashScreen onFinish={handleSplashFinish} />}
               <Toaster />
               <Sonner position="bottom-right" richColors />
               <BrowserRouter>
@@ -168,6 +189,7 @@ const App = () => {
                   <ThemeToggle />
                   <WhatsAppWidget />
                   <AnalyticsTracker />
+                  <MobileBottomNav />
                   <Routes>
                     <Route path="/" element={<Index />} />
                     <Route path="/admin" element={<AdminDashboard />} />

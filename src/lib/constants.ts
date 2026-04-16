@@ -16,6 +16,7 @@ export const SITE_CONFIG = {
         facebook: "https://www.facebook.com/share/1HpTkYTqRf/",
         instagram: "https://www.instagram.com/happiness.makers.20?igsh=anRnZ2Mzcmw2Ymdk"
     },
+    vatRate: 1.14,
     branches: [
         { name: "فرع الرحاب", info: "السوق القديم بجانب مكتبة الأوائل", phone: "01050005701", map: "https://maps.app.goo.gl/atDFtjPyawmjVF2f7" },
         { name: "فرع المهندسين", info: "تقاطع شارع شهاب مع شارع سوريا", phone: "01050663537", map: "https://maps.app.goo.gl/n8ZGWeHtxUBbdA497" },
@@ -25,4 +26,30 @@ export const SITE_CONFIG = {
         { name: "فرع مصر الجديدة", info: "24 شارع الميرغني امام النادي", phone: "01050006946", map: "https://maps.app.goo.gl/52u6nSZCBhzigG2v5" },
         { name: "فرع اسكندرية", info: "سان ستيفانو ممر عمارة الاوقاف", phone: "01050663539", map: "https://maps.app.goo.gl/GzcPvygy4inj9dbj7" },
     ]
+};
+
+export const CAT_HIERARCHY: Record<string, any[]> = {
+    'chocolate': [
+        { id: 'milk-chocolate', label: 'ميلك', icon: '🥛' },
+        { id: 'dark-chocolate', label: 'دارك', icon: '🌑' },
+        { id: 'white-chocolate', label: 'وايت', icon: '☁️' },
+        { id: 'stevia-chocolate', label: 'ستيفيا', icon: '🌿' },
+        { id: 'kunafa-chocolate', label: 'كنافة', icon: '🧁' },
+        { id: 'nuts-chocolate', label: 'مكسرات', icon: '🥜' },
+    ],
+    'coffee': [
+        { id: 'instant-coffee', label: 'سريعة التحضير', icon: '⚡' },
+        { id: 'turkish-coffee', label: 'قهوة تركية', icon: '🫖' },
+        { id: 'espresso', label: 'اسبريسو', icon: '☕' },
+        { id: 'decaf', label: 'ديكاف', icon: '💤' },
+    ],
+    'dietary': [
+        { id: 'free-sugar', label: 'فري شوجر', icon: '🚫🍬' },
+        { id: 'free-gluten', label: 'فري جلوتين', icon: '🌾❌' },
+    ],
+    'cosmetics': [
+        { id: 'skincare', label: 'العناية بالبشرة', icon: '🧴' },
+        { id: 'haircare', label: 'العناية بالشعر', icon: '💇' },
+        { id: 'car', label: 'السيارة', icon: '🚗' },
+    ],
 };

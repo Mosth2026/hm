@@ -1,9 +1,10 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Heart, Plus, Star, Share2, MessageCircle, Copy } from "lucide-react";
+import { ShoppingCart, Heart, Plus, Star, Share2, MessageCircle, Copy, Check } from "lucide-react";
 import { useCart } from "@/hooks/use-cart";
 import { toast } from "sonner";
-import { cn, cleanProductName, getShareUrl, copyToClipboard, formatPrice } from "@/lib/utils";
+import { cn, cleanProductName, getShareUrl, copyToClipboard, formatPrice, getWhatsAppLink } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,6 +48,7 @@ const ProductCard = ({
   stock = 0
 }: ProductCardProps) => {
   const addItem = useCart((state) => state.addItem);
+  const [isAdding, setIsAdding] = useState(false);
 
   const showNew = isNew || is_new;
   const showSale = isOnSale || is_on_sale;
@@ -84,6 +86,9 @@ const ProductCard = ({
       },
       style: { background: 'var(--primary)', color: 'white', borderRadius: '1rem', cursor: 'pointer' }
     });
+
+    setIsAdding(true);
+    setTimeout(() => setIsAdding(false), 1200);
   };
 
 
@@ -91,8 +96,18 @@ const ProductCard = ({
   const shareToWhatsApp = () => {
     const url = getShareUrl('product', id);
     const cleanName = cleanProductName(name);
-    const message = encodeURIComponent(`شوف المنتج الرائع ده من صناع السعادة: ${cleanName}\n${url}`);
-    window.open(`https://wa.me/?text=${message}`, '_blank');
+    const messageText = `شوف المنتج الرائع ده من صناع السعادة: ${cleanName}\n${url}`;
+    const waLink = getWhatsAppLink('', messageText);
+    
+    const start = Date.now();
+    window.location.href = waLink;
+    
+    setTimeout(() => {
+      if (Date.now() - start < 1000) {
+        const message = encodeURIComponent(messageText);
+        window.open(`https://wa.me/?text=${message}`, '_blank');
+      }
+    }, 500);
   };
 
   const handleShare = async (e: React.MouseEvent) => {
@@ -201,10 +216,15 @@ const ProductCard = ({
           <Button
             size="icon"
             variant="ghost"
-            className="h-10 w-10 bg-white/80 backdrop-blur-md rounded-full shadow-xl text-primary hover:bg-secondary hover:text-white transition-colors"
+            className={cn(
+              "h-10 w-10 rounded-full shadow-xl transition-all duration-300",
+              isAdding
+                ? "bg-green-500 text-white scale-110"
+                : "bg-white/80 backdrop-blur-md text-primary hover:bg-secondary hover:text-white"
+            )}
             onClick={handleAddToCart}
           >
-            <Plus className="h-5 w-5" />
+            {isAdding ? <Check className="h-5 w-5 animate-in zoom-in-50 duration-200" /> : <Plus className="h-5 w-5" />}
           </Button>
         </div>
       </div>
@@ -217,10 +237,14 @@ const ProductCard = ({
             {category.split(',').map((catName, idx) => {
               const ids = categoryId.split(',');
               const catId = ids[idx] || ids[0];
+              // CLEAN: Remove internal metadata like [IDS:CHOCOLATE]
+              const cleanCatName = catName.replace(/\[.*?\]/g, "").trim();
+              if (!cleanCatName) return null;
+              
               return (
                 <Link key={idx} to={`/categories/${catId.trim()}`}>
                   <span className="text-[10px] uppercase tracking-wider font-black text-secondary bg-secondary/10 px-2 py-0.5 rounded-md">
-                    {catName.trim()}
+                    {cleanCatName}
                   </span>
                 </Link>
               );
@@ -253,10 +277,18 @@ const ProductCard = ({
 
           <Button
             size="icon"
-            className="bg-primary hover:bg-secondary text-white rounded-lg md:rounded-xl h-8 w-8 md:h-10 md:w-10 shadow-lg shadow-primary/10 transition-all active:scale-95 group/btn"
+            className={cn(
+              "text-white rounded-lg md:rounded-xl h-8 w-8 md:h-10 md:w-10 shadow-lg transition-all duration-300 active:scale-95 group/btn",
+              isAdding
+                ? "bg-green-500 hover:bg-green-600 shadow-green-500/30 scale-110"
+                : "bg-primary hover:bg-secondary shadow-primary/10"
+            )}
             onClick={handleAddToCart}
           >
-            <ShoppingCart className="h-3.5 w-3.5 md:h-4 md:w-4 group-hover/btn:animate-bounce" />
+            {isAdding
+              ? <Check className="h-3.5 w-3.5 md:h-4 md:w-4 animate-in zoom-in-50 duration-200" />
+              : <ShoppingCart className="h-3.5 w-3.5 md:h-4 md:w-4 group-hover/btn:animate-bounce" />
+            }
           </Button>
         </div>
       </div>

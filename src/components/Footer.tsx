@@ -2,6 +2,7 @@
 import { Link } from "react-router-dom";
 import { Facebook, Instagram, Twitter, Mail, Phone, MapPin, ExternalLink, ShieldCheck, MessageCircle } from "lucide-react";
 import { SITE_CONFIG } from "@/lib/constants";
+import { getWhatsAppLink } from "@/lib/utils";
 
 const Footer = () => {
   return (
@@ -109,7 +110,21 @@ const Footer = () => {
                 </div>
               </div>
 
-              <a href={`https://wa.me/${SITE_CONFIG.whatsappNumber}`} target="_blank" rel="noopener noreferrer" className="flex flex-col md:flex-row items-center md:items-start gap-4 group/wa transition-transform hover:translate-x-2">
+              <a 
+                href={`https://wa.me/${SITE_CONFIG.whatsappNumber}`} 
+                onClick={(e) => {
+                  e.preventDefault();
+                  const waLink = getWhatsAppLink(SITE_CONFIG.whatsappNumber, 'مرحباً صناع السعادة، أود الاستفسار عن منتجاتكم');
+                  const start = Date.now();
+                  window.location.href = waLink;
+                  setTimeout(() => {
+                    if (Date.now() - start < 1000) {
+                      window.open(`https://wa.me/${SITE_CONFIG.whatsappNumber}`, '_blank');
+                    }
+                  }, 500);
+                }}
+                className="flex flex-col md:flex-row items-center md:items-start gap-4 group/wa transition-transform hover:translate-x-2 cursor-pointer"
+              >
                 <div className="h-11 w-11 md:h-12 md:w-12 rounded-2xl bg-[#25D366]/10 border border-[#25D366]/20 flex items-center justify-center shrink-0 text-[#25D366]">
                   <MessageCircle className="h-5 w-5 md:h-6 md:w-6" />
                 </div>

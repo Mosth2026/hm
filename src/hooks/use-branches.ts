@@ -5,6 +5,7 @@ export interface Branch {
   id: number;
   name: string;
   whatsapp_number: string;
+  address?: string;
   latitude: number;
   longitude: number;
   is_active: boolean;
@@ -89,7 +90,12 @@ export const useBranches = () => {
     if (branches.length > 0) {
       const saved = localStorage.getItem('selected_branch');
       if (saved) {
-        setSelectedBranch(JSON.parse(saved));
+        try {
+          setSelectedBranch(JSON.parse(saved));
+        } catch (e) {
+          console.error("Malformed branch in storage", e);
+          localStorage.removeItem('selected_branch');
+        }
       }
       // Automatic detection removed to keep branches in background as requested
     }

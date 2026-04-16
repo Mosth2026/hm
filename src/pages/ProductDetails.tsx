@@ -11,7 +11,7 @@ import { useProduct } from "@/hooks/use-products";
 import { useBranchContext } from "@/context/BranchContext";
 import { useCart } from "@/hooks/use-cart";
 import { toast } from "sonner";
-import { cn, cleanImageUrl, cleanProductName, formatPrice, getShareUrl, copyToClipboard } from "@/lib/utils";
+import { cn, cleanImageUrl, cleanProductName, formatPrice, getShareUrl, copyToClipboard, getWhatsAppLink } from "@/lib/utils";
 import { SITE_CONFIG } from "@/lib/constants";
 import { saveOrderToDb } from "@/lib/orders";
 import { useAuth } from "@/hooks/use-auth";
@@ -70,9 +70,11 @@ const ProductDetails = () => {
   }
 
   const isOutOfStock = product && product.stock <= 0;
-  const isInternalItem = product && product.category_id === 'no-tax';
+  const isDraft = product && product.description?.includes('[DRAFT]');
+  const hasNoImage = product && (!product.image || product.image === SITE_CONFIG.placeholderImage || product.image.includes('unsplash.com'));
+  const isInvalidPrice = product && Number(product.price) <= 0;
 
-  if (error || !product || ((isOutOfStock || isInternalItem) && !isAdmin)) {
+  if (error || !product || ((isOutOfStock || isDraft || hasNoImage || isInvalidPrice) && !isAdmin)) {
     return (
       <div className="min-h-screen flex flex-col font-tajawal rtl bg-white">
         <Header />
@@ -322,7 +324,16 @@ const ProductDetails = () => {
                         `📄 *إضغط لعرض الفاتورة:* \n\n${invoiceUrl}\n\n` +
                         `مرحباً صناع السعادة، أود استلام هذا المنتج.`
                       );
-                      window.open(`https://wa.me/${SITE_CONFIG.whatsappNumber}?text=${message}`, '_blank');
+                      const waLink = getWhatsAppLink(SITE_CONFIG.whatsappNumber, decodeURIComponent(message));
+                      
+                      const start = Date.now();
+                      window.location.href = waLink;
+                      
+                      setTimeout(() => {
+                        if (Date.now() - start < 1000) {
+                          window.open(`https://wa.me/${SITE_CONFIG.whatsappNumber}?text=${message}`, '_blank');
+                        }
+                      }, 500);
                     }}
                     variant="outline"
                     className="flex-grow sm:flex-grow-0 border-[#25D366] text-[#25D366] hover:bg-[#25D366] hover:text-white h-14 rounded-xl font-bold flex items-center justify-center gap-2"
@@ -393,8 +404,9 @@ const ProductDetails = () => {
                             if (!product) return;
                             const url = getShareUrl('product', product.id);
                             const cleanName = cleanProductName(product.name);
-                            const message = encodeURIComponent(`شوف المنتج الرائع ده من صناع السعادة: ${cleanName}\n${url}`);
-                            window.open(`https://wa.me/?text=${message}`, '_blank');
+                            const message = `شوف المنتج الرائع ده من صناع السعادة: ${cleanName}\n${url}`;
+                            const waLink = getWhatsAppLink("", message); // No phone for general share
+                            window.open(waLink, '_blank');
                           }}
                           className="rounded-xl gap-2 cursor-pointer focus:bg-emerald-600 focus:text-white font-bold py-3 text-emerald-600"
                         >
@@ -419,10 +431,17 @@ const ProductDetails = () => {
                     onClick={() => {
                       if (!product) return;
                       const cleanName = cleanProductName(product.name);
-                      const message = encodeURIComponent(
-                        `مرحباً صناع السعادة، أود الاستفسار عن منتج: ${cleanName}\nالرابط: ${window.location.href}`
-                      );
-                      window.open(`https://wa.me/${SITE_CONFIG.whatsappNumber}?text=${message}`, '_blank');
+                      const msg = `مرحباً صناع السعادة، أود الاستفسار عن منتج: ${cleanName}\nالرابط: ${window.location.href}`;
+                      const waLink = getWhatsAppLink(SITE_CONFIG.whatsappNumber, msg);
+                      
+                      const start = Date.now();
+                      window.location.href = waLink;
+                      
+                      setTimeout(() => {
+                        if (Date.now() - start < 1000) {
+                          window.open(`https://wa.me/${SITE_CONFIG.whatsappNumber}?text=${encodeURIComponent(msg)}`, '_blank');
+                        }
+                      }, 500);
                     }}
                     className="p-6 bg-emerald-50 rounded-[2.5rem] border border-emerald-100 flex flex-col md:flex-row items-center gap-6 group hover:shadow-xl hover:shadow-emerald-500/10 transition-all cursor-pointer"
                   >

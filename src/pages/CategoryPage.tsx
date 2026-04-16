@@ -1,55 +1,178 @@
-import { useState, useMemo } from "react";
-import { useParams } from "react-router-dom";
+import React, { useEffect, useState, useMemo } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
+import { cn } from "@/lib/utils";
+import { 
+  LayoutGrid, 
+  ChevronRight, 
+  Loader2, 
+  SlidersHorizontal,
+  ChevronLeft,
+  ArrowRight,
+  ShoppingBag,
+  Sparkles
+} from "lucide-react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import { Button } from "@/components/ui/button";
 import ProductCard from "@/components/ProductCard";
+import CategoryCard from "@/components/CategoryCard";
+import SocialBanner from "@/components/SocialBanner";
 import { Helmet } from "react-helmet-async";
-import { useProducts } from "@/hooks/use-products";
-import { useBranchContext } from "@/context/BranchContext";
-import { Loader2, Sparkles, Filter, Share2, MessageCircle, Copy } from "lucide-react";
-import { toast } from "sonner";
-import { cleanImageUrl, copyToClipboard } from "@/lib/utils";
-import { SITE_CONFIG } from "@/lib/constants";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
-const categoryNames: Record<string, string> = {
-  chocolate: "مختارات الشوكولاتة",
-  coffee: "عالم القهوة المختصة",
-  cookies: "عالم الكوكيز والبسكويت",
-  candy: "عالم الكاندي",
-  snacks: "سناكس السعادة",
-  drinks: "المشروبات المنعشة",
-  cosmetics: "مستحضرات التجميل",
-  gifts: "صناديق الهدايا",
+// Arabic normalization for robust keyword matching
+const normArabic = (input: string) => {
+  let text = (input || "").trim().toLowerCase();
+  text = text.replace(/[أإآ]/g, 'ا');
+  text = text.replace(/ة/g, 'ه');
+  text = text.replace(/ى/g, 'ي');
+  return text;
 };
 
 const CategoryPage = () => {
-  const { categoryId } = useParams<{ categoryId: string }>();
-  const { selectedBranch } = useBranchContext();
-  const { data: products, isLoading, error } = useProducts(categoryId, false, selectedBranch?.id);
-  const [sortBy, setSortBy] = useState<string>("newest");
+  const { categoryId } = useParams();
+  const navigate = useNavigate();
+  const [products, setProducts] = useState<any[]>([]);
+  const [category, setCategory] = useState<any>(null);
+  const [subCategories, setSubCategories] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [sortBy, setSortBy] = useState("newest");
+  const [categoryPath, setCategoryPath] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!categoryId) return;
+      setIsLoading(true);
+      window.scrollTo(0, 0);
+
+      try {
+        // 1. Fetch ALL categories for robustness and in-memory processing
+        const { data: allCats, error: catError } = await supabase
+          .from("categories")
+          .select("*");
+        
+        if (catError) throw catError;
+
+        const currentCat = allCats?.find(c => c.id === categoryId);
+        if (!currentCat) {
+          setIsLoading(false);
+          return;
+        }
+        setCategory(currentCat);
+
+        // 2. Build breadcrumbs (path) in-memory
+        const path = [];
+        let parentId = currentCat.parent_id;
+        while (parentId) {
+          const parent = allCats?.find(c => c.id === parentId);
+          if (parent) {
+            path.unshift(parent);
+            parentId = parent.parent_id;
+          } else {
+            break;
+          }
+        }
+        setCategoryPath(path);
+
+        // 3. Subcategories (excluding accounting ones)
+        const subs = allCats?.filter(c => 
+          c.parent_id === categoryId && 
+          c.id !== "no-tax" && 
+          !(c.label || "").toLowerCase().includes("ضريبة")
+        ).sort((a, b) => (a.order_index || 0) - (b.order_index || 0)) || [];
+        
+        setSubCategories(subs);
+
+        // 4. Identify all descendant IDs for product fetching
+        const allDescendantIds = [categoryId];
+        const getChildren = (parentIds: string[]) => {
+          const children = allCats?.filter(c => c.parent_id && parentIds.includes(c.parent_id)) || [];
+          if (children.length > 0) {
+            const ids = children.map(c => c.id);
+            allDescendantIds.push(...ids);
+            getChildren(ids);
+          }
+        };
+        getChildren([categoryId]);
+
+        // 5. Fetch products for ALL identified categories
+        // We'll fetch all products that EITHER have category_id in descendants 
+        // OR have any of the descendant IDs in their description as [ADD_CAT:id]
+        const tryFetchProds = async (useIsAvailable: boolean) => {
+          let query = supabase
+            .from("products")
+            .select("*")
+            // ULTRA-STRICT: Only show products with actual images
+            .not("image", "is", null)
+            .neq("image", "")
+            .neq("image", "null")
+            .neq("image", "undefined")
+            .not("image", "ilike", "%placeholder%");
+          
+          if (useIsAvailable) {
+            query = query.eq("is_available", true);
+          }
+
+          // Fetch more to filter in-memory since .or() with complex arrays is tricky for secondary tags
+          // This ensures we get both primary and secondary matches
+          const { data, error } = await query;
+          if (error) return { data, error };
+
+          // Filter in-memory: Match primary ID OR secondary tag OR category label in product name
+          const matched = (data || []).filter(p => {
+            const isPrimaryMatch = allDescendantIds.includes(p.category_id);
+            const isSecondaryMatch = allDescendantIds.some(id =>
+               p.description && p.description.includes(`[ADD_CAT:${id}]`)
+            );
+            // Keyword match: if the product name contains any descendant category label
+            // This ensures products like "كيك شوكولاتة" appear in the "كيك" category
+            const productNameNorm = normArabic(p.name || '');
+            const isNameMatch = allDescendantIds.some(id => {
+              const cat = allCats?.find(c => c.id === id);
+              if (!cat) return false;
+              const label = normArabic((cat.label || '').replace(/\[.*?\]/g, '').trim());
+              // Only match if label is meaningful (>=2 chars) to avoid false matches
+              return label.length >= 2 && productNameNorm.includes(label);
+            });
+            return isPrimaryMatch || isSecondaryMatch || isNameMatch;
+          });
+
+          return { data: matched, error: null };
+        };
+
+        let { data: prodData, error: prodError } = await tryFetchProds(true);
+        if (prodError && prodError.message.includes("is_available")) {
+          const secondTry = await tryFetchProds(false);
+          prodData = secondTry.data;
+        }
+
+        setProducts(prodData || []);
+      } catch (error) {
+        console.error("Category data fetch error:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [categoryId]);
 
   const sortedProducts = useMemo(() => {
-    if (!products) return [];
     let result = [...products];
-    if (sortBy === "price-asc") {
-      result.sort((a, b) => a.price - b.price);
-    } else if (sortBy === "price-desc") {
-      result.sort((a, b) => b.price - a.price);
+    if (sortBy === "price-low") {
+      result.sort((a, b) => (a.price || 0) - (b.price || 0));
+    } else if (sortBy === "price-high") {
+      result.sort((a, b) => (b.price || 0) - (a.price || 0));
     } else {
-      // Default: newest (assuming ID or created_at corresponds to newest)
-      result.sort((a, b) => b.id - a.id);
+      result.sort((a, b) => {
+        const dateA = new Date(a.created_at || 0).getTime();
+        const dateB = new Date(b.created_at || 0).getTime();
+        return dateB - dateA;
+      });
     }
     return result;
   }, [products, sortBy]);
 
-  const categoryName = categoryId ? categoryNames[categoryId] || categoryId : "";
+  const categoryName = category?.label || categoryId || "";
 
   if (isLoading) {
     return (
@@ -57,7 +180,7 @@ const CategoryPage = () => {
         <Header />
         <main className="flex-grow flex flex-col items-center justify-center gap-4">
           <Loader2 className="h-12 w-12 animate-spin text-secondary" />
-          <p className="text-primary font-bold animate-pulse">ننتقي لك أفضل مختارات {categoryName}...</p>
+          <p className="text-primary font-black animate-pulse">ننتقي لك أفضل مختارات {categoryName}...</p>
         </main>
         <Footer />
       </div>
@@ -69,130 +192,127 @@ const CategoryPage = () => {
       <Helmet>
         <title>{categoryName} | صناع السعادة</title>
         <meta name="description" content={`استكشف تشكيلتنا الحصرية من ${categoryName} الفاخرة في متجر صناع السعادة.`} />
-
-        {/* Open Graph Tags */}
-        <meta property="og:title" content={`${categoryName} | صناع السعادة`} />
-        <meta property="og:description" content={`استكشف تشكيلتنا الحصرية من ${categoryName} الفاخرة في متجر صناع السعادة.`} />
-        <meta property="og:image" content={products && products.length > 0 ? cleanImageUrl(products[0].image) : "https://happinessmakers.online/assets/logo.png"} />
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content={`${SITE_CONFIG.siteUrl}${window.location.pathname}`} />
-
-        {/* Twitter Card Tags */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={`${categoryName} | صناع السعادة`} />
-        <meta name="twitter:description" content={`استكشف تشكيلتنا الحصرية من ${categoryName} الفاخرة في متجر صناع السعادة.`} />
-        <meta name="twitter:image" content={products && products.length > 0 ? cleanImageUrl(products[0].image) : "https://happinessmakers.online/assets/logo.png"} />
       </Helmet>
-      <div className="min-h-screen flex flex-col font-tajawal rtl bg-white">
-        <Header />
-        <main className="flex-grow pt-32 md:pt-40">
 
-          {/* Page Header */}
-          <div className="relative py-12 md:py-20 bg-primary/5 overflow-hidden">
-            <div className="absolute top-0 right-0 w-1/3 h-full bg-secondary/5 -skew-x-12 translate-x-1/2 pointer-events-none" />
-            <div className="container mx-auto px-4 md:px-8 relative z-10">
-              <div className="max-w-4xl mx-auto text-center space-y-4 md:space-y-6">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/10 text-secondary text-[10px] font-black uppercase tracking-widest mx-auto">
-                  <Sparkles className="h-3 w-3" />
-                  Elite Collection
+      <div className="min-h-screen flex flex-col bg-[#fdfdfd] font-tajawal rtl">
+        <Header />
+
+        <main className="flex-grow">
+          {/* Breadcrumbs - Clean App Style */}
+          <div className="container mx-auto px-6 pt-8">
+            <nav className="flex items-center gap-2 text-xs font-bold text-muted-foreground/50 overflow-x-auto no-scrollbar whitespace-nowrap">
+              <Link to="/" className="hover:text-primary transition-colors">الرئيسية</Link>
+              {categoryPath.map((pathItem) => (
+                <React.Fragment key={pathItem.id}>
+                  <ChevronLeft className="h-3 w-3 opacity-30" />
+                  <Link to={`/categories/${pathItem.id}`} className="hover:text-primary transition-colors">
+                    {pathItem.label.replace(/\[.*?\]/g, "").trim()}
+                  </Link>
+                </React.Fragment>
+              ))}
+              <ChevronLeft className="h-3 w-3 opacity-30" />
+              <span className="text-secondary font-black truncate">{categoryName}</span>
+            </nav>
+          </div>
+
+          {/* Transparent App-Style Header & Hero */}
+          <section className="relative pt-12 pb-12 overflow-hidden bg-[#fdfdfd]">
+            <div className="container mx-auto px-6 relative z-10">
+              {/* Main Category Header - Centered as per App Parity */}
+              <div className="flex flex-col items-center justify-center text-center space-y-6 animate-in fade-in slide-in-from-top-8 duration-1000">
+                <div className="flex flex-col items-center gap-5">
+                  <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-secondary text-white text-[10px] font-black uppercase tracking-widest mx-auto shadow-xl shadow-secondary/20">
+                    Elite Collection
+                  </div>
                 </div>
-                <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-primary leading-tight">
+                
+                <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-primary leading-tight tracking-tighter drop-shadow-sm">
                   {categoryName}
                 </h1>
-                <p className="text-muted-foreground text-lg md:text-xl font-medium max-w-3xl mx-auto leading-relaxed">
-                  استكشف عالم الجودة والمذاق الاستثنائي مع تشكيلتنا المختارة بعناية من {categoryName}.
+                
+                <div className="flex items-center gap-3 bg-primary/[0.03] px-6 py-2.5 rounded-2xl border border-primary/5">
+                  <ShoppingBag className="h-4 w-4 text-secondary" />
+                  <span className="font-bold text-sm text-primary/70 italic">عروض حصرية: {products.length} منتج فاخر</span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Background Texture for Luxury Feel */}
+            <div className="absolute top-0 right-0 w-full h-full opacity-[0.03] pointer-events-none -z-10"
+              style={{ backgroundImage: 'radial-gradient(#222319 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+          </section>
+          {/* Subcategories Grid - Styled as 'Browse our categories' from app */}
+        {subCategories.length > 0 && (
+          <div className="bg-gradient-to-b from-white to-gray-50/50 py-12 md:py-20 border-b border-primary/5">
+            <div className="container mx-auto px-4">
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12">
+                <div className="space-y-2">
+                  <span className="text-secondary font-black uppercase tracking-[0.3em] text-[10px]">
+                    Explore Sub-Collections
+                  </span>
+                  <h2 className="text-4xl md:text-5xl font-black text-primary leading-tight">
+                    تصفح أقسامنا
+                  </h2>
+                </div>
+                <p className="text-muted-foreground text-sm font-bold md:max-w-md md:text-left">
+                  اكتشف المزيد من الخيارات الفاخرة المنسقة خصيصاً لك تحت قسم {categoryName}.
                 </p>
+              </div>
+
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-10">
+                {subCategories.map((sub, idx) => (
+                  <div
+                    key={sub.id}
+                    className="animate-in fade-in slide-in-from-bottom-8 duration-1000"
+                    style={{ animationDelay: `${idx * 100}ms` }}
+                  >
+                    <CategoryCard
+                      id={sub.id}
+                      label={sub.label.replace(/\[.*?\]/g, "").trim()}
+                      icon={sub.icon}
+                      childrenCount={0} // No sub-sub categories in this simplified view
+                      variant="sub"
+                    />
+                  </div>
+                ))}
+                
+                {/* Special 'Shop All' for current category products */}
+                <CategoryCard
+                  id={categoryId}
+                  label={`كل ${categoryName}`}
+                  icon="🛍️"
+                  isAll={true}
+                  variant="root"
+                />
               </div>
             </div>
           </div>
-
-          <section className="py-12 md:py-16">
+        )}
+  <section className="py-12 md:py-16" id="products">
             <div className="container mx-auto px-4 md:px-8">
-              {/* Toolbar */}
-              <div className="flex items-center justify-between mb-12 py-4 border-b border-primary/5">
-                <p className="text-sm font-bold text-muted-foreground italic">عرض {products?.length || 0} منتج فاخر</p>
-                <div className="flex gap-2">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/5 hover:bg-primary/10 transition-colors text-sm font-black text-primary h-10"
-                      >
-                        <Share2 className="h-4 w-4" />
-                        مشاركة القسم
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl border-primary/10 shadow-2xl font-tajawal rtl">
-                      <DropdownMenuItem
-                        onClick={async () => {
-                          const url = window.location.href;
-                          if (navigator.share) {
-                            try {
-                              await navigator.share({
-                                title: categoryName,
-                                text: `استكشف تشكيلة ${categoryName} الرائعة من صناع السعادة!`,
-                                url: url,
-                              });
-                            } catch (err: any) {
-                              if (err.name !== 'AbortError') {
-                                const success = await copyToClipboard(url);
-                                if (success) toast.success("تم نسخ رابط القسم! يمكنك مشاركته الآن.");
-                              }
-                            }
-                          } else {
-                            const success = await copyToClipboard(url);
-                            if (success) toast.success("تم نسخ رابط القسم! يمكنك مشاركته الآن.");
-                          }
-                        }}
-                        className="rounded-xl gap-2 cursor-pointer focus:bg-primary focus:text-white font-bold py-3"
-                      >
-                        <Copy className="h-4 w-4" />
-                        مشاركة كـ رابط
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => {
-                          const url = window.location.href;
-                          const message = encodeURIComponent(`شوف القسم الرائع ده من صناع السعادة: ${categoryName}\n${url}`);
-                          window.open(`https://wa.me/?text=${message}`, '_blank');
-                        }}
-                        className="rounded-xl gap-2 cursor-pointer focus:bg-emerald-600 focus:text-white font-bold py-3 text-emerald-600"
-                      >
-                        <MessageCircle className="h-4 w-4" />
-                        واتسـاب ويب
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/5 hover:bg-primary/10 transition-colors text-sm font-black text-primary h-10">
-                        <Filter className="h-4 w-4" />
-                        {sortBy === "newest" ? "الأحدث" : sortBy === "price-asc" ? "الأقل سعراً" : "الأعلى سعراً"}
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl border-primary/10 shadow-2xl font-tajawal rtl">
-                      <DropdownMenuItem onClick={() => setSortBy("newest")} className="rounded-xl gap-2 cursor-pointer focus:bg-primary focus:text-white font-bold py-3">
-                        ترتيب حسب: الأحدث
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSortBy("price-asc")} className="rounded-xl gap-2 cursor-pointer focus:bg-primary focus:text-white font-bold py-3">
-                        السعر: من الأقل للأعلى
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSortBy("price-desc")} className="rounded-xl gap-2 cursor-pointer focus:bg-primary focus:text-white font-bold py-3">
-                        السعر: من الأعلى للأقل
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+              <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12 py-4 border-b border-primary/5 px-6">
+                <div className="flex items-center gap-3">
+                  <ShoppingBag className="h-5 w-5 text-secondary" />
+                  <p className="text-sm font-bold text-muted-foreground italic">عروض حصرية: {products.length} منتج فاخر</p>
+                </div>
+                
+                <div className="flex items-center gap-4 w-full md:w-auto">
+                  <select 
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="flex-grow md:flex-none h-11 bg-white border border-primary/10 rounded-xl px-4 text-xs font-bold text-primary outline-none focus:ring-2 focus:ring-secondary/20"
+                  >
+                    <option value="newest">الأحدث وصولا</option>
+                    <option value="price-low">السعر: الأقل للأعلى</option>
+                    <option value="price-high">السعر: الأعلى للأقل</option>
+                  </select>
                 </div>
               </div>
 
-              {error ? (
-                <div className="text-center py-24 bg-destructive/5 rounded-[3rem] border border-destructive/10">
-                  <p className="text-xl font-black text-destructive">عذراً، حدث خطأ أثناء تحميل المنتجات.</p>
-                </div>
-              ) : sortedProducts && sortedProducts.length > 0 ? (
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
+              {sortedProducts.length > 0 ? (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 lg:gap-12">
                   {sortedProducts.map((product, idx) => (
-                    <div
+                    <div 
                       key={product.id}
                       className="animate-in fade-in slide-in-from-bottom-8 duration-500 fill-mode-both"
                       style={{ animationDelay: `${idx * 50}ms` }}
@@ -206,13 +326,22 @@ const CategoryPage = () => {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-32 bg-primary/5 rounded-[3rem] border-2 border-dashed border-primary/10">
-                  <p className="text-2xl font-black text-primary/30 italic">لا توجد منتجات متاحة حالياً في هذه القائمة.</p>
+                <div className="text-center py-32 bg-primary/[0.02] rounded-[3rem] border-2 border-dashed border-primary/10">
+                  <p className="text-2xl font-black text-primary/30 italic">لا توجد منتجات متاحة حاليا في هذه القائمة.</p>
+                  <button 
+                    onClick={() => navigate(-1)}
+                    className="mt-6 px-6 py-2 bg-primary text-white rounded-xl font-black hover:bg-black transition-colors text-sm"
+                  >
+                    العودة للخلف
+                  </button>
                 </div>
               )}
             </div>
           </section>
+
+          <SocialBanner />
         </main>
+
         <Footer />
       </div>
     </>
@@ -220,4 +349,3 @@ const CategoryPage = () => {
 };
 
 export default CategoryPage;
-
