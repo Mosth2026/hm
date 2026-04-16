@@ -48,13 +48,21 @@ interface DashboardDialogsProps {
     bulkCategoryId: string;
     setBulkCategoryId: (id: string) => void;
     handleBulkCategoryUpdate: () => void;
+
+    // Coupon Dialog
+    isCouponDialogOpen: boolean;
+    setIsCouponDialogOpen: (open: boolean) => void;
+    newCoupon: { code: string; discount_type: string; discount_value: number };
+    setNewCoupon: (c: any) => void;
+    handleCreateCoupon: () => void;
 }
 
-const DashboardDialogs: React.FC<DashboardDialogsProps> = ({ 
+const DashboardDialogs: React.FC<DashboardDialogsProps> = ({
     isEditDialogOpen, setIsEditDialogOpen, currentProduct, setCurrentProduct, handleSave, handleImageUpload, isUploading, categories,
     isCropperOpen, setIsCropperOpen, tempImageUrl, handleCropComplete, handleSkip,
     isLifecycleOpen, setIsLifecycleOpen, lifecycleProduct, lifecycleData, lifecycleLoading,
-    isBulkCategoryOpen, setIsBulkCategoryOpen, bulkCategoryId, setBulkCategoryId, handleBulkCategoryUpdate
+    isBulkCategoryOpen, setIsBulkCategoryOpen, bulkCategoryId, setBulkCategoryId, handleBulkCategoryUpdate,
+    isCouponDialogOpen, setIsCouponDialogOpen, newCoupon, setNewCoupon, handleCreateCoupon
 }) => {
     return (
         <>
@@ -312,6 +320,61 @@ const DashboardDialogs: React.FC<DashboardDialogsProps> = ({
                     <DialogFooter className="gap-3 sm:gap-0 mt-4">
                         <Button variant="outline" onClick={() => setIsBulkCategoryOpen(false)} className="flex-1 h-14 rounded-2xl font-black border-gray-100 text-gray-400">إلغاء</Button>
                         <Button onClick={handleBulkCategoryUpdate} disabled={!bulkCategoryId} className="flex-[2] h-14 rounded-2xl font-black bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl shadow-indigo-200">تحديث الآن</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Coupon Dialog */}
+            <Dialog open={isCouponDialogOpen} onOpenChange={setIsCouponDialogOpen}>
+                <DialogContent className="sm:max-w-md bg-white rounded-3xl p-8 font-tajawal border-none shadow-2xl rtl" dir="rtl">
+                    <DialogHeader className="mb-6">
+                        <DialogTitle className="text-2xl font-black text-saada-brown flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-saada-red/10 flex items-center justify-center">
+                                <Ticket className="h-5 w-5 text-saada-red" />
+                            </div>
+                            إنشاء كود خصم جديد
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-5">
+                        <div className="space-y-2">
+                            <Label className="text-saada-brown font-black">كود الخصم</Label>
+                            <input
+                                type="text"
+                                placeholder="مثلاً: SAADA20"
+                                value={newCoupon.code}
+                                onChange={e => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
+                                className="w-full h-14 px-4 rounded-2xl bg-gray-50 border border-gray-100 focus:outline-none focus:ring-2 ring-saada-red text-lg font-black tracking-widest"
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label className="text-saada-brown font-black">نوع الخصم</Label>
+                                <Select value={newCoupon.discount_type} onValueChange={v => setNewCoupon({ ...newCoupon, discount_type: v })}>
+                                    <SelectTrigger className="h-14 rounded-2xl bg-gray-50 border-none font-bold">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent className="rounded-2xl font-tajawal">
+                                        <SelectItem value="percentage">نسبة مئوية %</SelectItem>
+                                        <SelectItem value="fixed">مبلغ ثابت ج.م</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-saada-brown font-black">القيمة</Label>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    placeholder={newCoupon.discount_type === 'percentage' ? '20' : '50'}
+                                    value={newCoupon.discount_value || ''}
+                                    onChange={e => setNewCoupon({ ...newCoupon, discount_value: Number(e.target.value) })}
+                                    className="w-full h-14 px-4 rounded-2xl bg-gray-50 border border-gray-100 focus:outline-none focus:ring-2 ring-saada-red text-lg font-black"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <DialogFooter className="gap-3 mt-6">
+                        <Button variant="outline" onClick={() => setIsCouponDialogOpen(false)} className="flex-1 h-14 rounded-2xl font-black border-gray-100 text-gray-400">إلغاء</Button>
+                        <Button onClick={handleCreateCoupon} className="flex-[2] h-14 rounded-2xl font-black bg-saada-red hover:bg-black text-white shadow-xl">إنشاء الكود</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

@@ -755,6 +755,24 @@ export const useAdminDashboard = () => {
         handleDelete: async (id: number) => { if(confirm("حذف؟")) { await supabase.from('products').delete().eq('id', id); fetchProducts(); } },
         handleSave, handleImageUpload, handleCropComplete, handleSkip, handleMarkAsReceived, handleReturnOrder, handleDeleteOrder,
         handleExportData, handleBulkCategoryUpdate, fetchProductLifecycle, formatPrice, categories: dbCategories, fetchCategories,
-        handleExcelImport, handleCleanupDuplicates, handleRestoreLostImages
+        handleExcelImport, handleCleanupDuplicates, handleRestoreLostImages,
+        handleCreateCoupon: async () => {
+            const { code, discount_type, discount_value } = newCoupon;
+            if (!code.trim()) return toast.error("أدخل كود الخصم");
+            if (!discount_value || discount_value <= 0) return toast.error("أدخل قيمة صحيحة");
+            const { error } = await supabase.from('coupons').insert([{ code: code.trim().toUpperCase(), discount_type, discount_value }]);
+            if (error) return toast.error(`فشل إنشاء الكود: ${error.message}`);
+            toast.success("تم إنشاء كود الخصم");
+            setNewCoupon({ code: "", discount_type: "percentage", discount_value: 0 });
+            setIsCouponDialogOpen(false);
+            fetchCoupons();
+        },
+        handleDeleteCoupon: async (id: number) => {
+            if (!confirm("حذف كود الخصم؟")) return;
+            const { error } = await supabase.from('coupons').delete().eq('id', id);
+            if (error) return toast.error(`فشل الحذف: ${error.message}`);
+            toast.success("تم حذف الكود");
+            fetchCoupons();
+        }
     };
 };

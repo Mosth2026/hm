@@ -43,7 +43,8 @@ const AdminDashboard = () => {
         login, logout, initialize, logAction, fetchProducts, fetchOrders, handleBranchChange, toggleNotifications,
         handleEdit, handleAddNew, handleDelete, handleSave, handleImageUpload, handleCropComplete, handleSkip,
         handleMarkAsReceived, handleReturnOrder, handleDeleteOrder, handleExportData, handleBulkCategoryUpdate,
-        fetchProductLifecycle, formatPrice, categories, fetchCategories, handleExcelImport, handleCleanupDuplicates, handleRestoreLostImages
+        fetchProductLifecycle, formatPrice, categories, fetchCategories, handleExcelImport, handleCleanupDuplicates, handleRestoreLostImages,
+        handleCreateCoupon, handleDeleteCoupon
     } = useAdminDashboard();
 
     const userRole = (user?.role || 'customer') as UserRole;
@@ -361,7 +362,7 @@ const AdminDashboard = () => {
                                     </CardTitle>
                                     <CardDescription className="font-bold mt-1">إدارة العروض والخصومات النشطة</CardDescription>
                                 </div>
-                                <Button className="bg-saada-red hover:bg-black rounded-2xl h-12 px-6 font-black gap-2 transition-all">
+                                <Button onClick={() => setIsCouponDialogOpen(true)} className="bg-saada-red hover:bg-black rounded-2xl h-12 px-6 font-black gap-2 transition-all">
                                     <Plus className="h-5 w-5" />
                                     إنشاء كود جديد
                                 </Button>
@@ -387,7 +388,7 @@ const AdminDashboard = () => {
                                                     <TableCell className="font-bold">{c.discount_value}{c.discount_type === 'percentage' ? '%' : ' ج.م'}</TableCell>
                                                     <TableCell className="font-medium text-gray-500">{c.usage_count || 0}</TableCell>
                                                     <TableCell><Badge className="bg-emerald-100 text-emerald-700 font-bold">نشط</Badge></TableCell>
-                                                    <TableCell className="text-center"><Button variant="ghost" size="icon" className="text-red-500"><Trash2 className="h-4 w-4" /></Button></TableCell>
+                                                    <TableCell className="text-center"><Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDeleteCoupon(c.id)}><Trash2 className="h-4 w-4" /></Button></TableCell>
                                                 </TableRow>
                                             ))
                                         )}
@@ -548,6 +549,11 @@ const AdminDashboard = () => {
                     bulkCategoryId={bulkCategoryId}
                     setBulkCategoryId={setBulkCategoryId}
                     handleBulkCategoryUpdate={handleBulkCategoryUpdate}
+                    isCouponDialogOpen={isCouponDialogOpen}
+                    setIsCouponDialogOpen={setIsCouponDialogOpen}
+                    newCoupon={newCoupon}
+                    setNewCoupon={setNewCoupon}
+                    handleCreateCoupon={handleCreateCoupon}
                 />
             </div>
         </div>
