@@ -10,9 +10,9 @@ import { Switch } from "@/components/ui/switch";
 import { 
     Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from "@/components/ui/select";
-import { 
+import {
     ImageIcon, Upload, Camera, Save, X, Trash2, Clock, TrendingUp, Sparkles, AlertTriangle,
-    Edit, Plus, List
+    Edit, Plus, List, Ticket
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ImageCropper from "@/components/admin/ImageCropper";
