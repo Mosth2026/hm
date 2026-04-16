@@ -1,0 +1,25 @@
+# Flutter mobile app — not needed for web deployment
+happiness_makers_app/
+
+# Utility & sync scripts
+*.py
+*.mjs
+sync_categories.js
+check_*.py
+fix_*.py
+find_unclosed.py
+rewrite_lifecycle.py
+upload_*.mjs
+sync_*.mjs
+ultra_sync.mjs
+
+# SQL migration scripts (not needed at runtime)
+fix-categories-schema.sql
+fix-orders-recursion.sql
+fix-roles-policy.sql
+security-fixes.sql
+user-management-schema.sql
+
+# Misc
+*.txt
+logo.PNG
