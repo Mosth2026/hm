@@ -27,7 +27,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
         'logs', 'subscribers',
         'users', 'users.create', 'users.edit', 'users.delete',
         'branches', 'import', 'export',
-        'category-tree'
+        'category-tree', 'store-display'
     ],
     manager: [
         'dashboard', 'products', 'products.write',
@@ -37,7 +37,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
         'analytics',
         'logs',
         'import', 'export',
-        'category-tree'
+        'category-tree', 'store-display'
     ],
     employee: [
         'dashboard', 'products',

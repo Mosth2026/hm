@@ -1,12 +1,12 @@
 
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
-import { 
-    Package, 
-    ShoppingCart, 
-    Ticket, 
-    List, 
-    Users, 
+import {
+    Package,
+    ShoppingCart,
+    Ticket,
+    List,
+    Users,
     PieChart,
     RefreshCw,
     Search,
@@ -16,7 +16,8 @@ import {
     CreditCard,
     UserCog,
     MapPin,
-    Navigation
+    Navigation,
+    Monitor
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,7 @@ const AdminTabs: React.FC<AdminTabsProps> = ({
         { id: 'users', label: "إدارة المستخدمين", icon: UserCog, permission: 'users' },
         { id: 'logs', label: "السجل", icon: List, permission: 'logs' },
         { id: 'subscribers', label: "المشتركون", icon: Users, permission: 'subscribers' },
+        { id: 'store-display', label: "أوضاع العرض", icon: Monitor, permission: 'store-display' },
     ];
 
     // Filter tabs by user permissions

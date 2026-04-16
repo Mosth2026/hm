@@ -24,6 +24,7 @@ import {
 
 import { CategoryTreeManager } from "@/components/admin/CategoryTreeManager";
 import PaymentSettings from "@/components/admin/PaymentSettings";
+import LayoutSettings from "@/components/admin/LayoutSettings";
 import { hasPermission, ROLE_LABELS, ROLE_COLORS, UserRole } from "@/hooks/use-auth";
 
 const AdminDashboard = () => {
@@ -463,6 +464,8 @@ const AdminDashboard = () => {
                                 </Table>
                             </CardContent>
                         </Card>
+                    ) : activeTab === 'store-display' ? (
+                        <LayoutSettings />
                     ) : (
                         <Card className="border-none shadow-xl bg-white/70 backdrop-blur-md rounded-3xl p-20 text-center">
                             <div className="text-2xl font-black text-gray-300">هذا القسم قيد التطوير بلمساتنا السحرية...</div>
