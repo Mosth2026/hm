@@ -121,7 +121,7 @@ export const useAuth = create<AuthState>()(
                     try {
                         const { data: roleData } = await supabase
                             .from('user_roles')
-                            .select('role, branch_id, display_name, phone, custom_permissions')
+                            .select('*')
                             .eq('user_id', data.user.id)
                             .single();
                         
