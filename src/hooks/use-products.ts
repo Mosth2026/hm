@@ -72,7 +72,7 @@ const processProduct = (p: any, isAdmin: boolean): Product => {
 
 export const useProducts = (categoryId?: string, isFeatured?: boolean, branchId?: number) => {
     const { user } = useAuth();
-    const isAdmin = user?.role === 'admin' || user?.role === 'editor';
+    const isAdmin = user?.role === 'owner' || user?.role === 'manager' || user?.role === 'employee';
 
     return useQuery({
         queryKey: ['products', categoryId, isFeatured, isAdmin, branchId],
@@ -95,9 +95,12 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean, branchId?
             if (!isAdmin) {
                 query = query
                     .filter('price', 'gt', 0)
+                    .gt('stock', 0)
                     .not('image', 'is', null)
                     .neq('image', '')
-                    .not('image', 'ilike', '%unsplash.com%')
+                    .not('image', 'ilike', '%unsplash%')
+                    .not('image', 'ilike', '%1581091226825%')
+                    .not('image', 'ilike', '%placeholder%')
                     .not('description', 'ilike', '%[DRAFT]%');
             }
 
@@ -132,9 +135,11 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean, branchId?
         const price = Number(p.price) || 0;
         const stock = totalStock;
         const isDraft = (p.description || '').includes('[DRAFT]');
-        const hasImage = p.image && 
-                         p.image.trim() !== "" && 
-                         !p.image.includes('unsplash.com') && 
+        const hasImage = p.image &&
+                         p.image.trim() !== "" &&
+                         !p.image.includes('unsplash') &&
+                         !p.image.includes('1581091226825') &&
+                         !p.image.includes('placeholder') &&
                          p.image !== SITE_CONFIG.placeholderImage;
 
         // RULE: No Stock -> Hidden. No Price -> Hidden. No Image -> Hidden. Draft -> Hidden.
@@ -168,7 +173,7 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean, branchId?
 
 export const useProduct = (id: number, branchId?: number) => {
 const { user } = useAuth();
-const isAdmin = user?.role === 'admin' || user?.role === 'editor';
+const isAdmin = user?.role === 'owner' || user?.role === 'manager' || user?.role === 'employee';
 
 return useQuery({
 queryKey: ['product', id, isAdmin, branchId],

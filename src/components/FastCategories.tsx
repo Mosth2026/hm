@@ -55,8 +55,11 @@ const FastCategories: React.FC = () => {
             .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
 
           // Fetch real product previews — try featured first, then any valid image
+          const isValidImg = (url: string | null | undefined) =>
+            !!url && !url.includes('unsplash') && !url.includes('1581091226825') && !url.includes('placeholder');
+
           const enriched = await Promise.all(roots.map(async (cat) => {
-            if (cat.image) return { ...cat, preview_image: cat.image };
+            if (isValidImg(cat.image)) return { ...cat, preview_image: cat.image };
 
             const baseFilter = (q: any) => q
               .neq('image', '')

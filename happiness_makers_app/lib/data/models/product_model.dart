@@ -53,10 +53,11 @@ class ProductModel {
   bool get hasValidImage {
     final lower = image.toLowerCase();
     return image.isNotEmpty &&
-        !lower.contains('unsplash.com') &&
+        image.trim().isNotEmpty &&
+        !lower.contains('unsplash') &&
+        !lower.contains('1581091226825') &&
         !lower.contains('placeholder') &&
-        !lower.contains('generic') &&
-        image.trim().isNotEmpty;
+        !lower.contains('generic');
   }
 
   /// Dietary helpers
