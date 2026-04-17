@@ -54,24 +54,35 @@ const FastCategories: React.FC = () => {
             .filter((cat) => !cat.parent_id && !cat.id.includes("tax"))
             .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
 
-          // Fetch real product previews for each category to make it "Alive"
+          // Fetch real product previews — try featured first, then any valid image
           const enriched = await Promise.all(roots.map(async (cat) => {
             if (cat.image) return { ...cat, preview_image: cat.image };
 
-            // Try to find a real product image from this category
-            const { data: prods } = await supabase
-                .from('products')
-                .select('image')
-                .eq('category_id', cat.id)
-                .neq('image', '')
-                .not('image', 'is', null)
-                .not('image', 'ilike', '%placeholder%')
-                .limit(1);
-            
-            return {
-                ...cat,
-                preview_image: prods?.[0]?.image || null
-            };
+            const baseFilter = (q: any) => q
+              .neq('image', '')
+              .not('image', 'is', null)
+              .not('image', 'ilike', '%placeholder%')
+              .not('image', 'ilike', '%unsplash%')
+              .not('image', 'ilike', '%1581091226825%');
+
+            // 1st try: featured product in this category
+            const { data: featured } = await baseFilter(
+              supabase.from('products').select('image')
+                .or(`category_id.eq.${cat.id},category_id.ilike.%${cat.id}%,category_name.ilike.%${cat.label}%`)
+                .eq('is_featured', true)
+            ).limit(1);
+
+            if (featured?.[0]?.image) return { ...cat, preview_image: featured[0].image };
+
+            // 2nd try: any product in category or matching label
+            const { data: any } = await baseFilter(
+              supabase.from('products').select('image')
+                .or(`category_id.eq.${cat.id},category_id.ilike.%${cat.id}%,category_name.ilike.%${cat.label}%`)
+                .order('created_at', { ascending: false })
+            ).limit(3);
+
+            const validImg = any?.find(p => p.image && !p.image.includes('unsplash') && !p.image.includes('placeholder'));
+            return { ...cat, preview_image: validImg?.image || null };
           }));
 
           setCategories(enriched);
@@ -136,24 +147,31 @@ const FastCategories: React.FC = () => {
                 style={{ animationDelay: `${idx * 50}ms` }}
                 className={`${cardBg} group relative flex flex-col p-2.5 md:p-4 rounded-[1.5rem] md:rounded-[2rem] transition-all duration-500 hover:-translate-y-1 hover:shadow-xl active:scale-95 cursor-pointer border border-black/5 aspect-[4/5] overflow-hidden shadow-sm animate-in fade-in zoom-in-90 duration-500 fill-mode-both`}
               >
-                {/* Image Area */}
-                <div className="flex-grow flex items-center justify-center relative overflow-hidden py-1">
+                {/* Image Area — blur-background technique */}
+                <div className="flex-grow relative overflow-hidden">
+                  {(cat.preview_image || style.icon) && (
+                    <img
+                      src={cat.preview_image || style.icon}
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute inset-0 w-full h-full object-cover scale-125 blur-xl opacity-30 pointer-events-none"
+                    />
+                  )}
                   <img
                     src={cat.preview_image || style.icon || 'https://happinessmakers.online/assets/logo.png'}
                     alt={cat.label}
-                    className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-700 drop-shadow-xl"
+                    className="relative w-full h-full object-contain group-hover:scale-105 transition-transform duration-700 drop-shadow-xl p-1"
                     loading="lazy"
                     onError={(e) => {
-                      (e.target as HTMLImageElement).src = 'https://happinessmakers.online/assets/logo.png';
+                      const el = e.target as HTMLImageElement;
+                      if (style.icon && el.src !== style.icon) { el.src = style.icon; }
                     }}
                   />
-                  {/* Shine overlay on hover */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/0 via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full" />
                 </div>
 
-                {/* Label */}
-                <div className="mt-1.5 text-center px-1">
-                  <h3 className={`text-[9px] sm:text-[11px] md:text-sm font-black ${textClass} leading-tight line-clamp-1 tracking-tight`}>
+                {/* Label — 2 lines allowed */}
+                <div className="mt-1 text-center px-1 pb-0.5">
+                  <h3 className={`text-[9px] sm:text-[10px] md:text-xs font-black ${textClass} leading-tight line-clamp-2 tracking-tight`}>
                     {cat.label.replace(/\[.*?\]/g, '').trim()}
                   </h3>
                 </div>

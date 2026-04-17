@@ -69,6 +69,9 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
             .not("image", "is", null)
             .not("image", "ilike", "%placeholder%")
             .not("image", "ilike", "%generic%")
+            .not("image", "ilike", "%unsplash%")
+            .not("image", "ilike", "%1581091226825%")
+            .order("is_featured", { ascending: false })
             .limit(4);
           
           if (!isAll) {

@@ -1,4 +1,5 @@
 
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -109,26 +110,39 @@ class FastCategoryCard extends ConsumerWidget {
               ),
             ),
 
-            // 2. PRODUCT IMAGE - Massive and Centered (Breadfast Look)
+            // 2. PRODUCT IMAGE - blur-background + contain foreground
             Positioned(
-              left: 4,
-              right: 4,
-              bottom: 4,
-              top: 35, // Clear space for text
-              child: isAsset 
-                  ? Image.asset(
-                      displayIcon,
-                      fit: BoxFit.contain,
-                      alignment: Alignment.center,
-                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.category, color: Colors.black12, size: 40),
-                    )
-                  : CachedNetworkImage(
-                      imageUrl: displayIcon,
-                      fit: BoxFit.contain,
-                      alignment: Alignment.center,
-                      placeholder: (context, url) => const SizedBox(),
-                      errorWidget: (context, url, error) => const Icon(Icons.category, color: Colors.black12, size: 40),
+              left: 0, right: 0, bottom: 0,
+              top: 30,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Blurred background
+                  if (!isAsset)
+                    ClipRect(
+                      child: ImageFiltered(
+                        imageFilter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+                        child: CachedNetworkImage(
+                          imageUrl: displayIcon,
+                          fit: BoxFit.cover,
+                          color: Colors.white.withValues(alpha: 0.5),
+                          colorBlendMode: BlendMode.lighten,
+                          errorWidget: (_, __, ___) => const SizedBox(),
+                        ),
+                      ),
                     ),
+                  // Main image
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(4, 2, 4, 4),
+                    child: isAsset
+                        ? Image.asset(displayIcon, fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.category, color: Colors.black12, size: 36))
+                        : CachedNetworkImage(imageUrl: displayIcon, fit: BoxFit.contain,
+                            placeholder: (_, __) => const SizedBox(),
+                            errorWidget: (_, __, ___) => const Icon(Icons.category, color: Colors.black12, size: 36)),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
