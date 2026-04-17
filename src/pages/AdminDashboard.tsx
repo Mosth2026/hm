@@ -17,9 +17,9 @@ import {
     Table, TableBody, TableCell, TableHead, TableHeader, TableRow 
 } from "@/components/ui/table";
 import { 
-    Heart, Package, Plus, Upload, RefreshCw, Trash2, 
+    Heart, Package, Plus, Upload, RefreshCw, Trash2,
     Ticket, Users, List, TrendingUp, Calendar, Phone, Mail,
-    CheckCircle2, XCircle, LogOut, MapPin, Navigation
+    CheckCircle2, XCircle, LogOut, MapPin, Navigation, AlertTriangle
 } from "lucide-react";
 
 import { CategoryTreeManager } from "@/components/admin/CategoryTreeManager";
@@ -495,7 +495,41 @@ const AdminDashboard = () => {
                                     نقل لقسم آخـر
                                 </Button>
                                 
-                                <Button 
+                                <Button
+                                    variant="ghost"
+                                    onClick={async () => {
+                                        const selected = products.filter(p => selectedProductIds.includes(p.id));
+                                        for (const p of selected) {
+                                            const isDraft = (p.description || '').includes('[DRAFT]');
+                                            if (!isDraft) await handleToggleDraft(p);
+                                        }
+                                        setSelectedProductIds([]);
+                                        toast.success(`تم تحويل ${selected.length} منتج للدرافت`);
+                                    }}
+                                    className="h-12 px-6 bg-amber-500 hover:bg-amber-600 text-white font-black rounded-2xl gap-2 transition-all"
+                                >
+                                    <AlertTriangle className="h-5 w-5" />
+                                    درافت
+                                </Button>
+
+                                <Button
+                                    variant="ghost"
+                                    onClick={async () => {
+                                        const selected = products.filter(p => selectedProductIds.includes(p.id));
+                                        for (const p of selected) {
+                                            const isDraft = (p.description || '').includes('[DRAFT]');
+                                            if (isDraft) await handleToggleDraft(p);
+                                        }
+                                        setSelectedProductIds([]);
+                                        toast.success(`تم إلغاء الدرافت عن ${selected.length} منتج`);
+                                    }}
+                                    className="h-12 px-6 bg-green-500 hover:bg-green-600 text-white font-black rounded-2xl gap-2 transition-all"
+                                >
+                                    <CheckCircle2 className="h-5 w-5" />
+                                    إلغاء درافت
+                                </Button>
+
+                                <Button
                                     variant="ghost"
                                     onClick={() => setSelectedProductIds([])}
                                     className="h-12 px-6 text-white/60 hover:text-white hover:bg-white/5 font-bold rounded-2xl transition-all"
@@ -503,7 +537,7 @@ const AdminDashboard = () => {
                                     إلغاء التحديد
                                 </Button>
 
-                                <Button 
+                                <Button
                                     variant="ghost"
                                     onClick={() => {
                                         if(confirm(`حذف ${selectedProductIds.length} منتج نهائياً؟`)) {

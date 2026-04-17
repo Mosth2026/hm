@@ -758,7 +758,9 @@ export const useAdminDashboard = () => {
             const newDesc = isDraft
                 ? (product.description || '').replace('[DRAFT]', '').trim()
                 : '[DRAFT] ' + (product.description || '').trim();
-            await supabase.from('products').update({ description: newDesc }).eq('id', product.id);
+            const { error } = await supabase.from('products').update({ description: newDesc }).eq('id', product.id);
+            if (error) { toast.error('فشل التحديث: ' + error.message); return; }
+            toast.success(isDraft ? '✅ تم إلغاء الدرافت' : '🚫 تم تحويله لدرافت');
             fetchProducts();
         },
         handleSave, handleImageUpload, handleCropComplete, handleSkip, handleMarkAsReceived, handleReturnOrder, handleDeleteOrder,
