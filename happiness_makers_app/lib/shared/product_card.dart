@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -43,13 +44,30 @@ class ProductCard extends ConsumerWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
+                  // Blurred background — fills space with product's own colors
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                    child: ImageFiltered(
+                      imageFilter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                      child: CachedNetworkImage(
+                        imageUrl: product.image,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                        color: Colors.white.withValues(alpha: 0.6),
+                        colorBlendMode: BlendMode.lighten,
+                      ),
+                    ),
+                  ),
+
+                  // Main product image — fully visible, no cropping
                   Hero(
                     tag: 'product_image_${product.id}',
                     child: ClipRRect(
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
                       child: CachedNetworkImage(
                         imageUrl: product.image,
-                        fit: BoxFit.cover,
+                        fit: BoxFit.contain,
                         errorWidget: (context, url, error) => Container(
                           color: AppColors.shimmerBase,
                           child: const Icon(Iconsax.image, color: AppColors.border),
@@ -57,7 +75,7 @@ class ProductCard extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  
+
                   // Decorative Overlay (Futuristic Shine)
                   Positioned.fill(
                     child: Container(
@@ -66,9 +84,9 @@ class ProductCard extends ConsumerWidget {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            Colors.white.withValues(alpha: 0.1),
+                            Colors.white.withValues(alpha: 0.05),
                             Colors.transparent,
-                            Colors.black.withValues(alpha: 0.05),
+                            Colors.black.withValues(alpha: 0.04),
                           ],
                         ),
                       ),

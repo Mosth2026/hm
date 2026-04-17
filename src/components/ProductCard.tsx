@@ -141,12 +141,20 @@ const ProductCard = ({
     <div className="group relative bg-card rounded-[1.5rem] md:rounded-[2rem] border border-primary/10 p-2 md:p-3 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 font-tajawal rtl h-full flex flex-col premium-card">
 
       {/* Image Container */}
-      <div className="relative aspect-square overflow-hidden rounded-[1.25rem] md:rounded-[1.5rem] bg-primary/5">
+      <div className="relative aspect-square overflow-hidden rounded-[1.25rem] md:rounded-[1.5rem] bg-white">
         <Link to={`/products/${id}`} className="block w-full h-full">
+          {/* Blurred background — fills space with product's own colors */}
+          <img
+            src={image}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-40 pointer-events-none select-none"
+          />
+          {/* Main product image — fully visible, no cropping */}
           <img
             src={image}
             alt={name}
-            className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
+            className="relative w-full h-full object-contain transition-transform duration-700 group-hover:scale-105 drop-shadow-lg"
             loading="lazy"
             onError={(e) => {
               (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&q=80';
