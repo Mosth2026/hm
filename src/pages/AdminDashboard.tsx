@@ -1,5 +1,6 @@
 
 import React, { useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
 import AdminStats from "@/components/admin/AdminStats";
 import AdminTabs from "@/components/admin/AdminTabs";
