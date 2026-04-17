@@ -326,6 +326,7 @@ const AdminDashboard = () => {
                             setSelectedProductIds={setSelectedProductIds}
                             handleEdit={handleEdit}
                             handleDelete={handleDelete}
+                            handleToggleDraft={handleToggleDraft}
                             fetchProductLifecycle={fetchProductLifecycle}
                             formatPrice={formatPrice}
                             isSpecial={isOwner}

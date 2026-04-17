@@ -753,6 +753,14 @@ export const useAdminDashboard = () => {
         handleEdit: (p: Product) => { setCurrentProduct(p); setIsEditDialogOpen(true); },
         handleAddNew: () => { setCurrentProduct({ image: PLACEHOLDER_IMAGE, stock: 0, price: 0 }); setIsEditDialogOpen(true); },
         handleDelete: async (id: number) => { if(confirm("حذف؟")) { await supabase.from('products').delete().eq('id', id); fetchProducts(); } },
+        handleToggleDraft: async (product: any) => {
+            const isDraft = (product.description || '').includes('[DRAFT]');
+            const newDesc = isDraft
+                ? (product.description || '').replace('[DRAFT]', '').trim()
+                : '[DRAFT] ' + (product.description || '').trim();
+            await supabase.from('products').update({ description: newDesc }).eq('id', product.id);
+            fetchProducts();
+        },
         handleSave, handleImageUpload, handleCropComplete, handleSkip, handleMarkAsReceived, handleReturnOrder, handleDeleteOrder,
         handleExportData, handleBulkCategoryUpdate, fetchProductLifecycle, formatPrice, categories: dbCategories, fetchCategories,
         handleExcelImport, handleCleanupDuplicates, handleRestoreLostImages,

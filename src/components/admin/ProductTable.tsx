@@ -19,20 +19,22 @@ interface ProductTableProps {
     setSelectedProductIds: (ids: number[]) => void;
     handleEdit: (product: any) => void;
     handleDelete: (id: number) => void;
+    handleToggleDraft?: (product: any) => void;
     fetchProductLifecycle: (product: any) => void;
     formatPrice: (price: number) => string;
     isSpecial: boolean;
 }
 
-const ProductTable: React.FC<ProductTableProps> = ({ 
-    products, 
-    loading, 
-    activeFilter, 
-    searchQuery, 
-    selectedProductIds, 
+const ProductTable: React.FC<ProductTableProps> = ({
+    products,
+    loading,
+    activeFilter,
+    searchQuery,
+    selectedProductIds,
     setSelectedProductIds,
     handleEdit,
     handleDelete,
+    handleToggleDraft,
     fetchProductLifecycle,
     formatPrice,
     isSpecial
@@ -159,6 +161,16 @@ const ProductTable: React.FC<ProductTableProps> = ({
                                             <Button variant="ghost" size="icon" onClick={() => handleEdit(product)} className="h-10 w-10 text-gray-400 hover:text-saada-brown hover:bg-saada-brown/10 rounded-xl">
                                                 <Edit className="h-5 w-5" />
                                             </Button>
+                                            {handleToggleDraft && (
+                                                <Button
+                                                    variant="ghost" size="icon"
+                                                    onClick={() => handleToggleDraft(product)}
+                                                    title={isDraft ? 'إلغاء الدرافت' : 'تحويل لدرافت'}
+                                                    className={`h-10 w-10 rounded-xl ${isDraft ? 'text-amber-500 bg-amber-50 hover:bg-amber-100' : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50'}`}
+                                                >
+                                                    <AlertTriangle className="h-5 w-5" />
+                                                </Button>
+                                            )}
                                             <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)} className="h-10 w-10 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl">
                                                 <Trash2 className="h-5 w-5" />
                                             </Button>
