@@ -231,7 +231,7 @@ queryFn: async () => {
     const isVisibleToCustomer = (p: any, tStock: number) => {
         const pr = Number(p.price) || 0;
         const dr = (p.description || '').includes('[DRAFT]');
-        const img = p.image && p.image.trim() !== "" && !p.image.includes('unsplash.com') && p.image !== SITE_CONFIG.placeholderImage;
+        const img = p.image && p.image.trim() !== "" && !p.image.includes('unsplash') && !p.image.includes('1581091226825') && !p.image.includes('placeholder') && p.image !== SITE_CONFIG.placeholderImage;
         return tStock >= 1 && pr > 0 && img && !dr;
     };
 
