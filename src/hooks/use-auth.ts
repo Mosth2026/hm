@@ -119,15 +119,17 @@ export const useAuth = create<AuthState>()(
                     let custom_permissions: string[] = [];
                     
                     try {
-                        const { data: roleData } = await supabase
+                        const { data: roleData, error: roleError } = await supabase
                             .from('user_roles')
                             .select('*')
                             .eq('user_id', data.user.id)
-                            .single();
-                        
-                        if (roleData?.role) {
+                            .maybeSingle();
+
+                        if (roleError) {
+                            console.error('Role fetch error:', roleError);
+                        } else if (roleData?.role) {
                             role = roleData.role as UserRole;
-                            branch_id = roleData.branch_id;
+                            branch_id = roleData.branch_id ?? null;
                             display_name = roleData.display_name;
                             phone = roleData.phone;
                             custom_permissions = roleData.custom_permissions || [];
