@@ -109,6 +109,7 @@ const Index = () => {
           {layoutMode === 'original' ? (
             <>
               <Hero />
+              <CategoryGrid />
               <FeaturedProducts />
               <Features />
               <SocialBanner />
