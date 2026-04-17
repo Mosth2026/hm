@@ -1,6 +1,10 @@
 # Flutter mobile app — not needed for web deployment
 happiness_makers_app/
 
+# Build artifacts — Vercel builds from source
+dist/
+node_modules/
+
 # Utility & sync scripts
 *.py
 *.mjs

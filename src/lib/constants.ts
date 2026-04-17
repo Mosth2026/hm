@@ -1,10 +1,12 @@
+import logoUrl from '@/assets/logo.png';
+
 export const SITE_CONFIG = {
     name: "صناع السعادة",
     englishName: "Suna Al Saada",
     slogan: "أصل المستورد",
-    logoPath: "/assets/logo.png",
+    logoPath: logoUrl,
     faviconPath: "/favicon.ico",
-    ogImage: "/assets/logo.png",
+    ogImage: logoUrl,
     phoneNumber: "01050663539",
     whatsappNumber: "201050663539",
     officePhone: "01050663539",
