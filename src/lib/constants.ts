@@ -1,4 +1,4 @@
-import logoUrl from '@/assets/logo.png';
+import logoUrl from '@/assets/logo-base64';
 
 export const SITE_CONFIG = {
     name: "صناع السعادة",
