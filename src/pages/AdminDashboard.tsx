@@ -41,7 +41,7 @@ const AdminDashboard = () => {
         setIsExemptImport, setSelectedBranchId, setIsNotificationsEnabled,
         
         login, logout, initialize, logAction, fetchProducts, fetchOrders, handleBranchChange, toggleNotifications,
-        handleEdit, handleAddNew, handleDelete, handleSave, handleImageUpload, handleCropComplete, handleSkip,
+        handleEdit, handleAddNew, handleDelete, handleToggleDraft, handleSave, handleImageUpload, handleCropComplete, handleSkip,
         handleMarkAsReceived, handleReturnOrder, handleDeleteOrder, handleExportData, handleBulkCategoryUpdate,
         fetchProductLifecycle, formatPrice, categories, fetchCategories, handleExcelImport, handleCleanupDuplicates, handleRestoreLostImages,
         handleCreateCoupon, handleDeleteCoupon
