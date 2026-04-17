@@ -109,7 +109,7 @@ const Index = () => {
           {layoutMode === 'original' ? (
             <>
               <Hero />
-              <FeaturedProducts />
+              <FeaturedProducts showAll />
               <Features />
               <SocialBanner />
               <Testimonials />

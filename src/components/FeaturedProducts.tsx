@@ -5,9 +5,9 @@ import ProductCard from "./ProductCard";
 
 import { useBranchContext } from "@/context/BranchContext";
 
-const FeaturedProducts = () => {
+const FeaturedProducts = ({ showAll = false }: { showAll?: boolean }) => {
   const { selectedBranch } = useBranchContext();
-  const { data: products, isLoading, error } = useProducts(undefined, true, selectedBranch?.id);
+  const { data: products, isLoading, error } = useProducts(undefined, showAll ? undefined : true, selectedBranch?.id);
 
   if (isLoading) {
     return (
