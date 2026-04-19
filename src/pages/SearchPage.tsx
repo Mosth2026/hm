@@ -40,8 +40,10 @@ const SearchPage = () => {
                     .gt("price", 0)
                     .not("image", "is", null)
                     .neq("image", "")
-                    .not("image", "ilike", "%unsplash.com%")
-                    .neq("category_id", "no-tax");
+                    .not("image", "ilike", "%unsplash%")
+                    .not("image", "ilike", "%1581091226825%")
+                    .neq("category_id", "no-tax")
+                    .not("description", "ilike", "%[DRAFT]%");
             }
             const { data, error } = await dbQuery.order("created_at", { ascending: false });
             if (error) throw error;
@@ -79,11 +81,22 @@ const SearchPage = () => {
                 return resultData.filter((p: any) => {
                     const price = Number(p.price);
                     const stock = Number(p.stock);
+                    const catName = (p.category_name || '').toLowerCase();
+                    const catId = (p.category_id || '').toLowerCase();
+                    
+                    const isDraft = p.description.includes('[DRAFT]') || 
+                                    catName.includes('درافت') || 
+                                    catName.includes('مخفي') ||
+                                    catId === 'trash' || 
+                                    catId === 'draft';
+
                     const hasValidImage = p.image &&
                         p.image.trim() !== "" &&
-                        !p.image.includes('unsplash.com');
+                        !p.image.includes('unsplash') &&
+                        !p.image.includes('1581091226825') &&
+                        !p.image.includes('placeholder');
 
-                    return stock >= 1 && price > 0 && hasValidImage;
+                    return stock >= 1 && price > 0 && hasValidImage && !isDraft;
                 });
             }
 

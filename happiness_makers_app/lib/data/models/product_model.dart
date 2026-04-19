@@ -65,11 +65,19 @@ class ProductModel {
   bool get isFreeGluten => allCategoryIds.contains('free-gluten') || description.contains('خالي من الجلوتين');
 
   /// Check if product is available for customers
-  bool get isAvailableForCustomer =>
-      price > 0 &&
-      hasValidImage &&
-      stock >= 1 &&
-      !description.contains('[DRAFT]');
+  bool get isAvailableForCustomer {
+    final lowerCat = categoryName.toLowerCase();
+    final isDraftCategory = lowerCat.contains('درافت') || 
+                           lowerCat.contains('مخفي') || 
+                           categoryId == 'trash' ||
+                           categoryId == 'draft';
+                           
+    return price > 0 &&
+        hasValidImage &&
+        stock >= 1 &&
+        !description.contains('[DRAFT]') &&
+        !isDraftCategory;
+  }
 
   factory ProductModel.fromJson(Map<String, dynamic> json, {bool isAdmin = false, int? branchId}) {
     // Extract stock based on branch

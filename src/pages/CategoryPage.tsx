@@ -101,38 +101,49 @@ const CategoryPage = () => {
           let query = supabase
             .from("products")
             .select("*")
-            // ULTRA-STRICT: Only show products with actual images
+            .gt("stock", 0)
+            .gt("price", 0)
             .not("image", "is", null)
             .neq("image", "")
             .neq("image", "null")
             .neq("image", "undefined")
-            .not("image", "ilike", "%placeholder%");
+            .not("image", "ilike", "%placeholder%")
+            .not("image", "ilike", "%unsplash%")
+            .not("image", "ilike", "%1581091226825%")
+            .not("description", "ilike", "%[DRAFT]%");
           
           if (useIsAvailable) {
             query = query.eq("is_available", true);
           }
 
-          // Fetch more to filter in-memory since .or() with complex arrays is tricky for secondary tags
-          // This ensures we get both primary and secondary matches
           const { data, error } = await query;
           if (error) return { data, error };
 
           // Filter in-memory: Match primary ID OR secondary tag OR category label in product name
+          // AND exclude any "Draft" or "Hidden" categories
           const matched = (data || []).filter(p => {
+            const catName = (p.category_name || '').toLowerCase();
+            const catId = (p.category_id || '').toLowerCase();
+            const isDraft = catName.includes('درافت') || 
+                            catName.includes('مخفي') || 
+                            catId === 'trash' || 
+                            catId === 'draft';
+
+            if (isDraft) return false;
+
             const isPrimaryMatch = allDescendantIds.includes(p.category_id);
             const isSecondaryMatch = allDescendantIds.some(id =>
                p.description && p.description.includes(`[ADD_CAT:${id}]`)
             );
-            // Keyword match: if the product name contains any descendant category label
-            // This ensures products like "كيك شوكولاتة" appear in the "كيك" category
+            
             const productNameNorm = normArabic(p.name || '');
             const isNameMatch = allDescendantIds.some(id => {
               const cat = allCats?.find(c => c.id === id);
               if (!cat) return false;
               const label = normArabic((cat.label || '').replace(/\[.*?\]/g, '').trim());
-              // Only match if label is meaningful (>=2 chars) to avoid false matches
               return label.length >= 2 && productNameNorm.includes(label);
             });
+
             return isPrimaryMatch || isSecondaryMatch || isNameMatch;
           });
 

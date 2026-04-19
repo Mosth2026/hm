@@ -134,7 +134,16 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean, branchId?
     const isVisibleToCustomer = (p: any, totalStock: number) => {
         const price = Number(p.price) || 0;
         const stock = totalStock;
-        const isDraft = (p.description || '').includes('[DRAFT]');
+        const description = p.description || '';
+        const catName = p.category_name || '';
+        const catId = p.category_id || '';
+        
+        const isDraft = description.includes('[DRAFT]') || 
+                        catName.includes('درافت') || 
+                        catName.includes('مخفي') ||
+                        catId === 'trash' ||
+                        catId === 'draft';
+
         const hasImage = p.image &&
                          p.image.trim() !== "" &&
                          !p.image.includes('unsplash') &&
@@ -230,8 +239,23 @@ queryFn: async () => {
     // THE GUARDRAIL CHECK
     const isVisibleToCustomer = (p: any, tStock: number) => {
         const pr = Number(p.price) || 0;
-        const dr = (p.description || '').includes('[DRAFT]');
-        const img = p.image && p.image.trim() !== "" && !p.image.includes('unsplash') && !p.image.includes('1581091226825') && !p.image.includes('placeholder') && p.image !== SITE_CONFIG.placeholderImage;
+        const description = p.description || '';
+        const catName = p.category_name || '';
+        const catId = p.category_id || '';
+        
+        const dr = description.includes('[DRAFT]') || 
+                   catName.includes('درافت') || 
+                   catName.includes('مخفي') ||
+                   catId === 'trash' ||
+                   catId === 'draft';
+
+        const img = p.image && 
+                   p.image.trim() !== "" && 
+                   !p.image.includes('unsplash') && 
+                   !p.image.includes('1581091226825') && 
+                   !p.image.includes('placeholder') && 
+                   p.image !== SITE_CONFIG.placeholderImage;
+                   
         return tStock >= 1 && pr > 0 && img && !dr;
     };
 
