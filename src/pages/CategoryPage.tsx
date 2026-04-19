@@ -239,52 +239,14 @@ const CategoryPage = () => {
               style={{ backgroundImage: 'radial-gradient(#222319 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
           </section>
           {/* Subcategories Grid - Styled as 'Browse our categories' from app */}
+        {/* Subcategories Grid - Disabled for Original Web Layout to avoid complexity */}
+        {/* 
         {subCategories.length > 0 && (
           <div className="bg-gradient-to-b from-white to-gray-50/50 py-12 md:py-20 border-b border-primary/5">
-            <div className="container mx-auto px-4">
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-12">
-                <div className="space-y-2">
-                  <span className="text-secondary font-black uppercase tracking-[0.3em] text-[10px]">
-                    Explore Sub-Collections
-                  </span>
-                  <h2 className="text-4xl md:text-5xl font-black text-primary leading-tight">
-                    تصفح أقسامنا
-                  </h2>
-                </div>
-                <p className="text-muted-foreground text-sm font-bold md:max-w-md md:text-left">
-                  اكتشف المزيد من الخيارات الفاخرة المنسقة خصيصاً لك تحت قسم {categoryName}.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 md:gap-10">
-                {subCategories.map((sub, idx) => (
-                  <div
-                    key={sub.id}
-                    className="animate-in fade-in slide-in-from-bottom-8 duration-1000"
-                    style={{ animationDelay: `${idx * 100}ms` }}
-                  >
-                    <CategoryCard
-                      id={sub.id}
-                      label={sub.label.replace(/\[.*?\]/g, "").trim()}
-                      icon={sub.icon}
-                      childrenCount={0} // No sub-sub categories in this simplified view
-                      variant="sub"
-                    />
-                  </div>
-                ))}
-                
-                {/* Special 'Shop All' for current category products */}
-                <CategoryCard
-                  id={categoryId}
-                  label={`كل ${categoryName}`}
-                  icon="🛍️"
-                  isAll={true}
-                  variant="root"
-                />
-              </div>
-            </div>
+            ...
           </div>
         )}
+        */}
   <section className="py-12 md:py-16" id="products">
             <div className="container mx-auto px-4 md:px-8">
               <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-12 py-4 border-b border-primary/5 px-6">

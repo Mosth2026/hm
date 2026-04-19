@@ -21,22 +21,24 @@ type LayoutMode = 'original' | 'premium' | 'fast';
 const ALL_MODES: LayoutMode[] = ['original', 'premium', 'fast'];
 
 const Index = () => {
-  const [layoutMode, setLayoutMode] = useState<LayoutMode>('premium');
-  const [enabledLayouts, setEnabledLayouts] = useState<LayoutMode[]>(ALL_MODES);
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>('original');
+  const [enabledLayouts, setEnabledLayouts] = useState<LayoutMode[]>(['original']);
 
   useEffect(() => {
     // Read enabled layouts from admin settings
-    let enabled: LayoutMode[] = ALL_MODES;
+    let enabled: LayoutMode[] = ['original'];
     const savedEnabled = localStorage.getItem('saada_enabled_layouts');
     if (savedEnabled) {
       try {
         const parsed = JSON.parse(savedEnabled);
         if (Array.isArray(parsed) && parsed.length > 0) {
           enabled = parsed.filter((m: string) => ALL_MODES.includes(m as LayoutMode)) as LayoutMode[];
-          if (enabled.length === 0) enabled = ALL_MODES;
         }
       } catch {}
     }
+    
+    // Safety check: if empty, always allow original
+    if (enabled.length === 0) enabled = ['original'];
     setEnabledLayouts(enabled);
 
     // Read saved layout mode, fall back to first enabled if disabled
@@ -44,7 +46,7 @@ const Index = () => {
     if (savedMode && enabled.includes(savedMode)) {
       setLayoutMode(savedMode);
     } else {
-      setLayoutMode(enabled[0]);
+      setLayoutMode(enabled[0] || 'original');
     }
   }, []);
 
@@ -68,39 +70,29 @@ const Index = () => {
         {enabledLayouts.length > 1 && (
           <div className="absolute top-24 left-6 md:top-32 md:left-10 z-[50] animate-in fade-in slide-in-from-left-10 duration-1000">
             <div className="bg-white/80 backdrop-blur-xl p-1.5 rounded-full shadow-2xl border border-primary/5 flex gap-1 items-center shadow-primary/20 hover:scale-105 transition-all duration-500">
-              {enabledLayouts.includes('original') && (
-                <Button
-                  onClick={() => toggleLayout('original')}
-                  className={`h-10 w-10 md:h-12 md:w-auto md:px-4 rounded-full transition-all duration-500 font-black text-xs gap-2 ${
-                    layoutMode === 'original' ? 'bg-amber-600 text-white shadow-xl shadow-amber-600/30' : 'bg-transparent text-amber-600/40 hover:bg-amber-600/5'
-                  }`}
-                >
-                  <Home className="h-4 w-4" />
-                  <span className="hidden md:inline">الوضع الأصلي</span>
-                </Button>
-              )}
-              {enabledLayouts.includes('premium') && (
-                <Button
-                  onClick={() => toggleLayout('premium')}
-                  className={`h-10 w-10 md:h-12 md:w-auto md:px-4 rounded-full transition-all duration-500 font-black text-xs gap-2 ${
-                    layoutMode === 'premium' ? 'bg-primary text-white shadow-xl shadow-primary/30' : 'bg-transparent text-primary/40 hover:bg-primary/5'
-                  }`}
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                  <span className="hidden md:inline">العرض الكلاسيكي</span>
-                </Button>
-              )}
-              {enabledLayouts.includes('fast') && (
-                <Button
-                  onClick={() => toggleLayout('fast')}
-                  className={`h-10 w-10 md:h-12 md:w-auto md:px-4 rounded-full transition-all duration-500 font-black text-xs gap-2 ${
-                    layoutMode === 'fast' ? 'bg-saada-red text-white shadow-xl shadow-saada-red/30' : 'bg-transparent text-saada-red/40 hover:bg-saada-red/5'
-                  }`}
-                >
-                  <Zap className="h-4 w-4" />
-                  <span className="hidden md:inline">التصفح السريع</span>
-                </Button>
-              )}
+              {enabledLayouts.map(modeId => {
+                const mode = ALL_MODES.find(m => m === modeId);
+                if (!mode) return null;
+                
+                const isSelected = layoutMode === modeId;
+                const label = modeId === 'original' ? 'الوضع الأصلي' : modeId === 'premium' ? 'العرض الكلاسيكي' : 'التصفح السريع';
+                const Icon = modeId === 'original' ? Home : modeId === 'premium' ? LayoutGrid : Zap;
+                const activeColor = modeId === 'original' ? 'bg-amber-600 shadow-amber-600/30' : modeId === 'premium' ? 'bg-primary shadow-primary/30' : 'bg-saada-red shadow-saada-red/30';
+                const textColor = modeId === 'original' ? 'text-amber-600' : modeId === 'premium' ? 'text-primary' : 'text-saada-red';
+
+                return (
+                  <Button
+                    key={modeId}
+                    onClick={() => toggleLayout(modeId)}
+                    className={`h-10 w-10 md:h-12 md:w-auto md:px-4 rounded-full transition-all duration-500 font-black text-xs gap-2 ${
+                      isSelected ? `${activeColor} text-white shadow-xl` : `bg-transparent ${textColor}/40 hover:bg-gray-100`
+                    }`}
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span className="hidden md:inline">{label}</span>
+                  </Button>
+                );
+              })}
             </div>
           </div>
         )}
@@ -109,6 +101,10 @@ const Index = () => {
           {layoutMode === 'original' ? (
             <>
               <Hero />
+              <div className="container mx-auto px-4 py-8">
+                <h2 className="text-3xl font-black text-primary mb-8 text-center">أقسامنا الرئيسية</h2>
+                <CategoryGrid />
+              </div>
               <FeaturedProducts showAll />
               <Features />
               <SocialBanner />

@@ -33,11 +33,13 @@ const CategoryGrid: React.FC = () => {
               const isRoot = !cat.parent_id;
               const label = (cat.label || "").toLowerCase();
               const isAccounting = cat.id === "no-tax" || label.includes("ضريبة") || label.includes("محاسب");
-              return isRoot && !isAccounting;
+              const isHiddenOnWeb = label.includes("[hide_on_web]");
+              return isRoot && !isAccounting && !isHiddenOnWeb;
             })
             // Dynamically count children from the full list
             .map((cat) => ({
               ...cat,
+              label: cat.label.replace(/\[HIDE_ON_WEB\]/gi, "").trim(),
               children_count: data.filter(child => child.parent_id === cat.id).length
             }))
             .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));

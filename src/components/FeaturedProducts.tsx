@@ -8,6 +8,7 @@ import { useBranchContext } from "@/context/BranchContext";
 const FeaturedProducts = ({ showAll = false }: { showAll?: boolean }) => {
   const { selectedBranch } = useBranchContext();
   const { data: products, isLoading, error } = useProducts(undefined, showAll ? undefined : true, selectedBranch?.id);
+  const [visibleCount, setVisibleCount] = useState(20);
 
   if (isLoading) {
     return (
@@ -22,6 +23,15 @@ const FeaturedProducts = ({ showAll = false }: { showAll?: boolean }) => {
   if (error || !products?.length) {
     return null;
   }
+
+  const filteredProducts = products.filter(p => 
+    p.image && 
+    p.image !== "null" && 
+    p.image !== "undefined" && 
+    !p.image.includes("placeholder")
+  );
+
+  const displayedProducts = filteredProducts.slice(0, visibleCount);
 
   return (
     <section className="py-12 md:py-16 relative overflow-hidden font-tajawal rtl bg-background">
@@ -44,23 +54,31 @@ const FeaturedProducts = ({ showAll = false }: { showAll?: boolean }) => {
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-8">
-          {products
-            .filter(p => p.image && p.image !== "null" && p.image !== "undefined" && !p.image.includes("placeholder"))
-            .map((product, idx) => (
-              <div
-                key={product.id}
-                className="animate-in fade-in slide-in-from-bottom-8 duration-500 fill-mode-both"
-                style={{ animationDelay: `${idx * 100}ms` }}
-              >
-                <ProductCard
-                  {...product}
-                  category={product.category_name}
-                  categoryId={product.category_id}
-                />
-              </div>
-            ))
-          }
+          {displayedProducts.map((product, idx) => (
+            <div
+              key={product.id}
+              className="animate-in fade-in slide-in-from-bottom-8 duration-500 fill-mode-both"
+              style={{ animationDelay: `${idx * 50}ms` }}
+            >
+              <ProductCard
+                {...product}
+                category={product.category_name}
+                categoryId={product.category_id}
+              />
+            </div>
+          ))}
         </div>
+
+        {visibleCount < filteredProducts.length && (
+          <div className="mt-16 flex justify-center">
+            <button 
+              onClick={() => setVisibleCount(prev => prev + 20)}
+              className="px-12 py-4 bg-primary text-white rounded-full font-black text-lg hover:bg-black transition-all hover:scale-105 active:scale-95 shadow-2xl shadow-primary/20"
+            >
+              عرض المزيد من المنتجات
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );

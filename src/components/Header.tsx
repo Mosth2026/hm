@@ -107,12 +107,13 @@ const Header = () => {
               const isRoot = !cat.parent_id;
               const label = (cat.label || "").toLowerCase();
               const isAccounting = cat.id === "no-tax" || label.includes("ضريبة") || label.includes("محاسب");
-              return isRoot && !isAccounting;
+              const isHiddenOnWeb = label.includes("[hide_on_web]");
+              return isRoot && !isAccounting && !isHiddenOnWeb;
             })
             // Sort by order_index if it exists
             .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
             .map(cat => ({
-              name: cat.label,
+              name: cat.label.replace(/\[HIDE_ON_WEB\]/gi, "").trim(),
               path: `/categories/${cat.id}`
             }));
           

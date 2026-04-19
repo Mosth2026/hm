@@ -14,13 +14,15 @@ interface CategoryCardProps {
   variant?: 'root' | 'sub';
 }
 
+// Simple global cache to prevent redundant fetches during session
+const categoryImageCache: Record<string, string[]> = {};
+
 const CategoryCard: React.FC<CategoryCardProps> = ({ 
   id, label, icon, childrenCount, isAll, isActive, variant = 'root' 
 }) => {
-  const [images, setImages] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [images, setImages] = useState<string[]>(categoryImageCache[id] || []);
+  const [loading, setLoading] = useState(!categoryImageCache[id]);
 
-  // BREADFAST STYLE COLORS
   const getCategoryTheme = (id: string, label: string) => {
     const l = label.toLowerCase();
     if (l.includes('شوكولاتة') || id.includes('chocolate')) return 'bg-[#FEF3F2]'; 
@@ -35,9 +37,17 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
 
   useEffect(() => {
     const fetchCollageImages = async () => {
+      // Return if already in cache
+      if (categoryImageCache[id] && categoryImageCache[id].length > 0) {
+        setLoading(false);
+        return;
+      }
+
       // Special case for cosmetics/personal care image
       if (id.includes('cosmetics') || label.includes('مستحضرات') || label.includes('العناية الشخصية')) {
-         setImages(['/assets/cosmetics.png']);
+         const imgs = ['/assets/cosmetics.png'];
+         categoryImageCache[id] = imgs;
+         setImages(imgs);
          setLoading(false);
          return;
       }
@@ -78,7 +88,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
             .not("category_name", "ilike", "%مخفي%")
             .not("category_id", "in", "(trash,draft)")
             .order("is_featured", { ascending: false })
-            .limit(4);
+            .limit(variant === 'sub' ? 1 : 4); // Only fetch 1 image for subcategories for speed
           
           if (!isAll) {
             const labelFilters = labels.map(l => `"${l}"`).join(",");
@@ -91,7 +101,9 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
         let { data } = await tryFetch();
         
         if (data && data.length > 0) {
-          setImages(data.map((p) => p.image).filter(Boolean));
+          const imgs = data.map((p) => p.image).filter(Boolean);
+          categoryImageCache[id] = imgs;
+          setImages(imgs);
         } else if (!isAll) {
           try {
             const { data: fuzzyData } = await supabase
@@ -106,10 +118,12 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
               .not("image", "ilike", "%1581091226825%")
               .not("description", "ilike", "%[DRAFT]%")
               .ilike("name", `%${label}%`)
-              .limit(4);
+              .limit(1); // Keep it simple
             
             if (fuzzyData && fuzzyData.length > 0) {
-              setImages(fuzzyData.map((p) => p.image).filter(Boolean));
+              const imgs = fuzzyData.map((p) => p.image).filter(Boolean);
+              categoryImageCache[id] = imgs;
+              setImages(imgs);
             }
           } catch (e) {}
         }
@@ -121,7 +135,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
     };
 
     fetchCollageImages();
-  }, [id, isAll]);
+  }, [id, isAll, label, variant]);
 
   const renderContent = () => {
     if (loading) return <div className="absolute inset-0 flex items-center justify-center"><div className="h-4 w-4 bg-gray-200 animate-ping rounded-full" /></div>;
@@ -169,11 +183,14 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
         <h3 className="text-xl md:text-2xl font-black text-slate-800 leading-none tracking-tighter px-2 group-hover:scale-110 transition-transform duration-700">
             {label}
         </h3>
+        {/* Children count disabled for simple layout */}
+        {/* 
         {childrenCount !== undefined && childrenCount >= 0 && (
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mt-2 block opacity-60">
                 {childrenCount} فرعي
             </span>
         )}
+        */}
       </div>
 
       {/* Glossy reflection effect */}
