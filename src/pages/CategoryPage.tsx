@@ -119,24 +119,8 @@ const CategoryPage = () => {
           const { data, error } = await query;
           if (error) return { data, error };
 
-          // Secondary filtering for [ADD_CAT:id] tags which are still needed in-memory
-          const matched = (data || []).filter(p => {
-            const catName = (p.category_name || '').toLowerCase();
-            const catId = (p.category_id || '').toLowerCase();
-            const isDraft = catName.includes('درافت') || catName.includes('مخفي') || catId === 'trash';
-
-            if (isDraft) return false;
-
-            // Already filtered by category_id in SQL, but we add [ADD_CAT] check here
-            const isSecondaryMatch = allDescendantIds.some(id =>
-               p.description && p.description.includes(`[ADD_CAT:${id}]`)
-            );
-            
-            // We can keep the name match if needed, but SQL 'in' filter did 90% of the work
-            return true; 
-          });
-
-          return { data: matched, error: null };
+          // Strictly return data from SQL (no more keyword matching)
+          return { data: data || [], error: null };
         };
 
         let { data: prodData, error: prodError } = await tryFetchProds(true);

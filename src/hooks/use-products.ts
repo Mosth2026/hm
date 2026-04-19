@@ -94,8 +94,7 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean, branchId?
             }
 
             if (categoryId && categoryId !== 'all') {
-                // Using a more focused match for categories
-                query = query.or(`category_id.eq.${categoryId},category_name.ilike.%${categoryId}%`);
+                query = query.eq('category_id', categoryId);
             }
 
             if (isFeatured) {

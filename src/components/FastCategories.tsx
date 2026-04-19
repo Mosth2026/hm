@@ -48,10 +48,26 @@ const FastCategories: React.FC = () => {
       try {
         setLoading(true);
         const { data: catData } = await supabase.from("categories").select("*");
+        const { data: prodData } = await supabase.from("products").select("category_id").gt("stock", 0).gt("price", 0);
         
         if (catData) {
+          const productList = prodData || [];
           const roots = catData
-            .filter((cat) => !cat.parent_id && !(cat.id || "").includes("tax"))
+            .filter((cat) => {
+              const isRoot = !cat.parent_id;
+              const label = (cat.label || "").toLowerCase();
+              const isAccounting = (cat.id || "").includes("tax") || label.includes("ضريبة") || label.includes("محاسب");
+              
+              if (!isRoot || isAccounting) return false;
+
+              // Min 4 products rule
+              const descendants = [cat.id];
+              const children = catData.filter(c => c.parent_id === cat.id);
+              descendants.push(...children.map(c => c.id));
+              const count = productList.filter(p => descendants.includes(p.category_id)).length;
+              
+              return count >= 4;
+            })
             .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
 
           // Fetch real product previews — try featured first, then any valid image

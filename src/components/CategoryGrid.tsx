@@ -27,14 +27,34 @@ const CategoryGrid: React.FC = () => {
         if (error) throw error;
 
         if (data) {
-          // Filter root categories that are not accounting-based
+          // 1.5. Fetch products for counting
+          const { data: prods } = await supabase
+            .from("products")
+            .select("category_id")
+            .gt("stock", 0)
+            .gt("price", 0);
+
+          const productList = prods || [];
+
+          // Filter root categories that are not accounting-based and have >= 4 products
           const filtered = data
             .filter((cat) => {
               const isRoot = !cat.parent_id;
               const label = (cat.label || "").toLowerCase();
               const isAccounting = cat.id === "no-tax" || label.includes("ضريبة") || label.includes("محاسب");
               const isHiddenOnWeb = label.includes("[hide_on_web]");
-              return isRoot && !isAccounting && !isHiddenOnWeb;
+              
+              if (!isRoot || isAccounting || isHiddenOnWeb) return false;
+
+              // Find all descendant IDs for this root category
+              const descendantIds = [cat.id];
+              const children = data.filter(c => c.parent_id === cat.id);
+              descendantIds.push(...children.map(c => c.id));
+              
+              // Count products in this category hierarchy
+              const count = productList.filter(p => descendantIds.includes(p.category_id)).length;
+              
+              return count >= 4;
             })
             // Dynamically count children from the full list
             .map((cat) => ({

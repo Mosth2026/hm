@@ -94,21 +94,37 @@ const Header = () => {
   useEffect(() => {
     const fetchNavCategories = async () => {
       try {
-        // Fetch ALL categories for robustness
-        const { data, error } = await supabase
+        // Fetch ALL categories and products for counting
+        const { data: cats, error: catError } = await supabase
           .from("categories")
           .select("*");
+        
+        const { data: prods } = await supabase
+          .from("products")
+          .select("category_id")
+          .gt("stock", 0)
+          .gt("price", 0);
 
-        if (error) throw error;
+        if (catError) throw catError;
 
-        if (data) {
-          const links = data
+        if (cats) {
+          const productList = prods || [];
+          const links = cats
             .filter((cat) => {
               const isRoot = !cat.parent_id;
               const label = (cat.label || "").toLowerCase();
               const isAccounting = cat.id === "no-tax" || label.includes("ضريبة") || label.includes("محاسب");
               const isHiddenOnWeb = label.includes("[hide_on_web]");
-              return isRoot && !isAccounting && !isHiddenOnWeb;
+              
+              if (!isRoot || isAccounting || isHiddenOnWeb) return false;
+
+              // Min 4 products rule
+              const descendants = [cat.id];
+              const children = cats.filter(c => c.parent_id === cat.id);
+              descendants.push(...children.map(c => c.id));
+              const count = productList.filter(p => descendants.includes(p.category_id)).length;
+
+              return count >= 4;
             })
             // Sort by order_index if it exists
             .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
