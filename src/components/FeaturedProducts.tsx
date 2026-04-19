@@ -1,4 +1,5 @@
 
+import { useState } from "react";
 import { Loader2, Sparkles } from "lucide-react";
 import { useProducts } from "@/hooks/use-products";
 import ProductCard from "./ProductCard";
