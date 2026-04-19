@@ -78,11 +78,7 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean, branchId?
         queryKey: ['products', categoryId, isFeatured, isAdmin, branchId],
         queryFn: async () => {
             let query = supabase.from('products').select(`
-                id, name, price, image, description, category_id, category_name, is_featured, stock, created_at,
-                product_branch_stock!left (
-                    stock,
-                    branch_id
-                )
+                id, name, price, image, description, category_id, category_name, is_featured, stock, created_at
             `);
 
             if (!isAdmin) {
