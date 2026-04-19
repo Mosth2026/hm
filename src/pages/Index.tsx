@@ -16,7 +16,7 @@ import SocialBanner from "@/components/SocialBanner";
 import { Helmet } from "react-helmet-async";
 import { LayoutGrid, Zap, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import WhatsAppButton from "@/components/WhatsAppButton";
+import WhatsAppWidget from "@/components/WhatsAppWidget";
 
 type LayoutMode = 'original' | 'premium' | 'fast';
 const ALL_MODES: LayoutMode[] = ['original', 'premium', 'fast'];
@@ -92,6 +92,8 @@ const Index = () => {
             <FeaturedProducts showAll />
             <Features />
             <SocialBanner />
+            <Testimonials />
+            <Newsletter />
           </div>
         ) : (
           <div className="animate-in fade-in duration-700">
@@ -104,13 +106,19 @@ const Index = () => {
             ) : (
               <FastCategories />
             )}
+            <SwissFruSection />
+            <LifestyleCollections />
             <FeaturedProducts />
+            <Features />
+            <SocialBanner />
+            <Testimonials />
+            <Newsletter />
           </div>
         )}
       </main>
 
       <Footer />
-      <WhatsAppButton />
+      <WhatsAppWidget />
     </div>
   );
 };
