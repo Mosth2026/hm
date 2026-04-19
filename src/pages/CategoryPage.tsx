@@ -82,14 +82,17 @@ const CategoryPage = () => {
         
         setSubCategories(subs);
 
-        // 4. Identify all descendant IDs for product fetching
+        // 4. Identify all descendant IDs for product fetching (with safety guard)
         const allDescendantIds = [categoryId];
-        const getChildren = (parentIds: string[]) => {
+        const getChildren = (parentIds: string[], depth = 0) => {
+          if (depth > 10) return; // Prevent infinite loops
           const children = allCats?.filter(c => c.parent_id && parentIds.includes(c.parent_id)) || [];
           if (children.length > 0) {
             const ids = children.map(c => c.id);
-            allDescendantIds.push(...ids);
-            getChildren(ids);
+            const newIds = ids.filter(id => !allDescendantIds.includes(id));
+            if (newIds.length === 0) return;
+            allDescendantIds.push(...newIds);
+            getChildren(newIds, depth + 1);
           }
         };
         getChildren([categoryId]);
