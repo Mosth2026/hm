@@ -77,24 +77,17 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean, branchId?
     return useQuery({
         queryKey: ['products', categoryId, isFeatured, isAdmin, branchId],
         queryFn: async () => {
-            // Using join to fetch product_branch_stock for the specific branch
             let query = supabase.from('products').select(`
-                *,
+                id, name, price, image, description, category_id, category_name, is_featured, stock, created_at,
                 product_branch_stock!left (
                     stock,
                     branch_id
                 )
             `);
 
-            if (branchId) {
-                // We filter for branch stock or null (to handle products not yet initialized for a branch)
-                // Actually, if we only want items for that branch, we filter by branch_id
-                // But if we want to show ALL items and just show 0 if no record, we use or filter or just handle it in JS.
-            }
-
             if (!isAdmin) {
                 query = query
-                    .filter('price', 'gt', 0)
+                    .gt('price', 0)
                     .gt('stock', 0)
                     .not('image', 'is', null)
                     .neq('image', '')
@@ -105,9 +98,8 @@ export const useProducts = (categoryId?: string, isFeatured?: boolean, branchId?
             }
 
             if (categoryId && categoryId !== 'all') {
-                // SMART FILTER: Search by category ID, category name, OR if the product name contains the category name
-                // To avoid too many matches, we use a simple keyword match
-                query = query.or(`category_id.ilike.%${categoryId}%,category_name.ilike.%${categoryId}%,name.ilike.%${categoryId}%`);
+                // Using a more focused match for categories
+                query = query.or(`category_id.eq.${categoryId},category_name.ilike.%${categoryId}%`);
             }
 
             if (isFeatured) {

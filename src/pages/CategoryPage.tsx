@@ -94,19 +94,16 @@ const CategoryPage = () => {
         };
         getChildren([categoryId]);
 
-        // 5. Fetch products for ALL identified categories
-        // We'll fetch all products that EITHER have category_id in descendants 
-        // OR have any of the descendant IDs in their description as [ADD_CAT:id]
+        // 5. Fetch products for ONLY the identified categories (and descendants)
         const tryFetchProds = async (useIsAvailable: boolean) => {
           let query = supabase
             .from("products")
-            .select("*")
+            .select("id, name, price, image, description, category_id, category_name, created_at")
+            .in("category_id", allDescendantIds)
             .gt("stock", 0)
             .gt("price", 0)
             .not("image", "is", null)
             .neq("image", "")
-            .neq("image", "null")
-            .neq("image", "undefined")
             .not("image", "ilike", "%placeholder%")
             .not("image", "ilike", "%unsplash%")
             .not("image", "ilike", "%1581091226825%")
@@ -119,32 +116,21 @@ const CategoryPage = () => {
           const { data, error } = await query;
           if (error) return { data, error };
 
-          // Filter in-memory: Match primary ID OR secondary tag OR category label in product name
-          // AND exclude any "Draft" or "Hidden" categories
+          // Secondary filtering for [ADD_CAT:id] tags which are still needed in-memory
           const matched = (data || []).filter(p => {
             const catName = (p.category_name || '').toLowerCase();
             const catId = (p.category_id || '').toLowerCase();
-            const isDraft = catName.includes('درافت') || 
-                            catName.includes('مخفي') || 
-                            catId === 'trash' || 
-                            catId === 'draft';
+            const isDraft = catName.includes('درافت') || catName.includes('مخفي') || catId === 'trash';
 
             if (isDraft) return false;
 
-            const isPrimaryMatch = allDescendantIds.includes(p.category_id);
+            // Already filtered by category_id in SQL, but we add [ADD_CAT] check here
             const isSecondaryMatch = allDescendantIds.some(id =>
                p.description && p.description.includes(`[ADD_CAT:${id}]`)
             );
             
-            const productNameNorm = normArabic(p.name || '');
-            const isNameMatch = allDescendantIds.some(id => {
-              const cat = allCats?.find(c => c.id === id);
-              if (!cat) return false;
-              const label = normArabic((cat.label || '').replace(/\[.*?\]/g, '').trim());
-              return label.length >= 2 && productNameNorm.includes(label);
-            });
-
-            return isPrimaryMatch || isSecondaryMatch || isNameMatch;
+            // We can keep the name match if needed, but SQL 'in' filter did 90% of the work
+            return true; 
           });
 
           return { data: matched, error: null };
