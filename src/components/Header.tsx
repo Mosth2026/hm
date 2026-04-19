@@ -113,7 +113,7 @@ const Header = () => {
             // Sort by order_index if it exists
             .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
             .map(cat => ({
-              name: cat.label.replace(/\[HIDE_ON_WEB\]/gi, "").trim(),
+              name: (cat.label || "").replace(/\[HIDE_ON_WEB\]/gi, "").trim(),
               path: `/categories/${cat.id}`
             }));
           

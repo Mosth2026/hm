@@ -39,7 +39,7 @@ const CategoryGrid: React.FC = () => {
             // Dynamically count children from the full list
             .map((cat) => ({
               ...cat,
-              label: cat.label.replace(/\[HIDE_ON_WEB\]/gi, "").trim(),
+              label: (cat.label || "").replace(/\[HIDE_ON_WEB\]/gi, "").trim(),
               children_count: data.filter(child => child.parent_id === cat.id).length
             }))
             .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
