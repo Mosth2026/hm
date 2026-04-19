@@ -51,7 +51,7 @@ const FastCategories: React.FC = () => {
         
         if (catData) {
           const roots = catData
-            .filter((cat) => !cat.parent_id && !cat.id.includes("tax"))
+            .filter((cat) => !cat.parent_id && !(cat.id || "").includes("tax"))
             .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
 
           // Fetch real product previews — try featured first, then any valid image
@@ -59,6 +59,8 @@ const FastCategories: React.FC = () => {
             !!url && !url.includes('unsplash') && !url.includes('1581091226825') && !url.includes('placeholder') && !url.includes('generic');
 
           const enriched = await Promise.all(roots.map(async (cat) => {
+            const catId = cat.id || "";
+            const catLabel = cat.label || "";
             if (isValidImg(cat.image)) return { ...cat, preview_image: cat.image };
 
             const baseFilter = (q: any) => q
@@ -77,20 +79,20 @@ const FastCategories: React.FC = () => {
             // 1st try: featured product in this category
             const { data: featured } = await baseFilter(
               supabase.from('products').select('image')
-                .or(`category_id.eq.${cat.id},category_id.ilike.%${cat.id}%,category_name.ilike.%${cat.label}%`)
+                .or(`category_id.eq.${catId},category_id.ilike.%${catId}%,category_name.ilike.%${catLabel}%`)
                 .eq('is_featured', true)
             ).limit(1);
 
             if (featured?.[0]?.image) return { ...cat, preview_image: featured[0].image };
 
             // 2nd try: any product in category or matching label
-            const { data: any } = await baseFilter(
+            const { data: anyProds } = await baseFilter(
               supabase.from('products').select('image')
-                .or(`category_id.eq.${cat.id},category_id.ilike.%${cat.id}%,category_name.ilike.%${cat.label}%`)
+                .or(`category_id.eq.${catId},category_id.ilike.%${catId}%,category_name.ilike.%${catLabel}%`)
                 .order('created_at', { ascending: false })
             ).limit(3);
 
-            const validImg = any?.find(p => p.image && !p.image.includes('unsplash') && !p.image.includes('placeholder'));
+            const validImg = anyProds?.find(p => p.image && !p.image.includes('unsplash') && !p.image.includes('placeholder'));
             return { ...cat, preview_image: validImg?.image || null };
           }));
 

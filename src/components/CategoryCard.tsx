@@ -23,13 +23,13 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
   const [images, setImages] = useState<string[]>(categoryImageCache[id] || []);
   const [loading, setLoading] = useState(!categoryImageCache[id]);
 
-  const getCategoryTheme = (catId: string, catLabel: string) => {
-    const l = (catLabel || '').toLowerCase();
-    const idStr = (catId || '').toLowerCase();
-    if (l.includes('شوكولاتة') || idStr.includes('chocolate')) return 'bg-[#FEF3F2]'; 
-    if (l.includes('قهوة') || idStr.includes('coffee')) return 'bg-[#F9F5F1]'; 
-    if (l.includes('مستحضرات') || l.includes('العناية الشخصية') || idStr.includes('cosmetics')) return 'bg-[#F0F5FF]'; 
-    if (l.includes('دايت') || idStr.includes('dietary')) return 'bg-[#F6FEF9]'; 
+  const getCategoryTheme = (id: string, label: string) => {
+    const l = (label || "").toLowerCase();
+    const safeId = (id || "").toLowerCase();
+    if (l.includes('شوكولاتة') || safeId.includes('chocolate')) return 'bg-[#FEF3F2]'; 
+    if (l.includes('قهوة') || safeId.includes('coffee')) return 'bg-[#F9F5F1]'; 
+    if (l.includes('مستحضرات') || l.includes('العناية الشخصية') || safeId.includes('cosmetics')) return 'bg-[#F0F5FF]'; 
+    if (l.includes('دايت') || safeId.includes('dietary')) return 'bg-[#F6FEF9]'; 
     if (l.includes('مشروبات')) return 'bg-[#FFF9F2]'; 
     return 'bg-gray-50';
   };
@@ -144,8 +144,10 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
   const renderContent = () => {
     if (loading) return <div className="absolute inset-0 flex items-center justify-center"><div className="h-4 w-4 bg-gray-200 animate-ping rounded-full" /></div>;
 
-    if (images.length === 1 || id.includes('cosmetics') || label.includes('العناية الشخصية')) {
-        const isCosmetics = (id.includes('cosmetics') || label.includes('مستحضرات') || label.includes('العناية الشخصية'));
+    const safeIdRender = (id || '').toLowerCase();
+    const safeLabelRender = (label || '').toLowerCase();
+    if (images.length === 1 || safeIdRender.includes('cosmetics') || safeLabelRender.includes('مستحضرات') || safeLabelRender.includes('العناية الشخصية')) {
+        const isCosmetics = (safeIdRender.includes('cosmetics') || safeLabelRender.includes('مستحضرات') || safeLabelRender.includes('العناية الشخصية'));
         const imgSrc = isCosmetics ? '/assets/cosmetics.png' : images[0];
         return (
             <div className="absolute inset-0 flex items-end justify-center p-2 pt-12 overflow-hidden">

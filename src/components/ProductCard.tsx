@@ -240,11 +240,11 @@ const ProductCard = ({
       {/* Content Container */}
       <div className="p-2 md:p-4 flex-grow flex flex-col space-y-1.5 md:space-y-2">
         <div className="flex items-center justify-between">
-        {category && (
+        {(category || "") && (
           <div className="flex flex-wrap gap-1">
-            {category.split(',').map((catName, idx) => {
-              const ids = categoryId.split(',');
-              const catId = ids[idx] || ids[0];
+            {(category || "").split(',').map((catName, idx) => {
+              const ids = (categoryId || "").split(',');
+              const catId = ids[idx] || ids[0] || "all";
               // CLEAN: Remove internal metadata like [IDS:CHOCOLATE]
               const cleanCatName = catName.replace(/\[.*?\]/g, "").trim();
               if (!cleanCatName) return null;
