@@ -99,10 +99,6 @@ const Index = () => {
         {layoutMode === 'original' ? (
           <div className="animate-in fade-in duration-700">
             <Hero />
-            <div className="container mx-auto px-4 py-8">
-              <h2 className="text-3xl font-black text-primary mb-8 text-center italic">أقسامنا الرئيسية</h2>
-              <CategoryGrid />
-            </div>
             <FeaturedProducts showAll />
             <Features />
             <SocialBanner />
@@ -133,6 +129,56 @@ const Index = () => {
 
       <Footer />
       <WhatsAppWidget />
+
+      {/* Floating Layout Switcher Pill - Professional UI */}
+      {enabledLayouts.length > 1 && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[90] animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-1000">
+          <div className="bg-white/80 backdrop-blur-2xl border border-primary/10 p-1.5 rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.15)] flex items-center gap-1">
+            {enabledLayouts.includes('original') && (
+              <button
+                onClick={() => toggleLayout('original')}
+                className={cn(
+                  "px-6 py-2.5 rounded-full text-xs font-black transition-all flex items-center gap-2",
+                  layoutMode === 'original' 
+                    ? "bg-primary text-white shadow-lg scale-105" 
+                    : "text-primary/40 hover:text-primary hover:bg-primary/5"
+                )}
+              >
+                <Home className="h-3.5 w-3.5" />
+                <span>الوضع الأصلي</span>
+              </button>
+            )}
+            {enabledLayouts.includes('premium') && (
+              <button
+                onClick={() => toggleLayout('premium')}
+                className={cn(
+                  "px-6 py-2.5 rounded-full text-xs font-black transition-all flex items-center gap-2",
+                  layoutMode === 'premium' 
+                    ? "bg-secondary text-primary shadow-lg scale-105" 
+                    : "text-primary/40 hover:text-secondary hover:bg-secondary/5"
+                )}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+                <span>كلاسيك</span>
+              </button>
+            )}
+            {enabledLayouts.includes('fast') && (
+              <button
+                onClick={() => toggleLayout('fast')}
+                className={cn(
+                  "px-6 py-2.5 rounded-full text-xs font-black transition-all flex items-center gap-2",
+                  layoutMode === 'fast' 
+                    ? "bg-saada-red text-white shadow-lg scale-105" 
+                    : "text-primary/40 hover:text-saada-red hover:bg-saada-red/5"
+                )}
+              >
+                <Zap className="h-3.5 w-3.5" />
+                <span>تصفح سريع</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
