@@ -29,14 +29,44 @@ const normArabic = (input: string) => {
 };
 
 const CategoryPage = () => {
+  const queryClient = useQueryClient();
   const { categoryId } = useParams();
   const navigate = useNavigate();
   const [products, setProducts] = useState<any[]>([]);
   const [category, setCategory] = useState<any>(null);
   const [subCategories, setSubCategories] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [sortBy, setSortBy] = useState("newest");
   const [categoryPath, setCategoryPath] = useState<any[]>([]);
+  const touchStartY = useRef(0);
+
+  // Pull to Refresh Logic
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      if (window.scrollY === 0) {
+        touchStartY.current = e.touches[0].clientY;
+      }
+    };
+
+    const handleTouchEnd = async (e: TouchEvent) => {
+      const touchEndY = e.changedTouches[0].clientY;
+      const pullDistance = touchEndY - touchStartY.current;
+
+      if (window.scrollY === 0 && pullDistance > 150 && !isRefreshing) {
+        setIsRefreshing(true);
+        await queryClient.refetchQueries();
+        setTimeout(() => setIsRefreshing(false), 1000);
+      }
+    };
+
+    window.addEventListener('touchstart', handleTouchStart);
+    window.addEventListener('touchend', handleTouchEnd);
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [queryClient, isRefreshing]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -177,6 +207,16 @@ const CategoryPage = () => {
         <title>{categoryName} | صناع السعادة</title>
         <meta name="description" content={`استكشف تشكيلتنا الحصرية من ${categoryName} الفاخرة في متجر صناع السعادة.`} />
       </Helmet>
+
+      {/* Pull to Refresh Indicator */}
+      <div className={cn(
+        "fixed top-0 left-0 w-full flex justify-center pt-4 transition-all duration-500 z-[110] pointer-events-none",
+        isRefreshing ? "translate-y-0 opacity-100" : "-translate-y-20 opacity-0"
+      )}>
+        <div className="bg-white/80 backdrop-blur-2xl p-3 rounded-full shadow-2xl border border-primary/10">
+          <div className="h-6 w-6 border-2 border-primary/20 border-t-secondary animate-spin rounded-full" />
+        </div>
+      </div>
 
       <div className="min-h-screen flex flex-col bg-[#fdfdfd] font-tajawal rtl">
         <Header />

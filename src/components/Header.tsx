@@ -39,17 +39,28 @@ const Header = () => {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin' || user?.role === 'editor';
   const { logEvent } = useAnalytics();
+  const [isWiggling, setIsWiggling] = useState(false);
   const itemCount = getItemCount();
-  const totalPrice = getTotalPrice();
-  const discountedTotal = getDiscountedTotal();
-  const [couponInput, setCouponInput] = useState("");
-  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Cart Wiggle Effect
+  useEffect(() => {
+    if (itemCount > 0) {
+      setIsWiggling(true);
+      const timer = setTimeout(() => setIsWiggling(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [itemCount]);
+
+  const totalPrice = getTotalPrice();
+  const discountedTotal = getDiscountedTotal();
+  const [couponInput, setCouponInput] = useState("");
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -264,9 +275,12 @@ const Header = () => {
               <Sheet onOpenChange={(open) => open && logEvent('cart_view', { items_count: itemCount })}>
                 <SheetTrigger asChild>
                   <Button
-                    className="relative h-10 w-10 md:h-12 md:w-auto md:px-7 bg-primary hover:bg-black text-white rounded-xl md:rounded-2xl shadow-[0_10px_20px_rgba(0,0,0,0.15)] transition-all hover:scale-105 active:scale-95 group flex items-center justify-center md:gap-3 border-b-4 border-black/20 p-0 md:p-auto"
+                    className={cn(
+                      "relative h-10 w-10 md:h-12 md:w-auto md:px-7 bg-primary hover:bg-black text-white rounded-xl md:rounded-2xl shadow-[0_10px_20px_rgba(0,0,0,0.15)] transition-all hover:scale-105 active:scale-95 group flex items-center justify-center md:gap-3 border-b-4 border-black/20 p-0 md:p-auto",
+                      isWiggling && "animate-wiggle scale-110 shadow-secondary/50"
+                    )}
                   >
-                    <ShoppingCart className="h-5 w-5 group-hover:rotate-12 transition-transform" />
+                    <ShoppingCart className={cn("h-5 w-5 group-hover:rotate-12 transition-transform", isWiggling && "text-secondary")} />
                     <span className="text-[15px] font-black hidden lg:inline tracking-tight">سلة السعادة</span>
                     {itemCount > 0 && (
                       <span className="absolute -top-1.5 -right-1.5 bg-secondary text-primary text-[10px] font-black rounded-lg px-1.5 h-5 min-w-[20px] flex items-center justify-center shadow-lg border-2 border-white animate-bounce-slow">

@@ -138,7 +138,10 @@ const ProductCard = ({
   };
 
   return (
-    <div className="group relative bg-card rounded-[1.5rem] md:rounded-[2rem] border border-primary/10 p-2 md:p-3 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 font-tajawal rtl h-full flex flex-col premium-card">
+    <div className={cn(
+      "group relative bg-card rounded-[1.5rem] md:rounded-[2rem] border border-primary/10 p-2 md:p-3 transition-all duration-500 hover:shadow-2xl hover:-translate-y-2 font-tajawal rtl h-full flex flex-col premium-card tap-effect",
+      isAdding && "ring-2 ring-green-500 shadow-lg shadow-green-500/20 scale-[1.02]"
+    )}>
 
       {/* Image Container */}
       <div className="relative aspect-square overflow-hidden rounded-[1.25rem] md:rounded-[1.5rem] bg-white">

@@ -1,5 +1,6 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -23,9 +24,40 @@ type LayoutMode = 'original' | 'premium' | 'fast';
 const ALL_MODES: LayoutMode[] = ['original', 'premium', 'fast'];
 
 const Index = () => {
+  const queryClient = useQueryClient();
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('original');
   const [enabledLayouts, setEnabledLayouts] = useState<LayoutMode[]>(['original']);
   const [isReady, setIsReady] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const touchStartY = useRef(0);
+
+  // Pull to Refresh Logic
+  useEffect(() => {
+    const handleTouchStart = (e: TouchEvent) => {
+      if (window.scrollY === 0) {
+        touchStartY.current = e.touches[0].clientY;
+      }
+    };
+
+    const handleTouchEnd = async (e: TouchEvent) => {
+      const touchEndY = e.changedTouches[0].clientY;
+      const pullDistance = touchEndY - touchStartY.current;
+
+      if (window.scrollY === 0 && pullDistance > 150 && !isRefreshing) {
+        setIsRefreshing(true);
+        // Visual haptic feedback would go here
+        await queryClient.refetchQueries();
+        setTimeout(() => setIsRefreshing(false), 1000);
+      }
+    };
+
+    window.addEventListener('touchstart', handleTouchStart);
+    window.addEventListener('touchend', handleTouchEnd);
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [queryClient, isRefreshing]);
 
   useEffect(() => {
     const fetchGlobalSettings = async () => {
@@ -92,6 +124,16 @@ const Index = () => {
       <Helmet>
         <title>متجر صناع السعادة | أصل المستورد في مصر</title>
       </Helmet>
+
+      {/* Pull to Refresh Indicator */}
+      <div className={cn(
+        "fixed top-0 left-0 w-full flex justify-center pt-4 transition-all duration-500 z-[110] pointer-events-none",
+        isRefreshing ? "translate-y-0 opacity-100" : "-translate-y-20 opacity-0"
+      )}>
+        <div className="bg-white/80 backdrop-blur-2xl p-3 rounded-full shadow-2xl border border-primary/10">
+          <div className="h-6 w-6 border-2 border-primary/20 border-t-secondary animate-spin rounded-full" />
+        </div>
+      </div>
 
       <Header />
       

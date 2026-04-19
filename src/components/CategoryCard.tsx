@@ -176,7 +176,7 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
     <Link
       to={isAll ? (id === 'all' ? "/search" : `/categories/${id}`) : `/categories/${id}`}
       className={cn(
-        "group relative block aspect-[4/5] rounded-[2.5rem] overflow-hidden transition-all duration-1000 hover:-translate-y-4 active:scale-95 border border-black/[0.03] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)]",
+        "group relative block aspect-[4/5] rounded-[2.5rem] overflow-hidden transition-all duration-1000 hover:-translate-y-4 active:scale-95 border border-black/[0.03] shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] tap-effect",
         themeClass,
         isActive && "ring-4 ring-saada-red ring-offset-4"
       )}

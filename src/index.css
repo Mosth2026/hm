@@ -330,8 +330,61 @@
   display: none !important;
 }
 
-@media (min-width: 1024px) {
-  .collection-icon {
-    display: flex !important;
-  }
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(-8deg) scale(1.1); }
+  75% { transform: rotate(8deg) scale(1.1); }
+}
+
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 0 0 rgba(var(--secondary), 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(var(--secondary), 0); }
+  100% { box-shadow: 0 0 0 0 rgba(var(--secondary), 0); }
+}
+
+@keyframes bounce-subtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+.animate-wiggle {
+  animation: wiggle 0.5s ease-in-out;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s infinite;
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 2s ease-in-out infinite;
+}
+
+/* Premium Button Interactions */
+.btn-premium {
+  @apply transition-all duration-300 active:scale-90 select-none;
+}
+
+.tap-effect {
+  @apply active:scale-95 transition-transform duration-200;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+  @apply relative overflow-hidden bg-muted/20;
+}
+
+.skeleton-shimmer::after {
+  content: "";
+  @apply absolute inset-0;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(255,255,255,0.4) 50%, 
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite linear;
 }

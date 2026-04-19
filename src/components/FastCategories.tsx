@@ -172,7 +172,7 @@ const FastCategories: React.FC = () => {
                 key={cat.id}
                 onClick={() => navigate(`/categories/${cat.id}`)}
                 style={{ animationDelay: `${idx * 50}ms` }}
-                className={`${cardBg} group relative flex flex-col p-2.5 md:p-4 rounded-[1.5rem] md:rounded-[2rem] transition-all duration-500 hover:-translate-y-1 hover:shadow-xl active:scale-95 cursor-pointer border border-black/5 aspect-[4/5] overflow-hidden shadow-sm animate-in fade-in zoom-in-90 duration-500 fill-mode-both`}
+                className={`${cardBg} group relative flex flex-col p-2.5 md:p-4 rounded-[1.5rem] md:rounded-[2rem] transition-all duration-500 hover:-translate-y-1 hover:shadow-xl active:scale-95 cursor-pointer border border-black/5 aspect-[4/5] overflow-hidden shadow-sm animate-in fade-in zoom-in-90 duration-500 fill-mode-both tap-effect`}
               >
                 {/* Image Area — blur-background technique */}
                 <div className="flex-grow relative overflow-hidden">
