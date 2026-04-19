@@ -23,30 +23,36 @@ const ALL_MODES: LayoutMode[] = ['original', 'premium', 'fast'];
 const Index = () => {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('original');
   const [enabledLayouts, setEnabledLayouts] = useState<LayoutMode[]>(['original']);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Read enabled layouts from admin settings
-    let enabled: LayoutMode[] = ['original'];
-    const savedEnabled = localStorage.getItem('saada_enabled_layouts');
-    if (savedEnabled) {
-      try {
+    try {
+      // Read enabled layouts from admin settings
+      let enabled: LayoutMode[] = ['original'];
+      const savedEnabled = localStorage.getItem('saada_enabled_layouts');
+      if (savedEnabled) {
         const parsed = JSON.parse(savedEnabled);
         if (Array.isArray(parsed) && parsed.length > 0) {
           enabled = parsed.filter((m: string) => ALL_MODES.includes(m as LayoutMode)) as LayoutMode[];
         }
-      } catch {}
-    }
-    
-    // Safety check: if empty, always allow original
-    if (enabled.length === 0) enabled = ['original'];
-    setEnabledLayouts(enabled);
+      }
+      
+      if (enabled.length === 0) enabled = ['original'];
+      setEnabledLayouts(enabled);
 
-    // Read saved layout mode, fall back to first enabled if disabled
-    const savedMode = localStorage.getItem('saada_layout_mode') as LayoutMode | null;
-    if (savedMode && enabled.includes(savedMode)) {
-      setLayoutMode(savedMode);
-    } else {
-      setLayoutMode(enabled[0] || 'original');
+      // Read saved layout mode
+      const savedMode = localStorage.getItem('saada_layout_mode') as LayoutMode | null;
+      if (savedMode && enabled.includes(savedMode)) {
+        setLayoutMode(savedMode);
+      } else {
+        setLayoutMode('original'); // Always safe fallback
+      }
+    } catch (err) {
+      console.error("Layout initialization error:", err);
+      setEnabledLayouts(['original']);
+      setLayoutMode('original');
+    } finally {
+      setIsReady(true);
     }
   }, []);
 
@@ -54,6 +60,17 @@ const Index = () => {
     setLayoutMode(mode);
     localStorage.setItem('saada_layout_mode', mode);
   };
+
+  if (!isReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white font-tajawal rtl">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 border-4 border-primary/10 border-t-secondary animate-spin rounded-full" />
+          <p className="text-primary font-bold animate-pulse">جاري تحضير تجربة سعيدة...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
