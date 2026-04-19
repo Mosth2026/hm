@@ -88,72 +88,80 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
           onPressed: () => context.pop(),
         ),
       ),
-      body: CustomScrollView(
-        slivers: [
-          // ─── Sub-category Grid (Buttons) ───
-          if (node.hasChildren)
-            _buildSubCategoryGrid(node),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(productsProvider(activeFilter));
+          ref.invalidate(categoryTreeProvider);
+        },
+        color: AppColors.accent,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            // ─── Sub-category Grid (Buttons) ───
+            if (node.hasChildren)
+              _buildSubCategoryGrid(node),
 
-          // ─── Products Title ───
-          if (node.hasChildren)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-                child: Text(
-                  _selectedSubId == node.id || _selectedSubId == null 
-                    ? 'كل المنتجات' 
-                    : 'منتجات القسم المختار',
-                  style: AppTypography.titleMedium,
+            // ─── Products Title ───
+            if (node.hasChildren)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+                  child: Text(
+                    _selectedSubId == node.id || _selectedSubId == null 
+                      ? 'كل المنتجات' 
+                      : 'منتجات القسم المختار',
+                    style: AppTypography.titleMedium,
+                  ),
                 ),
               ),
-            ),
 
-          // ─── Products Grid ───
-          productsAsync.when(
-            data: (products) {
-              if (products.isEmpty) {
-                return SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Iconsax.box_search, size: 72, color: AppColors.border),
-                        const SizedBox(height: 16),
-                        Text('لا توجد منتجات في هذا القسم', style: AppTypography.titleMedium),
-                      ],
+            // ─── Products Grid ───
+            productsAsync.when(
+              data: (products) {
+                if (products.isEmpty) {
+                  return SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Iconsax.box_search, size: 72, color: AppColors.border),
+                          const SizedBox(height: 16),
+                          Text('لا توجد منتجات في هذا القسم', style: AppTypography.titleMedium),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                return SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 0.60,
+                      crossAxisSpacing: 14,
+                      mainAxisSpacing: 18,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) => ProductCard(product: products[index]),
+                      childCount: products.length,
                     ),
                   ),
                 );
-              }
-              return SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-                sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.60,
-                    crossAxisSpacing: 14,
-                    mainAxisSpacing: 18,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) => ProductCard(product: products[index]),
-                    childCount: products.length,
-                  ),
+              },
+              loading: () => SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: CircularProgressIndicator(color: AppColors.accent),
                 ),
-              );
-            },
-            loading: () => SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(
-                child: CircularProgressIndicator(color: AppColors.accent),
+              ),
+              error: (err, _) => SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(child: Text('حدث خطأ: $err')),
               ),
             ),
-            error: (err, _) => SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(child: Text('حدث خطأ: $err')),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

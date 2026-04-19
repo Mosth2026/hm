@@ -42,12 +42,29 @@ final categoryTreeProvider = FutureProvider<List<CategoryNode>>((ref) async {
     return AppConstants.categoryHierarchy.map((m) => CategoryNode.fromMap(m)).toList();
   }
 
-  // Filter out internal/accounting categories for customers (e.g., "بدون ضريبة" / "no-tax")
+  // Fetch all active products for counting
+  final repo = ref.read(productRepositoryProvider);
+  final allProducts = await repo.getProducts(isAdmin: false);
+
+  // Filter root categories that meet the "Min 4 products" rule
   final customerActiveCategories = categories.where((cat) {
     final isAccounting = cat.id == 'no-tax' || 
                          cat.label.contains('ضريبة') || 
                          cat.label.contains('محاسبي');
-    return !isAccounting;
+    if (isAccounting) return false;
+
+    // Only filter ROOT categories for the main view
+    if (cat.parentId != null) return true;
+
+    // Find all descendant category IDs
+    final descendantIds = [cat.id];
+    final children = categories.where((c) => c.parentId == cat.id).map((c) => c.id);
+    descendantIds.addAll(children);
+
+    // Count products in this category hierarchy
+    final count = allProducts.where((p) => descendantIds.contains(p.categoryId)).length;
+    
+    return count >= 4;
   }).toList();
 
   return _buildTree(customerActiveCategories);

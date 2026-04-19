@@ -32,9 +32,7 @@ class ProductRepository {
 
     // Category filter
     if (categoryId != null && categoryId != 'all') {
-      query = query.or(
-        'category_id.ilike.%$categoryId%,category_name.ilike.%$categoryId%,description.ilike.%[ADD_CAT:$categoryId]%',
-      );
+      query = query.eq('category_id', categoryId);
     }
 
     // Featured filter
