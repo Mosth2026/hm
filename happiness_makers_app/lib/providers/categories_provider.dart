@@ -78,7 +78,7 @@ final categoryPreviewImagesProvider = FutureProvider.family<List<String>, String
       if (id.isEmpty || id == 'all') continue;
       final products = await repo.getProducts(categoryId: id);
       final images = products
-          .where((p) => p.hasValidImage)
+          .where((p) => p.isAvailableForCustomer)
           .take(4)
           .map((p) => p.image)
           .toList();

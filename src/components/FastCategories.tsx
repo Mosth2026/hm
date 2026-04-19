@@ -56,17 +56,23 @@ const FastCategories: React.FC = () => {
 
           // Fetch real product previews — try featured first, then any valid image
           const isValidImg = (url: string | null | undefined) =>
-            !!url && !url.includes('unsplash') && !url.includes('1581091226825') && !url.includes('placeholder');
+            !!url && !url.includes('unsplash') && !url.includes('1581091226825') && !url.includes('placeholder') && !url.includes('generic');
 
           const enriched = await Promise.all(roots.map(async (cat) => {
             if (isValidImg(cat.image)) return { ...cat, preview_image: cat.image };
 
             const baseFilter = (q: any) => q
+              .gt('stock', 0)
+              .gt('price', 0)
               .neq('image', '')
               .not('image', 'is', null)
               .not('image', 'ilike', '%placeholder%')
               .not('image', 'ilike', '%unsplash%')
-              .not('image', 'ilike', '%1581091226825%');
+              .not('image', 'ilike', '%1581091226825%')
+              .not('description', 'ilike', '%[DRAFT]%')
+              .not('category_id', 'in', '(trash,draft)')
+              .not('category_name', 'ilike', '%درافت%')
+              .not('category_name', 'ilike', '%مخفي%');
 
             // 1st try: featured product in this category
             const { data: featured } = await baseFilter(

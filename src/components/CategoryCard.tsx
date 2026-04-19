@@ -65,12 +65,18 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
           let query = supabase
             .from("products")
             .select("image")
+            .gt("stock", 0)
+            .gt("price", 0)
             .neq("image", "")
             .not("image", "is", null)
             .not("image", "ilike", "%placeholder%")
             .not("image", "ilike", "%generic%")
             .not("image", "ilike", "%unsplash%")
             .not("image", "ilike", "%1581091226825%")
+            .not("description", "ilike", "%[DRAFT]%")
+            .not("category_name", "ilike", "%درافت%")
+            .not("category_name", "ilike", "%مخفي%")
+            .not("category_id", "in", "(trash,draft)")
             .order("is_featured", { ascending: false })
             .limit(4);
           
@@ -91,9 +97,14 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
             const { data: fuzzyData } = await supabase
               .from("products")
               .select("image")
+              .gt("stock", 0)
+              .gt("price", 0)
               .neq("image", "")
               .not("image", "is", null)
               .not("image", "ilike", "%placeholder%")
+              .not("image", "ilike", "%unsplash%")
+              .not("image", "ilike", "%1581091226825%")
+              .not("description", "ilike", "%[DRAFT]%")
               .ilike("name", `%${label}%`)
               .limit(4);
             
