@@ -27,34 +27,47 @@ const Index = () => {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    try {
-      // Read enabled layouts from admin settings
-      let enabled: LayoutMode[] = ['original'];
-      const savedEnabled = localStorage.getItem('saada_enabled_layouts');
-      if (savedEnabled) {
-        const parsed = JSON.parse(savedEnabled);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          enabled = parsed.filter((m: string) => ALL_MODES.includes(m as LayoutMode)) as LayoutMode[];
-        }
-      }
-      
-      if (enabled.length === 0) enabled = ['original'];
-      setEnabledLayouts(enabled);
+    const fetchGlobalSettings = async () => {
+      try {
+        // 1. Fetch enabled layouts from DB
+        const { data: dbSettings } = await supabase
+          .from('store_settings')
+          .select('value')
+          .eq('key', 'enabled_layouts')
+          .single();
 
-      // Read saved layout mode
-      const savedMode = localStorage.getItem('saada_layout_mode') as LayoutMode | null;
-      if (savedMode && enabled.includes(savedMode)) {
-        setLayoutMode(savedMode);
-      } else {
-        setLayoutMode('original'); // Always safe fallback
+        let enabled = ['original', 'premium', 'fast'] as LayoutMode[];
+        
+        if (dbSettings && Array.isArray(dbSettings.value)) {
+          enabled = dbSettings.value as LayoutMode[];
+        } else {
+          // Fallback to localStorage if DB fetch fails
+          const saved = localStorage.getItem('saada_enabled_layouts');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed)) enabled = parsed.filter(m => ALL_MODES.includes(m));
+          }
+        }
+        
+        setEnabledLayouts(enabled);
+
+        // 2. Determine initial mode
+        const savedMode = localStorage.getItem('saada_layout_mode') as LayoutMode;
+        if (savedMode && enabled.includes(savedMode)) {
+          setLayoutMode(savedMode);
+        } else {
+          // Default to first available layout from DB (prioritize original)
+          const defaultMode = enabled.includes('original') ? 'original' : (enabled[0] || 'original');
+          setLayoutMode(defaultMode);
+        }
+      } catch (e) {
+        console.error("Settings fetch error:", e);
+      } finally {
+        setIsReady(true);
       }
-    } catch (err) {
-      console.error("Layout initialization error:", err);
-      setEnabledLayouts(['original']);
-      setLayoutMode('original');
-    } finally {
-      setIsReady(true);
-    }
+    };
+
+    fetchGlobalSettings();
   }, []);
 
   const toggleLayout = (mode: LayoutMode) => {

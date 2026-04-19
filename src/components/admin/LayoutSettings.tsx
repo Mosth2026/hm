@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Home, LayoutGrid, Zap, Eye, EyeOff } from "lucide-react";
 
+import { supabase } from '@/lib/supabase';
+
 type LayoutId = 'original' | 'premium' | 'fast';
 
 const LAYOUT_MODES: { id: LayoutId; label: string; description: string; icon: React.ElementType; color: string; bg: string }[] = [
@@ -35,27 +37,52 @@ const LAYOUT_MODES: { id: LayoutId; label: string; description: string; icon: Re
 
 const LayoutSettings = () => {
   const [enabledLayouts, setEnabledLayouts] = useState<LayoutId[]>(['original', 'premium', 'fast']);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const saved = localStorage.getItem('saada_enabled_layouts');
-    if (saved) {
+    const fetchSettings = async () => {
       try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setEnabledLayouts(parsed as LayoutId[]);
+        const { data, error } = await supabase
+          .from('store_settings')
+          .select('value')
+          .eq('key', 'enabled_layouts')
+          .single();
+        
+        if (data && Array.isArray(data.value)) {
+          setEnabledLayouts(data.value as LayoutId[]);
         }
-      } catch {}
-    }
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
   }, []);
 
-  const toggleLayout = (id: LayoutId) => {
-    setEnabledLayouts(prev => {
-      const isEnabled = prev.includes(id);
-      if (isEnabled && prev.length === 1) return prev;
-      const next = isEnabled ? prev.filter(l => l !== id) : [...prev, id];
+  const toggleLayout = async (id: LayoutId) => {
+    const next = enabledLayouts.includes(id) 
+      ? enabledLayouts.filter(l => l !== id) 
+      : [...enabledLayouts, id];
+    
+    if (next.length === 0) return;
+
+    // Local state update for responsiveness
+    setEnabledLayouts(next);
+    
+    try {
+      const { error } = await supabase
+        .from('store_settings')
+        .upsert({ key: 'enabled_layouts', value: next });
+      
+      if (error) throw error;
+      toast.success("تم تحديث إعدادات العرض");
+      // Still update localStorage as a backup
       localStorage.setItem('saada_enabled_layouts', JSON.stringify(next));
-      return next;
-    });
+    } catch (err) {
+      toast.error("فشل في حفظ الإعدادات");
+      console.error(err);
+    }
   };
 
   const enabledCount = enabledLayouts.length;
