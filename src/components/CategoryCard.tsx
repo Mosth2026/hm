@@ -23,12 +23,13 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
   const [images, setImages] = useState<string[]>(categoryImageCache[id] || []);
   const [loading, setLoading] = useState(!categoryImageCache[id]);
 
-  const getCategoryTheme = (id: string, label: string) => {
-    const l = label.toLowerCase();
-    if (l.includes('شوكولاتة') || id.includes('chocolate')) return 'bg-[#FEF3F2]'; 
-    if (l.includes('قهوة') || id.includes('coffee')) return 'bg-[#F9F5F1]'; 
-    if (l.includes('مستحضرات') || l.includes('العناية الشخصية') || id.includes('cosmetics')) return 'bg-[#F0F5FF]'; 
-    if (l.includes('دايت') || id.includes('dietary')) return 'bg-[#F6FEF9]'; 
+  const getCategoryTheme = (catId: string, catLabel: string) => {
+    const l = (catLabel || '').toLowerCase();
+    const idStr = (catId || '').toLowerCase();
+    if (l.includes('شوكولاتة') || idStr.includes('chocolate')) return 'bg-[#FEF3F2]'; 
+    if (l.includes('قهوة') || idStr.includes('coffee')) return 'bg-[#F9F5F1]'; 
+    if (l.includes('مستحضرات') || l.includes('العناية الشخصية') || idStr.includes('cosmetics')) return 'bg-[#F0F5FF]'; 
+    if (l.includes('دايت') || idStr.includes('dietary')) return 'bg-[#F6FEF9]'; 
     if (l.includes('مشروبات')) return 'bg-[#FFF9F2]'; 
     return 'bg-gray-50';
   };
@@ -43,10 +44,13 @@ const CategoryCard: React.FC<CategoryCardProps> = ({
         return;
       }
 
+      const safeId = (id || '').toLowerCase();
+      const safeLabel = (label || '').toLowerCase();
+
       // Special case for cosmetics/personal care image
-      if (id.includes('cosmetics') || label.includes('مستحضرات') || label.includes('العناية الشخصية')) {
+      if (safeId.includes('cosmetics') || safeLabel.includes('مستحضرات') || safeLabel.includes('العناية الشخصية')) {
          const imgs = ['/assets/cosmetics.png'];
-         categoryImageCache[id] = imgs;
+         if (id) categoryImageCache[id] = imgs;
          setImages(imgs);
          setLoading(false);
          return;
