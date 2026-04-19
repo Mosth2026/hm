@@ -514,14 +514,18 @@ export const useAdminDashboard = () => {
                 const bcKey = findCol(['barcode', 'باركود', 'كود', 'ean', 'sku', 'رقم الصنف']) || columns[0];
                 const stockKey = findCol(['total_quantity', 'quantity', 'qty', 'stock', 'مخزون', 'كمية', 'رصيد', 'جرد']) || columns[1];
                 const priceKey = findCol(['sale_price', 'sale', 'price', 'سعر', 'قيمة', 'بيع']) || columns[2];
+                const nameKey = findCol(['name', 'item', 'product', 'اسم', 'صنف', 'البيان']) || columns[3];
+                const catKey = findCol(['category', 'dept', 'قسم', 'نوع']) || columns[4];
 
                 // 2. PREPARE TRACKING AND CALCULATION
                 const processedIds = new Set<number>();
                 const productUpdates: any[] = [];
+                const newProducts: any[] = [];
                 const stockUpdates: any[] = [];
                 let totalSoldQty = 0;
                 let totalSoldValue = 0;
                 let updatedCount = 0;
+                let addedCount = 0;
                 setImportProgress({ current: 0, total: rowData.length });
 
                 // Create a map for current stock and prices for fast diff calculation
@@ -546,9 +550,13 @@ export const useAdminDashboard = () => {
 
                     const sheetStockNum = Math.max(0, parseInt(String(row[stockKey] || 0).replace(/[^\d]/g, '')) || 0);
                     const sheetPriceRaw = parseFloat(String(row[priceKey] || 0).replace(/[^\d.]/g, ''));
+                    const sheetName = String(row[nameKey] || '').trim();
+                    const sheetCat = String(row[catKey] || '').trim();
                     
                     const pids = barcodeToIds.get(bc);
+                    
                     if (pids && pids.length > 0) {
+                        // EXISTING PRODUCT(S)
                         pids.forEach(pid => {
                             const p = productsInDb.find(x => x.id === pid);
                             const currentPrice = dbPriceMap.get(pid) || 0;
@@ -559,22 +567,20 @@ export const useAdminDashboard = () => {
                                 finalPrice = calculateProductPriceWithTax(sheetPriceRaw, p?.description, p?.category_name);
                             }
 
-                            // Calculate Sales
+                            // Calculate Sales (Difference)
                             if (sheetStockNum < currentStock) {
                                 const diff = currentStock - sheetStockNum;
                                 totalSoldQty += diff;
-                                // USE THE NEW PRICE (WITH TAX) FOR SALES CALCULATION
                                 totalSoldValue += (diff * finalPrice);
-                            }
-                            
-                            // Always track for debug, regardless of sales
-                            if (topSoldItems.length < 5) {
-                                topSoldItems.push({ 
-                                    name: p?.name || 'صنف', 
-                                    diff: currentStock - sheetStockNum,
-                                    dbStock: currentStock,
-                                    sheetStock: sheetStockNum
-                                });
+                                
+                                if (topSoldItems.length < 5) {
+                                    topSoldItems.push({ 
+                                        name: p?.name || 'صنف', 
+                                        diff: diff,
+                                        dbStock: currentStock,
+                                        sheetStock: sheetStockNum
+                                    });
+                                }
                             }
 
                             productUpdates.push({ 
@@ -589,6 +595,19 @@ export const useAdminDashboard = () => {
                             processedIds.add(pid);
                         });
                         updatedCount++;
+                    } else {
+                        // NEW PRODUCT
+                        const finalPrice = calculateProductPriceWithTax(sheetPriceRaw, '', sheetCat);
+                        newProducts.push({
+                            name: sheetName || `منتج جديد ${bc}`,
+                            price: finalPrice,
+                            stock: selectedBranchId ? 0 : sheetStockNum,
+                            category_name: sheetCat || 'الأصناف المستوردة',
+                            description: `باركود: ${bc}`,
+                            image: PLACEHOLDER_IMAGE,
+                            category_id: 'snacks'
+                        });
+                        addedCount++;
                     }
                 }
 
@@ -623,21 +642,31 @@ export const useAdminDashboard = () => {
                     }
                 }
 
-                // 5. EXECUTE UPDATES
-                // Using .update() instead of .upsert() to avoid "id" column constraints
-                setImportProgress({ current: 0, total: productUpdates.length });
+                // 5. EXECUTE UPDATES & INSERTS
+                if (newProducts.length > 0) {
+                    const { data: inserted, error: insertError } = await supabase.from('products').insert(newProducts).select();
+                    if (insertError) throw insertError;
+                    
+                    if (selectedBranchId && inserted) {
+                        const newStockPayload = inserted.map((np, idx) => ({ 
+                            product_id: np.id, 
+                            branch_id: selectedBranchId, 
+                            stock: newProducts[idx].stock || 0 
+                        }));
+                        await supabase.from('product_branch_stock').insert(newStockPayload);
+                    }
+                }
+
+                // Update Existing
                 for (let i = 0; i < productUpdates.length; i++) {
                     const { id, ...payload } = productUpdates[i];
-                    const { error } = await supabase.from('products').update(payload).eq('id', id);
-                    if (error) throw error;
+                    await supabase.from('products').update(payload).eq('id', id);
                     if (i % 10 === 0) setImportProgress({ current: i, total: productUpdates.length });
                 }
 
                 if (selectedBranchId && stockUpdates.length > 0) {
                     for (let i = 0; i < stockUpdates.length; i++) {
-                        const { product_id, branch_id, ...payload } = stockUpdates[i];
-                        const { error } = await supabase.from('product_branch_stock').upsert(stockUpdates[i], { onConflict: 'product_id,branch_id' });
-                        if (error) throw error;
+                        await supabase.from('product_branch_stock').upsert(stockUpdates[i], { onConflict: 'product_id,branch_id' });
                     }
                 }
 
@@ -648,11 +677,11 @@ export const useAdminDashboard = () => {
                 setImportProgress(null);
                 
                 const ghostCount = ghostProducts.length;
-                const excelCount = updatedCount - ghostCount;
+                const excelUpdateCount = updatedCount;
                 
                 const debugInfo = debugMatches ? `\nمقارنة عينة:\n${debugMatches}` : '';
-                toast.success(`جرد دقيق: تحديث ${excelCount} صنف من الملف + ${ghostCount} صنف غائب. المبيعات: ${totalSoldQty} قطعة بقيمة ${totalSoldValue.toFixed(2)}${debugInfo}`, {
-                    duration: 60000 // Fixed for 1 minute
+                toast.success(`جرد دقيق: تحديث ${excelUpdateCount} صنف + إضافة ${addedCount} صنف جديد + ${ghostCount} صنف غائب. المبيعات: ${totalSoldQty} قطعة بقيمة ${totalSoldValue.toFixed(2)}${debugInfo}`, {
+                    duration: 60000 
                 });
                 fetchProducts();
             } catch (err: any) {
