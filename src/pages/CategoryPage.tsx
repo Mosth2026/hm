@@ -132,7 +132,7 @@ const CategoryPage = () => {
         const tryFetchProds = async (useIsAvailable: boolean) => {
           let query = supabase
             .from("products")
-            .select("id, name, price, image, description, category_id, category_name, created_at")
+            .select("id, name, price, image, description, category_id, category_name, created_at, is_on_sale, discount, stock, is_available")
             .in("category_id", allDescendantIds)
             .gt("stock", 0)
             .gt("price", 0)
