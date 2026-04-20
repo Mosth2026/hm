@@ -414,9 +414,23 @@ export const useAdminDashboard = () => {
     };
 
     const handleDeleteOrder = async (id: number) => {
-        if (!confirm("حذف الطلب نهائياً؟")) return;
-        const { error } = await supabase.from('orders').delete().eq('id', id);
-        if (!error) fetchOrders();
+        if (!confirm("حذف الطلب نهائياً؟ هذا الإجراء سيحذف كافة تفاصيل الطلب ولا يمكن التراجع عنه.")) return;
+        const toastId = toast.loading("جاري حذف الطلب...");
+        try {
+            // 1. Delete associated order items first to satisfy foreign key constraints
+            const { error: itemsError } = await supabase.from('order_items').delete().eq('order_id', id);
+            if (itemsError) throw itemsError;
+
+            // 2. Delete the order itself
+            const { error: orderError } = await supabase.from('orders').delete().eq('id', id);
+            if (orderError) throw orderError;
+
+            toast.success("تم حذف الطلب وكافة ملحقاته بنجاح", { id: toastId });
+            fetchOrders();
+        } catch (e: any) {
+            console.error("Order deletion failed:", e);
+            toast.error(`فشل الحذف: ${e.message || "تأكد من صلاحياتك"}`, { id: toastId });
+        }
     };
 
     const handleExportData = () => {

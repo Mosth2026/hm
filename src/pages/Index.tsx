@@ -171,9 +171,7 @@ const Index = () => {
       </main>
 
       <Footer />
-      <WhatsAppWidget />
 
-      {/* Floating Layout Switcher Pill - Professional UI */}
       {enabledLayouts.length > 1 && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[90] animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-1000">
           <div className="bg-white/80 backdrop-blur-2xl border border-primary/10 p-1.5 rounded-full shadow-[0_20px_50px_rgba(0,0,0,0.15)] flex items-center gap-1">
