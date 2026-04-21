@@ -112,25 +112,35 @@ const UserManagement: React.FC = () => {
         try {
             const email = newUser.email.includes('@') ? newUser.email : `${newUser.email}@saada.com`;
 
-            const { data: authData, error: authError } = await supabase.auth.signUp({
-                email: email,
-                password: newUser.password,
-                options: { data: { username: newUser.display_name } }
+            // Get current session token for authorization
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) {
+                throw new Error('يجب تسجيل الدخول أولاً');
+            }
+
+            // Call secure server-side API
+            const response = await fetch('/api/create-user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({
+                    email,
+                    password: newUser.password,
+                    display_name: newUser.display_name,
+                    phone: newUser.phone || null,
+                    role: newUser.role,
+                    branch_id: newUser.branch_id ? Number(newUser.branch_id) : null,
+                    custom_permissions: newUser.custom_permissions
+                })
             });
 
-            if (authError) throw authError;
-            if (!authData.user) throw new Error('فشل إنشاء الحساب');
+            const result = await response.json();
 
-            const { error: roleError } = await supabase.from('user_roles').upsert({
-                user_id: authData.user.id,
-                role: newUser.role,
-                branch_id: newUser.branch_id ? Number(newUser.branch_id) : null,
-                display_name: newUser.display_name,
-                phone: newUser.phone || null,
-                custom_permissions: newUser.custom_permissions
-            }, { onConflict: 'user_id' });
-
-            if (roleError) throw roleError;
+            if (!response.ok) {
+                throw new Error(result.error || 'فشل إنشاء المستخدم');
+            }
 
             toast.success('تم إنشاء المستخدم بنجاح!', {
                 id: toastId,
@@ -141,8 +151,8 @@ const UserManagement: React.FC = () => {
             setShowCreateForm(false);
             fetchUsers();
         } catch (e: any) {
-            let errorMsg = 'فشل في إنشاء المستخدم';
-            if (e.message?.includes('already registered')) errorMsg = 'هذا البريد مسجل بالفعل';
+            let errorMsg = e.message || 'فشل في إنشاء المستخدم';
+            if (errorMsg.includes('already registered')) errorMsg = 'هذا البريد مسجل بالفعل';
             toast.error(errorMsg, { id: toastId });
         } finally {
             setCreating(false);

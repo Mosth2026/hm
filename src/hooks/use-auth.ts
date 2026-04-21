@@ -138,10 +138,6 @@ export const useAuth = create<AuthState>()(
                         console.error('Role fetch failed:', e);
                     }
 
-                    // EMERGENCY OVERRIDE for the main admin
-                    if (siteEmail.toLowerCase().includes('elhanafyadmin')) {
-                        role = 'owner';
-                    }
 
                     const userData: User = {
                         id: data.user.id,
@@ -204,9 +200,9 @@ export const useAuth = create<AuthState>()(
                     try {
                         const { data: roleData } = await supabase
                             .from('user_roles')
-                            .select('role, branch_id, display_name, phone, custom_permissions')
+                            .select('*')
                             .eq('user_id', session.user.id)
-                            .single();
+                            .maybeSingle();
                         
                         if (roleData?.role) {
                             role = roleData.role as UserRole;
@@ -219,10 +215,6 @@ export const useAuth = create<AuthState>()(
                         console.error('Initial role fetch failed:', e);
                     }
 
-                    // EMERGENCY OVERRIDE
-                    if (email.toLowerCase().includes('elhanafyadmin')) {
-                        role = 'owner';
-                    }
 
                     set({
                         user: {
