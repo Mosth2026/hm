@@ -84,8 +84,11 @@ export default async function handler(req, res) {
 
         const docs = stockData?.data?.items?.documents || [];
         const mappedItems = docs.filter(d => !d._deleted).map(item => {
-            const stockInfo = item.stocks?.find(s => s.branch_id === targetBranch) || item.stocks?.[0] || {};
-            const barcodeInfo = item.barcodes?.find(b => b.branch_id === targetBranch) || item.barcodes?.[0] || {};
+            const stocksArray = Array.isArray(item.stocks) ? item.stocks : [item.stocks].filter(Boolean);
+            const barcodesArray = Array.isArray(item.barcodes) ? item.barcodes : [item.barcodes].filter(Boolean);
+
+            const stockInfo = stocksArray.find(s => s.branch_id === targetBranch) || stocksArray[0] || {};
+            const barcodeInfo = barcodesArray.find(b => b.branch_id === targetBranch) || barcodesArray[0] || {};
             return {
                 name: item.name,
                 barcode: barcodeInfo.barcode || '',
