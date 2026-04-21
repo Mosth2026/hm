@@ -176,7 +176,10 @@ export const useAdminDashboard = () => {
     };
 
     const calculateStats = async () => {
-        const activeOverride = sessionSalesOverrideRef.current || sessionSalesOverride;
+        const savedCount = Number(localStorage.getItem('LAST_SYNC_SOLD_QTY')) || 0;
+        const savedValue = Number(localStorage.getItem('LAST_SYNC_SOLD_VALUE')) || 0;
+        
+        const activeOverride = sessionSalesOverrideRef.current || sessionSalesOverride || (savedCount > 0 ? { count: savedCount, value: savedValue } : null);
         
         // Fetch products with their branch stock if a branch is selected
         let query = supabase.from('products').select('price, stock, category_id, category_name, description, image, product_branch_stock(stock, branch_id)');
@@ -517,6 +520,8 @@ export const useAdminDashboard = () => {
             
             let updatedCount = 0;
             let newCount = 0;
+            let totalSoldQty = 0;
+            let totalSoldValue = 0;
 
             const updates = [];
             const inserts = [];
@@ -562,8 +567,14 @@ export const useAdminDashboard = () => {
                         existingProduct = matchingProducts.find(p => p.image_url) || matchingProducts[0];
                     }
                 }
-
                 if (existingProduct) {
+                    const oldStock = Number(existingProduct.stock) || 0;
+                    const diff = oldStock - qty;
+                    if (diff > 0) {
+                        totalSoldQty += diff;
+                        totalSoldValue += diff * (Number(existingProduct.price) || 0);
+                    }
+
                     updates.push({
                         id: existingProduct.id,
                         price: finalPrice > 0 ? finalPrice : existingProduct.price,
@@ -599,9 +610,16 @@ export const useAdminDashboard = () => {
                 await supabase.from('products').insert(chunk);
             }
 
-            await logAction(user?.id, `تمت المزامنة من Nard POS: تحديث ${updatedCount} منتج وإضافة ${newCount} جديد.`);
+            // Save stats for "آخر جرد" buttons
+            const finalResult = { count: totalSoldQty, value: totalSoldValue };
+            sessionSalesOverrideRef.current = finalResult;
+            setSessionSalesOverride(finalResult);
+            localStorage.setItem('LAST_SYNC_SOLD_QTY', String(totalSoldQty));
+            localStorage.setItem('LAST_SYNC_SOLD_VALUE', String(totalSoldValue));
+
+            await logAction(user?.id, `تم المزامنة مع Nard POS: تحديث ${updatedCount} صنف وإضافة ${newCount} جديد. مبيعات الجرد: ${totalSoldQty} صنف.`);
             
-            toast.success(`اكتملت المزامنة: تحديث ${updatedCount} وإضافة ${newCount} منتج`);
+            toast.success(`اكتملت المزامنة: تحديث ${updatedCount} وإضافة ${newCount} صنف`);
             setIsNardSyncOpen(false);
             fetchProducts();
             
@@ -832,6 +850,8 @@ export const useAdminDashboard = () => {
                 const finalResult = { count: totalSoldQty, value: totalSoldValue };
                 sessionSalesOverrideRef.current = finalResult;
                 setSessionSalesOverride(finalResult);
+                localStorage.setItem('LAST_SYNC_SOLD_QTY', String(totalSoldQty));
+                localStorage.setItem('LAST_SYNC_SOLD_VALUE', String(totalSoldValue));
                 setImportProgress(null);
                 
                 const ghostCount = ghostProducts.length;
