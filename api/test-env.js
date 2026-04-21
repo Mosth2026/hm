@@ -1,10 +1,17 @@
+// api/test-env.js
+// 🏛️ CONSTITUTION: This endpoint MUST NOT leak environment variable names or values
+// It is restricted to simple health-check status only.
+
 export default function handler(req, res) {
+    // Only allow GET for health check
+    if (req.method !== 'GET') {
+        return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    // Return only boolean status, never actual keys or values
     res.status(200).json({
-        supa_url: !!process.env.SUPABASE_URL,
-        vite_supa_url: !!process.env.VITE_SUPABASE_URL,
-        supa_key: !!process.env.SUPABASE_KEY,
-        supa_service_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-        vite_supa_service_key: !!process.env.VITE_SUPABASE_SERVICE_ROLE_KEY,
-        all_keys: Object.keys(process.env).filter(k => k.includes('SUPA') || k.includes('VITE'))
+        status: 'ok',
+        supabase_configured: !!(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL),
+        timestamp: new Date().toISOString()
     });
 }

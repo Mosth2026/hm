@@ -1,7 +1,8 @@
 export default async function handler(req, res) {
     const { id, type } = req.query;
-    const SUPABASE_URL = "https://yacjvrfwcahjqqbuiyxy.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_4OzSamMwsyetZNRWd4uNkA_D0135lxS";
+    // 🏛️ CONSTITUTION: Never hardcode credentials. Use environment variables.
+    const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const SUPABASE_KEY = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_KEY;
     // تحديد النطاق ديناميكياً لضمان تطابق رابط المعاينة مع الرابط المشترك (WWW أو بدونها)
     const host = req.headers.host || "www.happinessmakers.online";
     const protocol = req.headers['x-forwarded-proto'] || 'https';
