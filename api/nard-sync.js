@@ -1,7 +1,52 @@
+// api/nard-sync.js
+// 🏛️ CONSTITUTION: This endpoint MUST verify caller authentication before syncing.
+import { createClient } from '@supabase/supabase-js';
+
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method Not Allowed' });
     }
+
+    // ============================================================
+    // 🏛️ AUTH GUARD: Verify caller is authenticated staff/owner
+    // ============================================================
+    const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+    const SERVICE_KEY = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
+
+    if (SUPABASE_URL && SERVICE_KEY) {
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return res.status(401).json({ error: 'Unauthorized: Missing token' });
+        }
+
+        try {
+            const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_KEY, {
+                auth: { autoRefreshToken: false, persistSession: false }
+            });
+            const token = authHeader.replace('Bearer ', '');
+            const { data: { user: caller }, error: authError } = await supabaseAdmin.auth.getUser(token);
+
+            if (authError || !caller) {
+                return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+            }
+
+            // Check caller role - only owner/manager/employee with dashboard access
+            const { data: callerRole } = await supabaseAdmin
+                .from('user_roles')
+                .select('role')
+                .eq('user_id', caller.id)
+                .single();
+
+            const allowedRoles = ['owner', 'manager', 'employee'];
+            if (!callerRole || !allowedRoles.includes(callerRole.role)) {
+                return res.status(403).json({ error: 'Forbidden: Insufficient permissions for sync' });
+            }
+        } catch (authErr) {
+            console.error('Auth verification failed:', authErr);
+            return res.status(401).json({ error: 'Auth verification failed' });
+        }
+    }
+    // ============================================================
 
     try {
         const { accountCode, username, password, branchId } = req.body;

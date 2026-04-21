@@ -503,9 +503,16 @@ export const useAdminDashboard = () => {
         toast.info("جاري سحب البيانات من Nard POS...");
 
         try {
+            // 🏛️ CONSTITUTION: Send auth token so API can verify caller permissions
+            const { data: { session } } = await supabase.auth.getSession();
+            const authToken = session?.access_token || '';
+
             const res = await fetch('/api/nard-sync', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`
+                },
                 body: JSON.stringify({
                     accountCode: nardCredentials.code,
                     username: nardCredentials.username,
