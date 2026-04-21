@@ -148,7 +148,7 @@ const UserManagement: React.FC = () => {
 
             if (roleError) {
                 console.error("Role insertion failed:", roleError);
-                throw new Error("تم إنشاء الحساب ولكن فشل تعيين الصلاحيات");
+                throw new Error(`فشل تعيين الصلاحيات: ${roleError.message || roleError.details || 'تأكد من سياسات الحماية (RLS)'}`);
             }
 
             toast.success('تم إنشاء المستخدم بنجاح!', {
