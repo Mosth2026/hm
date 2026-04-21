@@ -7,7 +7,7 @@ export default async function handler(req, res) {
     }
 
     const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-    const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
+    const SERVICE_ROLE_KEY = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
 
     if (!SERVICE_ROLE_KEY) {
         const envKeys = Object.keys(process.env).filter(k => k.includes('SUPA') || k.includes('VITE'));
