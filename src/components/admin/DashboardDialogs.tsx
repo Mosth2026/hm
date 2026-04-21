@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import {
     ImageIcon, Upload, Camera, Save, X, Trash2, Clock, TrendingUp, Sparkles, AlertTriangle,
-    Edit, Plus, List, Ticket
+    Edit, Plus, List, Ticket, RefreshCw
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import ImageCropper from "@/components/admin/ImageCropper";
@@ -55,6 +55,14 @@ interface DashboardDialogsProps {
     newCoupon: { code: string; discount_type: string; discount_value: number };
     setNewCoupon: (c: any) => void;
     handleCreateCoupon: () => void;
+    
+    // Nard POS Sync Dialog
+    isNardSyncOpen: boolean;
+    setIsNardSyncOpen: (open: boolean) => void;
+    nardCredentials: any;
+    setNardCredentials: (cred: any) => void;
+    isNardSyncing: boolean;
+    handleNardSync: () => void;
 }
 
 const DashboardDialogs: React.FC<DashboardDialogsProps> = ({
@@ -62,7 +70,8 @@ const DashboardDialogs: React.FC<DashboardDialogsProps> = ({
     isCropperOpen, setIsCropperOpen, tempImageUrl, handleCropComplete, handleSkip,
     isLifecycleOpen, setIsLifecycleOpen, lifecycleProduct, lifecycleData, lifecycleLoading,
     isBulkCategoryOpen, setIsBulkCategoryOpen, bulkCategoryId, setBulkCategoryId, handleBulkCategoryUpdate,
-    isCouponDialogOpen, setIsCouponDialogOpen, newCoupon, setNewCoupon, handleCreateCoupon
+    isCouponDialogOpen, setIsCouponDialogOpen, newCoupon, setNewCoupon, handleCreateCoupon,
+    isNardSyncOpen, setIsNardSyncOpen, nardCredentials, setNardCredentials, isNardSyncing, handleNardSync
 }) => {
     return (
         <>
@@ -375,6 +384,67 @@ const DashboardDialogs: React.FC<DashboardDialogsProps> = ({
                     <DialogFooter className="gap-3 mt-6">
                         <Button variant="outline" onClick={() => setIsCouponDialogOpen(false)} className="flex-1 h-14 rounded-2xl font-black border-gray-100 text-gray-400">إلغاء</Button>
                         <Button onClick={handleCreateCoupon} className="flex-[2] h-14 rounded-2xl font-black bg-saada-red hover:bg-black text-white shadow-xl">إنشاء الكود</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            {/* Nard POS Sync Dialog */}
+            <Dialog open={isNardSyncOpen} onOpenChange={setIsNardSyncOpen}>
+                <DialogContent className="sm:max-w-md bg-white rounded-3xl p-8 font-tajawal border-none shadow-2xl rtl" dir="rtl">
+                    <DialogHeader className="mb-6">
+                        <DialogTitle className="text-2xl font-black text-[#2A82FF] flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                                <RefreshCw className="h-5 w-5 text-[#2A82FF]" />
+                            </div>
+                            مزامنة Nard POS
+                        </DialogTitle>
+                    </DialogHeader>
+                    
+                    <div className="space-y-5">
+                        <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 text-sm font-bold text-blue-800 leading-relaxed">
+                            هذه الميزة ستقوم بسحب جميع المنتجات، الأرصدة، والأسعار مباشرة من نظام Nard POS دون الحاجة لملفات الإكسيل. 
+                            <span className="block mt-2 text-xs opacity-70">(بانتظار الـ API من خدمة العملاء لتفعيل السحب)</span>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label className="text-saada-brown font-black">كود الحساب (Account Code)</Label>
+                            <input
+                                type="text"
+                                value={nardCredentials.code}
+                                onChange={e => setNardCredentials({ ...nardCredentials, code: e.target.value })}
+                                className="w-full h-14 px-4 rounded-2xl bg-gray-50 border border-gray-100 focus:outline-none focus:ring-2 ring-[#2A82FF] text-lg font-black text-center"
+                                readOnly
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-saada-brown font-black">اسم المستخدم (Username)</Label>
+                            <input
+                                type="text"
+                                value={nardCredentials.username}
+                                onChange={e => setNardCredentials({ ...nardCredentials, username: e.target.value })}
+                                className="w-full h-14 px-4 rounded-2xl bg-gray-50 border border-gray-100 focus:outline-none focus:ring-2 ring-[#2A82FF] text-lg font-bold"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label className="text-saada-brown font-black">كلمة المرور (Password)</Label>
+                            <input
+                                type="password"
+                                value={nardCredentials.password}
+                                onChange={e => setNardCredentials({ ...nardCredentials, password: e.target.value })}
+                                className="w-full h-14 px-4 rounded-2xl bg-gray-50 border border-gray-100 focus:outline-none focus:ring-2 ring-[#2A82FF] text-lg font-bold"
+                            />
+                        </div>
+                    </div>
+                    
+                    <DialogFooter className="gap-3 mt-6">
+                        <Button variant="outline" onClick={() => setIsNardSyncOpen(false)} disabled={isNardSyncing} className="flex-1 h-14 rounded-2xl font-black border-gray-100 text-gray-400">إلغاء</Button>
+                        <Button 
+                            onClick={handleNardSync} 
+                            disabled={isNardSyncing}
+                            className="flex-[2] h-14 rounded-2xl font-black bg-[#2A82FF] hover:bg-[#1C69D4] text-white shadow-xl shadow-blue-200"
+                        >
+                            <RefreshCw className={`h-5 w-5 ml-2 ${isNardSyncing ? 'animate-spin' : ''}`} />
+                            {isNardSyncing ? 'جاري سحب البيانات...' : 'بدء المزامنة'}
+                        </Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

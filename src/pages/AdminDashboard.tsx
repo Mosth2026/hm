@@ -40,9 +40,12 @@ const AdminDashboard = () => {
         setIsCropperOpen, setTempImageUrl, setCurrentProduct, setImportProgress, setSelectedProductIds,
         setIsCouponDialogOpen, setNewCoupon, setIsLifecycleOpen, setIsBulkCategoryOpen, setBulkCategoryId,
         setIsExemptImport, setSelectedBranchId, setIsNotificationsEnabled,
+        isNardSyncOpen, setIsNardSyncOpen, nardCredentials, setNardCredentials, isNardSyncing,
         
         login, logout, initialize, logAction, fetchProducts, fetchOrders, handleBranchChange, toggleNotifications,
         handleEdit, handleAddNew, handleDelete, handleToggleDraft, handleSave, handleImageUpload, handleCropComplete, handleSkip,
+        handleMarkAsReceived, handleReturnOrder, handleDeleteOrder, handleExportData, handleBulkCategoryUpdate,
+        handleNardSync,
         handleMarkAsReceived, handleReturnOrder, handleDeleteOrder, handleExportData, handleBulkCategoryUpdate,
         fetchProductLifecycle, formatPrice, categories, fetchCategories, handleExcelImport, handleCleanupDuplicates, handleRestoreLostImages,
         handleCreateCoupon, handleDeleteCoupon
@@ -261,6 +264,13 @@ const AdminDashboard = () => {
                                 >
                                     <Upload className="h-6 w-6" />
                                     رفع الرصيد
+                                </Button>
+                                <Button 
+                                    onClick={() => setIsNardSyncOpen(true)}
+                                    className="h-16 px-8 bg-[#2A82FF] hover:bg-[#1C69D4] text-white rounded-3xl gap-3 font-black text-lg shadow-2xl shadow-blue-200 transition-all hover:scale-[1.02] active:scale-95 border-2 border-white"
+                                >
+                                    <RefreshCw className="h-6 w-6" />
+                                    مزامنة Nard POS
                                 </Button>
                             </>
                         )}
@@ -590,6 +600,12 @@ const AdminDashboard = () => {
                     newCoupon={newCoupon}
                     setNewCoupon={setNewCoupon}
                     handleCreateCoupon={handleCreateCoupon}
+                    isNardSyncOpen={isNardSyncOpen}
+                    setIsNardSyncOpen={setIsNardSyncOpen}
+                    nardCredentials={nardCredentials}
+                    setNardCredentials={setNardCredentials}
+                    isNardSyncing={isNardSyncing}
+                    handleNardSync={handleNardSync}
                 />
             </div>
         </div>

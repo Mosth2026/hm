@@ -48,6 +48,9 @@ export const useAdminDashboard = () => {
     const [coupons, setCoupons] = useState<any[]>([]);
     const [couponsLoading, setCouponsLoading] = useState(false);
     const [isCouponDialogOpen, setIsCouponDialogOpen] = useState(false);
+    const [isNardSyncOpen, setIsNardSyncOpen] = useState(false);
+    const [isNardSyncing, setIsNardSyncing] = useState(false);
+    const [nardCredentials, setNardCredentials] = useState({ code: "2194", username: "", password: "" });
     const [newCoupon, setNewCoupon] = useState({ code: "", discount_type: "percentage", discount_value: 0 });
     const [subscribers, setSubscribers] = useState<any[]>([]);
     const [subscribersLoading, setSubscribersLoading] = useState(false);
@@ -472,6 +475,135 @@ export const useAdminDashboard = () => {
         }
     };
 
+    const handleNardSync = async () => {
+        if (!nardCredentials.username || !nardCredentials.password) {
+            toast.error("يرجى إدخال اسم المستخدم وكلمة المرور");
+            return;
+        }
+
+        setIsNardSyncing(true);
+        toast.info("جاري سحب البيانات من Nard POS...");
+
+        try {
+            const res = await fetch('/api/nard-sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    accountCode: nardCredentials.code,
+                    username: nardCredentials.username,
+                    password: nardCredentials.password,
+                    branchId: 15 // San Stefano
+                })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                throw new Error(data.details || data.error || "فشل مزامنة البيانات");
+            }
+
+            const items = data.data;
+            if (!items || !Array.isArray(items) || items.length === 0) {
+                toast.warning("لم يتم العثور على منتجات في الفرع المختار");
+                setIsNardSyncing(false);
+                return;
+            }
+
+            toast.success(`تم جلب ${items.length} منتج بنجاح! جاري التحديث...`);
+
+            // Fetch current DB products
+            const { data: rawProducts } = await supabase.from('products').select('*');
+            const productsInDb = rawProducts || [];
+            
+            let updatedCount = 0;
+            let newCount = 0;
+
+            const updates = [];
+            const inserts = [];
+
+            // We need to fetch categories to map them or just use Nard POS categories
+            const { data: catData } = await supabase.from('categories').select('id, name, name_ar');
+            const dbCats = catData || [];
+
+            for (const item of items) {
+                // Item from Nard POS structure:
+                // name, barcode, price (or item_price/selling_price), quantity (or stock), category_name
+                // It depends on their exact JSON. We assume some standard fields based on their POS.
+                const name = item.name || item.item_name || '';
+                if (!name) continue;
+
+                const barcode = String(item.barcode || item.item_code || '');
+                const rawPrice = Number(item.price || item.selling_price || item.item_price || 0);
+                const qty = Number(item.quantity || item.stock || item.balance || 0);
+                const costPrice = Number(item.cost_price || item.purchase_price || 0);
+                const categoryName = item.category?.name || item.category_name || '';
+
+                // Nard POS prices ALREADY include tax according to user's instructions for sync:
+                // "هانلغي موضوع البدون ضريبة في حالة السحب من السيستم لكن لو يدوي يفضل"
+                const finalPrice = rawPrice;
+
+                let catId = null;
+                if (categoryName) {
+                    const existingCat = dbCats.find(c => 
+                        (c.name && c.name.toLowerCase() === categoryName.toLowerCase()) || 
+                        (c.name_ar && c.name_ar.toLowerCase() === categoryName.toLowerCase())
+                    );
+                    if (existingCat) {
+                        catId = existingCat.id;
+                    }
+                }
+
+                const existingProduct = productsInDb.find(p => p.barcode === barcode || p.name === name);
+
+                if (existingProduct) {
+                    updates.push({
+                        id: existingProduct.id,
+                        price: finalPrice > 0 ? finalPrice : existingProduct.price,
+                        stock: qty,
+                        cost_price: costPrice > 0 ? costPrice : existingProduct.cost_price,
+                        category_id: catId || existingProduct.category_id
+                    });
+                    updatedCount++;
+                } else {
+                    inserts.push({
+                        name: name,
+                        barcode: barcode,
+                        price: finalPrice,
+                        stock: qty,
+                        cost_price: costPrice,
+                        category_id: catId,
+                        is_active: true
+                    });
+                    newCount++;
+                }
+            }
+
+            // Execute Updates
+            for (let i = 0; i < updates.length; i += 50) {
+                const chunk = updates.slice(i, i + 50);
+                await supabase.from('products').upsert(chunk, { onConflict: 'id' });
+            }
+
+            // Execute Inserts
+            for (let i = 0; i < inserts.length; i += 50) {
+                const chunk = inserts.slice(i, i + 50);
+                await supabase.from('products').insert(chunk);
+            }
+
+            await logAction(user?.id, `تمت المزامنة من Nard POS: تحديث ${updatedCount} منتج وإضافة ${newCount} جديد.`);
+            
+            toast.success(`اكتملت المزامنة: تحديث ${updatedCount} وإضافة ${newCount} منتج`);
+            setIsNardSyncOpen(false);
+            fetchProducts();
+            
+        } catch (error: any) {
+            console.error('Sync Error:', error);
+            toast.error(error.message || "حدث خطأ غير معروف أثناء المزامنة");
+        } finally {
+            setIsNardSyncing(false);
+        }
+    };
+
     const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -786,8 +918,9 @@ export const useAdminDashboard = () => {
         setIsCropperOpen, setTempImageUrl, setCurrentProduct, setImportProgress, setSelectedProductIds,
         setIsCouponDialogOpen, setNewCoupon, setIsLifecycleOpen, setIsBulkCategoryOpen, setBulkCategoryId,
         setIsExemptImport, setSelectedBranchId, setIsNotificationsEnabled,
+        isNardSyncOpen, setIsNardSyncOpen, nardCredentials, setNardCredentials, isNardSyncing,
         
-        login, logout, initialize, logAction, fetchProducts, fetchOrders,
+        login, logout, initialize, logAction, fetchProducts, fetchOrders, handleNardSync,
         handleBranchChange: (val: string) => {
             const id = Number(val); setSelectedBranchId(id);
             localStorage.setItem('saada_selected_branch', val); setCookie('saada_selected_branch', val);
