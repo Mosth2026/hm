@@ -1,5 +1,6 @@
 
 import React, { useEffect } from "react";
+import { useConstitution } from '@/hooks/use-constitution';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -130,6 +131,7 @@ import MobileBottomNav from "./components/MobileBottomNav";
 import AppSplashScreen from "./components/AppSplashScreen";
 
 const App = () => {
+  useConstitution();
   const [showSplash, setShowSplash] = React.useState(true);
 
   useEffect(() => {
