@@ -340,7 +340,9 @@ export const useAdminDashboard = () => {
       let finalDescription = (updateFields.description || '').replace('[TAX_EXEMPT]', '').trim();
       if (no_tax) finalDescription = `${finalDescription} [TAX_EXEMPT]`.trim();
       
-      const finalPrice = calculateProductPriceWithTax(updateFields.price, finalDescription, updateFields.category_name || '');
+      // FIX: Do not implicitly apply 14% tax on every save, as this causes compounding price inflation.
+      // The tax is applied automatically during Excel uploads. For manual UI edits, the price entered is the final price.
+      const finalPrice = Number(updateFields.price) || 0;
       const productData = { ...updateFields, description: finalDescription, price: finalPrice };
       
       const { error } = isNew ? await supabase.from("products").insert([productData]) : await supabase.from("products").update(productData).eq("id", id);
