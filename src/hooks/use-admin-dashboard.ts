@@ -74,6 +74,7 @@ export const useAdminDashboard = () => {
     const notificationSound = useRef<HTMLAudioElement | null>(null);
     const lastOrderId = useRef<number | null>(null);
     const sessionSalesOverrideRef = useRef<any>(null);
+    const fetchIdRef = useRef(0);
     const [sessionSalesOverride, setSessionSalesOverride] = useState<any>(null);
 
     const fetchCategories = async () => {
@@ -246,6 +247,7 @@ export const useAdminDashboard = () => {
     };
 
     const fetchProducts = async () => {
+        const currentFetchId = ++fetchIdRef.current;
         setLoading(true);
         try {
             let query = supabase.from("products").select(`*, product_branch_stock (stock, branch_id)`);
@@ -270,6 +272,8 @@ export const useAdminDashboard = () => {
             }
             
             const { data } = await query.limit(2000).order('created_at', { ascending: false });
+            if (currentFetchId !== fetchIdRef.current) return; // Ignore stale request
+            
             if (data) {
                 let processed = data.map(p => {
                     let s = p.stock || 0;
@@ -442,7 +446,7 @@ export const useAdminDashboard = () => {
     };
 
     const handleExportData = () => {
-        const data = products.map(p => ({
+        const productsToExport = selectedProductIds.length > 0 ? products.filter(p => selectedProductIds.includes(p.id)) : products; const data = productsToExport.map(p => ({
             الاسم: p.name,
             السعر: p.price,
             المخزون: p.stock,
