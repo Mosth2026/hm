@@ -46,7 +46,6 @@ const AdminDashboard = () => {
         handleEdit, handleAddNew, handleDelete, handleToggleDraft, handleSave, handleImageUpload, handleCropComplete, handleSkip,
         handleMarkAsReceived, handleReturnOrder, handleDeleteOrder, handleExportData, handleBulkCategoryUpdate,
         handleNardSync,
-        handleMarkAsReceived, handleReturnOrder, handleDeleteOrder, handleExportData, handleBulkCategoryUpdate,
         fetchProductLifecycle, formatPrice, categories, fetchCategories, handleExcelImport, handleCleanupDuplicates, handleRestoreLostImages,
         handleCreateCoupon, handleDeleteCoupon
     } = useAdminDashboard();
