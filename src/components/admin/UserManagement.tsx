@@ -112,34 +112,43 @@ const UserManagement: React.FC = () => {
         try {
             const email = newUser.email.includes('@') ? newUser.email : `${newUser.email}@saada.com`;
 
-            // Get current session token for authorization
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session?.access_token) {
-                throw new Error('يجب تسجيل الدخول أولاً');
-            }
-
-            // Call secure server-side API
-            const response = await fetch('/api/create-user', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session.access_token}`
-                },
-                body: JSON.stringify({
-                    email,
-                    password: newUser.password,
-                    display_name: newUser.display_name,
-                    phone: newUser.phone || null,
-                    role: newUser.role,
-                    branch_id: newUser.branch_id ? Number(newUser.branch_id) : null,
-                    custom_permissions: newUser.custom_permissions
-                })
+            // Create an isolated Supabase client just for signup so it doesn't log the admin out
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+            
+            // @ts-ignore - dynamic import of createClient to avoid circular deps if any
+            const { createClient } = await import('@supabase/supabase-js');
+            const tempClient = createClient(supabaseUrl, supabaseAnonKey, {
+                auth: {
+                    persistSession: false,
+                    autoRefreshToken: false,
+                    detectSessionInUrl: false
+                }
             });
 
-            const result = await response.json();
+            // 1. Create the user in Auth
+            const { data: authData, error: authError } = await tempClient.auth.signUp({
+                email: email,
+                password: newUser.password,
+                options: { data: { username: newUser.display_name } }
+            });
 
-            if (!response.ok) {
-                throw new Error(result.error || 'فشل إنشاء المستخدم');
+            if (authError) throw authError;
+            if (!authData.user) throw new Error('فشل إنشاء الحساب');
+
+            // 2. Insert the role using the MAIN client (which has the Admin's permissions)
+            const { error: roleError } = await supabase.from('user_roles').upsert({
+                user_id: authData.user.id,
+                role: newUser.role,
+                branch_id: newUser.branch_id ? Number(newUser.branch_id) : null,
+                display_name: newUser.display_name,
+                phone: newUser.phone || null,
+                custom_permissions: newUser.custom_permissions
+            }, { onConflict: 'user_id' });
+
+            if (roleError) {
+                console.error("Role insertion failed:", roleError);
+                throw new Error("تم إنشاء الحساب ولكن فشل تعيين الصلاحيات");
             }
 
             toast.success('تم إنشاء المستخدم بنجاح!', {
