@@ -580,7 +580,8 @@ export const useAdminDashboard = () => {
                             
                             let finalPrice = currentPrice;
                             if (sheetPriceRaw > 0) {
-                                finalPrice = calculateProductPriceWithTax(sheetPriceRaw, p?.description, p?.category_name);
+                                const combinedCat = `${p?.category_name || ''} ${sheetCat}`;
+                                finalPrice = calculateProductPriceWithTax(sheetPriceRaw, p?.description, combinedCat);
                             }
 
                             // Calculate Sales (Difference)
