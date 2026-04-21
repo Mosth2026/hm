@@ -36,17 +36,38 @@ export default async function handler(req, res) {
         const token = authData.data.tokens.access_token;
         const targetBranch = branchId || 15; // Default to San Stefano (15)
 
-        // 2. Fetch Stock Items
-        // We fetch a large limit to get all items. If pagination is needed, we'll fetch page 1 for now.
-        const stockUrl = `https://production.nardpos.com/stock-item?limit=500&page=1&branch_id=${targetBranch}`;
-        
-        const stockResponse = await fetch(stockUrl, {
-            method: 'GET',
+        const graphqlPayload = {
+            query: `query Items($checkpoint: CheckpointInput!) {
+              items(checkpoint: $checkpoint) {
+                documents {
+                  id
+                  name
+                  barcodes { barcode branch_id }
+                  stocks { sale_price cost_price quantity branch_id }
+                  main_item { category { name name_ar } }
+                  _deleted
+                }
+              }
+            }`,
+            operationName: "Items",
+            variables: {
+                checkpoint: {
+                    id: 0,
+                    updated_at: "0",
+                    batch_size: 2000,
+                    branch_id: targetBranch
+                }
+            }
+        };
+
+        const stockResponse = await fetch('https://production.nardpos.com/sync', {
+            method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'account-code': accountCode,
-                'code': accountCode
-            }
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(graphqlPayload)
         });
 
         if (!stockResponse.ok) {
@@ -56,11 +77,29 @@ export default async function handler(req, res) {
         }
 
         const stockData = await stockResponse.json();
+        
+        if (stockData.errors) {
+            return res.status(400).json({ error: 'GraphQL Error', details: stockData.errors });
+        }
+
+        const docs = stockData?.data?.items?.documents || [];
+        const mappedItems = docs.filter(d => !d._deleted).map(item => {
+            const stockInfo = item.stocks?.find(s => s.branch_id === targetBranch) || item.stocks?.[0] || {};
+            const barcodeInfo = item.barcodes?.find(b => b.branch_id === targetBranch) || item.barcodes?.[0] || {};
+            return {
+                name: item.name,
+                barcode: barcodeInfo.barcode || '',
+                price: stockInfo.sale_price || 0,
+                cost_price: stockInfo.cost_price || 0,
+                quantity: stockInfo.quantity || 0,
+                category_name: item.main_item?.category?.name || item.main_item?.category?.name_ar || ''
+            };
+        });
 
         // 3. Return the mapped data to the frontend
         res.status(200).json({ 
             success: true, 
-            data: stockData.data || stockData, // Depending on actual API structure
+            data: mappedItems,
             branchId: targetBranch
         });
 
