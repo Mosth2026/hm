@@ -158,7 +158,10 @@ const App = () => {
           'saada_selected_branch', 
           'SAADA_BELL_MASTER_V1', 
           'saada_notifications_active', 
-          'saada-final-auth-v1'
+          'saada-final-auth-v1',
+          'saada-final-auth-v2',
+          'LAST_SYNC_SOLD_QTY',
+          'LAST_SYNC_SOLD_VALUE'
         ];
         
         Object.keys(localStorage).forEach(key => {

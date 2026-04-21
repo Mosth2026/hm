@@ -446,17 +446,28 @@ export const useAdminDashboard = () => {
     };
 
     const handleExportData = () => {
-        const productsToExport = selectedProductIds.length > 0 ? products.filter(p => selectedProductIds.includes(p.id)) : products; const data = productsToExport.map(p => ({
+        const productsToExport = selectedProductIds.length > 0
+            ? products.filter(p => selectedProductIds.includes(p.id))
+            : products;
+
+        if (productsToExport.length === 0) {
+            toast.warning("لا يوجد منتجات للتصدير");
+            return;
+        }
+
+        const data = productsToExport.map(p => ({
             الاسم: p.name,
             السعر: p.price,
             المخزون: p.stock,
             القسم: p.category_name,
-            الباركود: p.description?.match(/باركود:\s*(\d+)/)?.[1] || ''
+            الباركود: p.description?.match(/باركود:\s*(\d+)/)?.[1] || p.barcode || ''
         }));
         const ws = XLSX.utils.json_to_sheet(data);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "المنتجات");
-        XLSX.writeFile(wb, `منتجات-صناع-السعادة-${new Date().toISOString().split('T')[0]}.xlsx`);
+        const filterLabel = activeFilter !== 'all' ? `-${activeFilter}` : '';
+        XLSX.writeFile(wb, `منتجات-صناع-السعادة${filterLabel}-${new Date().toISOString().split('T')[0]}.xlsx`);
+        toast.success(`تم تصدير ${productsToExport.length} منتج بنجاح`);
     };
 
     const handleBulkCategoryUpdate = async () => {
@@ -565,10 +576,17 @@ export const useAdminDashboard = () => {
                 let existingProduct = null;
                 
                 if (barcode) {
-                    const matchingProducts = productsInDb.filter(p => p.barcode === barcode);
+                    const matchingProducts = productsInDb.filter(p => {
+                        // Match by barcode column first
+                        if (p.barcode === barcode) return true;
+                        // Also check barcode stored in description field
+                        const descMatch = p.description?.match(/(\d{8,14})/);
+                        if (descMatch && normalizeBarcode(descMatch[1]) === normalizeBarcode(barcode)) return true;
+                        return false;
+                    });
                     if (matchingProducts.length > 0) {
-                        // Prefer the one with an image if multiple exist
-                        existingProduct = matchingProducts.find(p => p.image_url) || matchingProducts[0];
+                        // Prefer the one with an image if multiple exist (Constitution rule)
+                        existingProduct = matchingProducts.find(p => p.image && p.image !== PLACEHOLDER_IMAGE) || matchingProducts[0];
                     }
                 }
                 if (existingProduct) {
@@ -621,7 +639,7 @@ export const useAdminDashboard = () => {
             localStorage.setItem('LAST_SYNC_SOLD_QTY', String(totalSoldQty));
             localStorage.setItem('LAST_SYNC_SOLD_VALUE', String(totalSoldValue));
 
-            await logAction(user?.id, `تم المزامنة مع Nard POS: تحديث ${updatedCount} صنف وإضافة ${newCount} جديد. مبيعات الجرد: ${totalSoldQty} صنف.`);
+            await logAction(`تم المزامنة مع Nard POS: تحديث ${updatedCount} صنف وإضافة ${newCount} جديد. مبيعات الجرد: ${totalSoldQty} صنف.`);
             
             toast.success(`اكتملت المزامنة: تحديث ${updatedCount} وإضافة ${newCount} صنف`);
             setIsNardSyncOpen(false);
