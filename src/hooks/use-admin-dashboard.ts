@@ -553,18 +553,27 @@ export const useAdminDashboard = () => {
                     }
                 }
 
-                const existingProduct = productsInDb.find(p => p.barcode === barcode || p.name === name);
+                let existingProduct = null;
+                
+                if (barcode) {
+                    const matchingProducts = productsInDb.filter(p => p.barcode === barcode);
+                    if (matchingProducts.length > 0) {
+                        // Prefer the one with an image if multiple exist
+                        existingProduct = matchingProducts.find(p => p.image_url) || matchingProducts[0];
+                    }
+                }
 
                 if (existingProduct) {
                     updates.push({
                         id: existingProduct.id,
                         price: finalPrice > 0 ? finalPrice : existingProduct.price,
-                        stock: qty,
+                        stock: qty, // Overwrite store stock with Nard POS stock always
                         cost_price: costPrice > 0 ? costPrice : existingProduct.cost_price,
                         category_id: catId || existingProduct.category_id
                     });
                     updatedCount++;
-                } else {
+                } else if (barcode) {
+                    // Only insert new if it has a barcode, to prevent junk items without barcodes
                     inserts.push({
                         name: name,
                         barcode: barcode,

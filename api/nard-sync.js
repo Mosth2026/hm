@@ -44,7 +44,7 @@ export default async function handler(req, res) {
                   name
                   barcodes { barcode branch_id }
                   stocks { sale_price cost_price quantity branch_id }
-                  main_item { category { name name_ar } }
+                  main_item { category { name } }
                   _deleted
                 }
               }
