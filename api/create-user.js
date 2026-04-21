@@ -7,10 +7,16 @@ export default async function handler(req, res) {
     }
 
     const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-    const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
 
     if (!SERVICE_ROLE_KEY) {
-        return res.status(500).json({ error: 'Service role key not configured on server' });
+        // Debug: log available env var names (not values) to help diagnose
+        const envKeys = Object.keys(process.env).filter(k => k.includes('SUPA'));
+        console.error('Missing service role key. Available SUPA* vars:', envKeys);
+        return res.status(500).json({ 
+            error: 'Service role key not configured on server',
+            hint: `Found env vars: ${envKeys.join(', ') || 'none'}`
+        });
     }
 
     // Create admin client with service role key (full permissions)
